@@ -13,7 +13,7 @@ desktop.ini
 .env.*
 !.env.example
 
-# Dependencies & build (future)
+# Dependencies & build
 node_modules/
 dist/
 build/
@@ -21,3 +21,8 @@ coverage/
 *.log
 .turbo/
 .cache/
+*.tsbuildinfo
+
+# Tooling
+.eslintcache
+.prettiercache

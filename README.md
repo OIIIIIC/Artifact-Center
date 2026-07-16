@@ -6,22 +6,42 @@
 
 ## 当前阶段
 
-**P0 Foundation** — 仅项目规范与文档，尚未初始化应用工程。
+**工程 Bootstrap + Design System**
 
-## 文档
+- 文档规范：`docs/`
+- 前端已初始化：Vite + React + TypeScript + Tailwind v4 + shadcn/ui
+- **唯一页面**：`/design-system`（组件与 Token 演示）
+- **禁止**：业务页面（Upload / Dashboard / Login 等）
 
-权威规范见 [`docs/`](./docs/README.md)：
+## 规范（必读）
 
-| 文档 | 说明 |
-|------|------|
-| [00-VISION](./docs/00-VISION.md) | 产品愿景 |
-| [01-PRD](./docs/01-PRD.md) | 产品需求 |
-| [02-DESIGN](./docs/02-DESIGN.md) | 设计规范（重点） |
-| [03-ARCHITECTURE](./docs/03-ARCHITECTURE.md) | 架构 |
-| [04-ROADMAP](./docs/04-ROADMAP.md) | 路线图 |
-| [05-CODING-STANDARD](./docs/05-CODING-STANDARD.md) | 编码规范 |
-| [06-COMPONENT-GUIDELINES](./docs/06-COMPONENT-GUIDELINES.md) | 组件指南 |
-| [07-UI-PRINCIPLES](./docs/07-UI-PRINCIPLES.md) | UI 原则 |
+| 文档                                           | 说明             |
+| ---------------------------------------------- | ---------------- |
+| [02-DESIGN](./docs/02-DESIGN.md)               | 设计准则         |
+| [07-UI-PRINCIPLES](./docs/07-UI-PRINCIPLES.md) | UI 决策原则      |
+| [08-DESIGN-SYSTEM](./docs/08-DESIGN-SYSTEM.md) | 设计系统执行规范 |
+
+## 技术栈
+
+- React 19 · TypeScript · Vite
+- Tailwind CSS v4 · shadcn/ui (Nova)
+- Framer Motion · Lucide · TanStack Query · React Router · Zustand
+- ESLint · Prettier · Husky · lint-staged
+
+## 开发
+
+```bash
+npm install
+npm run dev
+```
+
+打开 [http://localhost:5173/design-system](http://localhost:5173/design-system)
+
+```bash
+npm run build
+npm run lint
+npm run typecheck
+```
 
 ## 仓库
 
