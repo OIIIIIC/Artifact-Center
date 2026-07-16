@@ -1,0 +1,23 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies & build (future)
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.turbo/
+.cache/
