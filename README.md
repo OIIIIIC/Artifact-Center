@@ -25,4 +25,4 @@
 
 ## 仓库
 
-- Gitee: https://gitee.com/Ficox/artifact-center
+- GitHub: https://github.com/OIIIIIC/Artifact-Center
