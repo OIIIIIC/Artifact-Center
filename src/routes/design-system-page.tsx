@@ -1,9 +1,15 @@
 import { motion } from 'framer-motion'
-import { Inbox, Loader2, Moon, Monitor, Sun } from 'lucide-react'
+import { Inbox, Loader2 } from 'lucide-react'
 
-import { PageContainer, Section, StatusBadge } from '@/components/common'
+import { StatusBadge } from '@/components/common'
 import { EmptyState, Loading, PageSkeleton } from '@/components/feedback'
-import { AppLayout } from '@/components/layout'
+import {
+  AppLayout,
+  PageContainer,
+  PageHeader,
+  Section,
+  ThemeSwitch,
+} from '@/components/layout'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,7 +31,6 @@ import {
   type TypographyToken,
 } from '@/lib/tokens'
 import { useThemeStore } from '@/store/theme-store'
-import type { ThemeMode } from '@/types/theme'
 
 const typographySamples: { token: TypographyToken; className: string }[] = [
   { token: 'display', className: 'text-display' },
@@ -56,12 +61,6 @@ const colorVarMap: Record<(typeof colorTokens)[number], string> = {
   info: 'var(--info)',
 }
 
-const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
-]
-
 const navItems = [
   'Typography',
   'Color',
@@ -83,41 +82,16 @@ function anchorId(label: string) {
 
 export function DesignSystemPage() {
   const theme = useThemeStore((s) => s.theme)
-  const setTheme = useThemeStore((s) => s.setTheme)
 
   return (
     <AppLayout
-      title="Design System"
-      actions={
-        <div className="flex items-center gap-1 rounded-lg border border-border p-1">
-          {themeOptions.map(({ value, label, icon: Icon }) => (
-            <Button
-              key={value}
-              type="button"
-              size="sm"
-              variant={theme === value ? 'default' : 'ghost'}
-              className="h-7 gap-1.5 px-2"
-              onClick={() => setTheme(value)}
-              aria-pressed={theme === value}
-            >
-              <Icon className="size-3.5" />
-              <span className="hidden sm:inline">{label}</span>
-            </Button>
-          ))}
-        </div>
-      }
+      breadcrumbs={[{ label: 'Foundation', href: '/layout' }, { label: 'Design System' }]}
     >
       <PageContainer className="space-y-[var(--section-gap)] pb-24">
-        <header className="space-y-3 max-w-2xl">
-          <p className="text-caption text-muted-foreground tracking-wide uppercase">
-            Artifact Center · Foundation
-          </p>
-          <h1 className="text-display text-foreground">Design System</h1>
-          <p className="text-body text-muted-foreground">
-            本页是工程阶段唯一允许的页面，用于展示与校验 Design Token
-            与基础组件。不包含任何业务能力。规范来源：docs/02、07、08。
-          </p>
-        </header>
+        <PageHeader
+          title="Design System"
+          description="展示与校验 Design Token 与基础组件。不包含任何业务能力。规范：docs/02、07、08。"
+        />
 
         <nav
           aria-label="Design system sections"
@@ -328,17 +302,7 @@ export function DesignSystemPage() {
         >
           <Card>
             <CardContent className="flex flex-wrap items-center gap-3 pt-6">
-              {themeOptions.map(({ value, label, icon: Icon }) => (
-                <Button
-                  key={value}
-                  type="button"
-                  variant={theme === value ? 'default' : 'outline'}
-                  onClick={() => setTheme(value)}
-                >
-                  <Icon className="size-4" />
-                  {label}
-                </Button>
-              ))}
+              <ThemeSwitch compact={false} />
               <p className="w-full text-caption text-muted-foreground">
                 当前选择：<span className="text-foreground">{theme}</span>
                 。切换后 documentElement 挂载 <code className="text-code">.dark</code>。

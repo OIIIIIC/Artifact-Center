@@ -10,7 +10,7 @@
 
 - 文档规范：`docs/`
 - 前端已初始化：Vite + React + TypeScript + Tailwind v4 + shadcn/ui
-- **唯一页面**：`/design-system`（组件与 Token 演示）
+- **允许页面**：`/design-system`（Token/组件）、`/layout`（布局体系）
 - **禁止**：业务页面（Upload / Dashboard / Login 等）
 
 ## 规范（必读）

@@ -11,6 +11,10 @@ interface SectionProps {
   id?: string
 }
 
+/**
+ * Standard vertical block: Title / Description / Content.
+ * Use for every major page region instead of one-off heading stacks.
+ */
 export function Section({
   children,
   className,
@@ -20,13 +24,13 @@ export function Section({
   id,
 }: SectionProps) {
   return (
-    <section id={id} className={cn('space-y-4', className)}>
+    <section id={id} data-slot="section" className={cn('space-y-4', className)}>
       {title || description || action ? (
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="space-y-1 min-w-0">
+          <div className="min-w-0 space-y-1">
             {title ? <h2 className="text-h2 text-foreground">{title}</h2> : null}
             {description ? (
-              <p className="text-caption text-muted-foreground max-w-2xl">
+              <p className="text-caption max-w-2xl text-muted-foreground">
                 {description}
               </p>
             ) : null}
@@ -34,7 +38,7 @@ export function Section({
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
       ) : null}
-      {children}
+      <div data-slot="section-content">{children}</div>
     </section>
   )
 }
