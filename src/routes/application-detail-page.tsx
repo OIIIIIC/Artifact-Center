@@ -79,37 +79,40 @@ export function ApplicationDetailPage() {
             <TabsList
               variant="line"
               className={cn(
-                'h-auto w-full justify-start gap-0 overflow-x-auto rounded-none border-b border-border/70 bg-transparent p-0',
-                'dark:border-border',
+                // Full-width line tabs: no fixed h-8, no overflow scroll (was clipping underline)
+                'h-auto min-h-0 w-full justify-start gap-0 overflow-visible rounded-none',
+                'border-b border-border/70 bg-transparent p-0 dark:border-border',
               )}
             >
-              <TabsTrigger
-                value="overview"
-                className="rounded-none px-3 pb-2.5 text-[0.8125rem] data-active:bg-transparent dark:data-active:bg-transparent"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="artifacts"
-                className="rounded-none px-3 pb-2.5 text-[0.8125rem] data-active:bg-transparent dark:data-active:bg-transparent"
-              >
-                Artifacts
-                <span className="ml-1.5 text-muted-foreground tabular-nums">
-                  {artifacts.length}
-                </span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="release-notes"
-                className="rounded-none px-3 pb-2.5 text-[0.8125rem] data-active:bg-transparent dark:data-active:bg-transparent"
-              >
-                Release Notes
-              </TabsTrigger>
-              <TabsTrigger
-                value="settings"
-                className="rounded-none px-3 pb-2.5 text-[0.8125rem] data-active:bg-transparent dark:data-active:bg-transparent"
-              >
-                Settings
-              </TabsTrigger>
+              {(
+                [
+                  { value: 'overview', label: 'Overview' },
+                  {
+                    value: 'artifacts',
+                    label: 'Artifacts',
+                    count: artifacts.length,
+                  },
+                  { value: 'release-notes', label: 'Release Notes' },
+                  { value: 'settings', label: 'Settings' },
+                ] as const
+              ).map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className={cn(
+                    'h-auto min-h-10 flex-1 rounded-none px-3 pt-2.5 pb-2.5 text-[0.8125rem]',
+                    'data-active:bg-transparent dark:data-active:bg-transparent',
+                    'after:bottom-0 after:h-0.5',
+                  )}
+                >
+                  {tab.label}
+                  {'count' in tab && tab.count != null ? (
+                    <span className="ml-1.5 text-muted-foreground tabular-nums">
+                      {tab.count}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             <TabsContent value="overview" className="mt-0 space-y-4 outline-none">

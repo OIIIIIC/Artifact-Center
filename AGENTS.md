@@ -1,146 +1,569 @@
-## 1. Official Best Practices First
+# Artifact Center Product Bible
 
-如果项目规范与技术栈官方最佳实践发生冲突：
-
-1. 先明确说明冲突原因。
-2. 优先采用官方最佳实践。
-3. 在官方最佳实践基础上完成项目定制。
-4. 不得绕过官方 CLI 初始化。
-5. 不得随意修改官方推荐项目结构，除非有充分理由。
+> Version: 1.0
+> Status: Draft
+> Last Updated: 2026-07
 
 ---
 
-## 2. Read Documentation First
+# 1. Vision
 
-开始任何开发之前，必须阅读 docs 目录中的相关文档。
+## Why does Artifact Center exist?
 
-包括但不限于：
+Artifact Center exists to make software artifact management simple, fast, and enjoyable.
 
-- PRD
-- DESIGN
-- DESIGN SYSTEM
-- ARCHITECTURE
+Its goal is not to become another DevOps platform, nor another enterprise management system.
 
-禁止忽略已有规范直接开发。
+Instead, it focuses on a single responsibility:
 
----
+> Help people find, publish, and download the right software artifact with the least amount of effort.
 
-## 3. Design System Is the Source of Truth
+Whether the user is a developer, tester, product manager, or operations engineer, the system should stay out of their way and help them complete their task as quickly as possible.
 
-所有 UI 必须遵循 Design System。
-
-禁止：
-
-- 新增颜色体系
-- 新增按钮风格
-- 新增间距规则
-- 新增字体规范
-
-所有新增设计必须保持一致。
+The best experience is one where users spend their time thinking about their applications, not about how to use the system.
 
 ---
 
-## 4. Consistency Over Creativity
+## Product Vision
 
-优先保证整个产品的一致性。
+Artifact Center aims to become the central hub for software artifacts inside an organization.
 
-不要为了局部页面而破坏整体体验。
+Every application should have a single place where people can:
 
----
+- View the latest version
+- Browse version history
+- Upload new artifacts
+- Download existing artifacts
+- Understand release information
 
-## 5. Keep It Simple
+Everything revolves around the application itself.
 
-避免：
+The platform should feel calm, modern, and focused.
 
-- 过度设计
-- 过早抽象
-- 无意义封装
-- 无实际价值的新功能
-
-优先简单、清晰、可维护。
-
----
-
-## 6. Prefer Composition
-
-优先组合已有能力。
-
-不要复制已有代码。
-
-不要重复实现已有组件。
+It should never feel like a traditional enterprise management system.
 
 ---
 
-## 7. Minimize Dependencies
+# 2. Product Positioning
 
-新增第三方依赖之前：
+## What Artifact Center is
 
-必须说明：
+Artifact Center is an internal software artifact management platform.
 
-- 为什么需要
-- 为什么现有能力不能解决
-- 是否存在维护风险
+It is designed for teams that need to manage build outputs throughout the software lifecycle.
 
-避免引入重量级依赖。
+Supported artifact types include:
 
----
+- Android APK
+- Android AAB
+- Windows EXE
+- ZIP Packages
 
-## 8. Accessibility Matters
+Future versions may support:
 
-所有交互必须考虑：
+- IPA
+- Firmware
+- Docker Images
+- Other distributable artifacts
 
-- Keyboard Navigation
-- Focus State
-- Hover State
-- Screen Reader
-- Color Contrast
-
----
-
-## 9. Dark Mode Is First-class
-
-所有页面必须同时支持：
-
-- Light
-- Dark
-
-禁止只完成 Light Mode。
+The platform focuses on artifact organization, version management, distribution, and traceability.
 
 ---
 
-## 10. Performance by Default
+## What Artifact Center is NOT
 
-默认关注性能。
+Artifact Center is not:
 
-避免：
+- A Dashboard
+- A BI Platform
+- A CI/CD System
+- A Project Management Tool
+- An ERP System
+- An OA Platform
+- A DevOps All-in-One Platform
 
-- 不必要渲染
-- 大对象传递
-- 重复计算
-- 无意义动画
+These responsibilities belong to other systems.
 
----
+Artifact Center solves only one problem exceptionally well:
 
-## 11. Never Start Coding Blindly
+> Managing software artifacts.
 
-如果需求存在歧义：
-
-先提出问题。
-
-不要猜测需求。
-
-不要自行发明产品逻辑。
+Anything that does not help users publish, discover, or download artifacts should be questioned before being added.
 
 ---
 
-## 12. Think Before Implementing
+## Design Principle
 
-任何复杂功能：
+Whenever a new feature is proposed, ask one question first:
 
-先分析。
+> Does this help users manage software artifacts?
 
-再设计。
+If the answer is no, the feature should probably not exist.
 
-最后实现。
+Focus is a product feature.
 
-不要直接开始写代码。
+# 3. Target Users
+
+## Purpose
+
+Define who Artifact Center is designed for.
+
+This document focuses on user responsibilities rather than user personas.
+
+The product should optimize for the work users need to complete, not for demographic profiles.
+
+---
+
+## Primary Users
+
+### Software Developers
+
+Includes:
+
+- Android Developers
+- Windows Developers
+- Backend Developers
+- Embedded Developers
+
+Primary Goals:
+
+- Upload new artifacts
+- Verify upload results
+- Manage historical versions
+- Share download links with others
+
+Typical Workflow:
+
+Develop → Build → Upload → Publish → Share
+
+Success Criteria:
+
+A developer should be able to publish a new artifact within 30 seconds without reading documentation.
+
+---
+
+### QA Engineers
+
+Primary Goals:
+
+- Find the correct version
+- Verify version information
+- Download artifacts
+- Compare different releases
+
+Typical Workflow:
+
+Search → Open Application → Select Version → Download
+
+Success Criteria:
+
+QA engineers should never need to ask developers where an installation package is located.
+
+---
+
+### Product Managers
+
+Primary Goals:
+
+- View release information
+- Confirm latest available version
+- Access installation packages for demonstrations or verification
+
+Typical Workflow:
+
+Search → Open Application → Download Latest
+
+Success Criteria:
+
+Product managers should obtain the correct package without requiring technical knowledge of the build process.
+
+---
+
+### Operations & Release Engineers
+
+Primary Goals:
+
+- Publish stable releases
+- Archive obsolete artifacts
+- Control visibility and distribution
+- Ensure release traceability
+
+Typical Workflow:
+
+Review → Publish → Share → Archive
+
+Success Criteria:
+
+Every published artifact should have clear ownership, history, and lifecycle status.
+
+---
+
+### Platform Administrators
+
+Primary Goals:
+
+- Manage storage
+- Configure permissions
+- Monitor system health
+- Maintain retention policies
+
+Administrators are responsible for the platform itself, not for individual applications.
+
+Administrative functions should remain isolated from everyday workflows.
+
+---
+
+# 4. Core User Journey
+
+## Purpose
+
+Artifact Center is optimized around user journeys rather than feature lists.
+
+Every interface should help users complete one of the following journeys with the least amount of effort.
+
+---
+
+## Journey 1 — Find an Artifact
+
+This is the most common workflow.
+
+Application List
+
+↓
+
+Search Application
+
+↓
+
+Open Application
+
+↓
+
+Select Version
+
+↓
+
+Download Artifact
+
+The entire process should be intuitive enough that users rarely need guidance.
+
+---
+
+## Journey 2 — Publish an Artifact
+
+Application
+
+↓
+
+Upload Artifact
+
+↓
+
+Verify Metadata
+
+↓
+
+Publish
+
+↓
+
+Share
+
+Uploading is an action initiated from an application.
+
+It is not an independent destination.
+
+---
+
+## Journey 3 — Review Release History
+
+Application
+
+↓
+
+Version History
+
+↓
+
+Compare Releases
+
+↓
+
+Read Release Notes
+
+↓
+
+Download Required Version
+
+Users should always understand which version they are viewing and why it exists.
+
+---
+
+## Journey 4 — Share an Artifact
+
+Application
+
+↓
+
+Latest Version
+
+↓
+
+Generate Download Link
+
+↓
+
+Share
+
+Sharing should require minimal effort while maintaining traceability and access control.
+
+---
+
+## Product Principle
+
+Every page in Artifact Center should directly support at least one core journey.
+
+If a feature cannot be mapped to one of these journeys, its necessity should be questioned before implementation.
+
+# 5. Product Object Model
+
+## Purpose
+
+Define the core objects of Artifact Center.
+
+Every page, interaction, and navigation structure should revolve around these objects.
+
+Actions are not objects.
+
+Statistics are not objects.
+
+Objects represent long-lived entities within the product.
+
+---
+
+## Core Objects
+
+Artifact Center contains only four first-class objects.
+
+Application
+
+↓
+
+Artifact
+
+↓
+
+Release
+
+↓
+
+User
+
+Everything else exists to serve these objects.
+
+---
+
+## Application
+
+Application is the top-level object.
+
+It represents a software product or service.
+
+Examples:
+
+- Mobile Banking
+- CRM Desktop
+- OTA Manager
+- POS Terminal
+
+Every artifact belongs to exactly one application.
+
+An application is the entry point of almost every user journey.
+
+---
+
+## Artifact
+
+Artifact is the core resource managed by the platform.
+
+Examples:
+
+- APK
+- AAB
+- EXE
+- ZIP
+
+Future support:
+
+- IPA
+- Firmware
+- Docker Image
+
+Artifacts are versioned and immutable.
+
+Once published, an artifact represents a specific build output.
+
+---
+
+## Release
+
+A Release is a meaningful publication of one or more artifacts.
+
+It provides human-readable context.
+
+A Release may contain:
+
+- Version
+- Release Notes
+- Status
+- Distribution Channel
+
+A Release helps users understand why a version exists.
+
+---
+
+## User
+
+Users interact with applications and artifacts.
+
+Users do not define product structure.
+
+Instead, permissions determine what users can view or modify.
+
+---
+
+## Relationships
+
+Application
+
+└── Artifact
+
+        └── Release
+
+User
+
+└── Upload
+
+└── Download
+
+└── Publish
+
+└── Archive
+
+Users perform actions.
+
+Applications own artifacts.
+
+Artifacts belong to releases.
+
+---
+
+## Product Rule
+
+Every new feature should belong to an existing object.
+
+If a feature cannot be associated with an object,
+
+it probably does not belong in Artifact Center.
+
+# 6. Navigation Principles
+
+## Purpose
+
+Navigation should represent product objects.
+
+Navigation should never represent actions.
+
+---
+
+## Object Navigation
+
+Good
+
+Applications
+
+Settings
+
+Bad
+
+Upload
+
+Download
+
+Release
+
+Dashboard
+
+Statistics
+
+Logs
+
+Reports
+
+---
+
+## Why?
+
+Users think in terms of applications.
+
+They do not think in terms of upload pages.
+
+For example:
+
+Correct:
+
+"I need to upload a new version of Mobile Banking."
+
+Incorrect:
+
+"I need to enter the Upload module."
+
+Upload is an action.
+
+Application is the object.
+
+---
+
+## Primary Navigation
+
+Applications
+
+Settings
+
+Development Environment (optional)
+
+Foundation
+
+Design System
+
+Layout
+
+Playground
+
+---
+
+## Secondary Navigation
+
+Tabs inside Application Detail.
+
+Overview
+
+Artifacts
+
+Release Notes
+
+Settings
+
+Secondary navigation should always belong to a parent object.
+
+---
+
+## Navigation Rule
+
+Every page should answer one question:
+
+"What object am I currently looking at?"
+
+If the answer is unclear,
+
+the navigation is probably wrong.

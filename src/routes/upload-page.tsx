@@ -13,6 +13,9 @@ import { useUploadFlow } from '@/features/upload/use-upload-flow'
 import { cn } from '@/lib/utils'
 import { STEP_LABELS } from '@/types/upload'
 
+/** Shared upload column — same width for every step + footer actions */
+const UPLOAD_COL = 'mx-auto w-full max-w-4xl'
+
 /**
  * Upload Artifact — multi-step flow (Vercel Deploy / GitHub Release style).
  * All processing is mocked.
@@ -27,14 +30,25 @@ export function UploadPage() {
         showSearch={false}
       >
         <PageContainer className="pb-20 pt-10">
-          <StepSuccess
-            application={flow.application}
-            version={flow.version.version}
-            onAnother={flow.resetAll}
-          />
+          <div className={UPLOAD_COL}>
+            <StepSuccess
+              application={flow.application}
+              version={flow.version.version}
+              onAnother={flow.resetAll}
+            />
+          </div>
         </PageContainer>
       </AppLayout>
     )
+  }
+
+  const stepHint: Record<1 | 2 | 3 | 4, string> = {
+    1: 'Choose where this build belongs.',
+    2: flow.application
+      ? `Drop the package for ${flow.application.name}.`
+      : 'Drop the package.',
+    3: 'Confirm version metadata. Notes and channel are yours to edit.',
+    4: 'Review once, then publish.',
   }
 
   return (
@@ -43,40 +57,36 @@ export function UploadPage() {
       showSearch={false}
     >
       <PageContainer className="pb-28 pt-8 sm:pt-10">
-        <div className="mx-auto max-w-2xl space-y-8 sm:space-y-10">
-          <header className="space-y-1.5 text-center sm:text-left">
+        {/*
+          Single column shell: header / steps / body share identical width.
+          Step components must stay w-full (no nested max-w-*) to avoid jump.
+        */}
+        <div className={cn(UPLOAD_COL, 'space-y-7 sm:space-y-8')}>
+          <header className="space-y-1">
             <h1 className="text-[1.75rem] font-semibold tracking-tight text-foreground sm:text-[1.875rem]">
               Upload Artifact
             </h1>
             <p className="text-[0.875rem] text-muted-foreground">
-              {STEP_LABELS[flow.step]} · 一步只做一件事
+              Step {flow.step} of 4 · {STEP_LABELS[flow.step]}
             </p>
           </header>
 
-          <StepIndicator step={flow.step} />
+          <StepIndicator step={flow.step} className="w-full" />
 
-          <div className="min-h-[20rem]">
-            {flow.step === 1 ? (
-              <div className="space-y-3">
-                <p className="text-[0.8125rem] text-muted-foreground">
-                  Choose where this build belongs.
-                </p>
+          <div className="w-full space-y-3">
+            <p className="text-[0.8125rem] text-muted-foreground">
+              {stepHint[flow.step]}
+            </p>
+
+            <div className="w-full">
+              {flow.step === 1 ? (
                 <ApplicationPicker
                   value={flow.applicationId}
                   onChange={flow.selectApplication}
                 />
-              </div>
-            ) : null}
+              ) : null}
 
-            {flow.step === 2 ? (
-              <div className="space-y-3">
-                <p className="text-[0.8125rem] text-muted-foreground">
-                  Drop the package for{' '}
-                  <span className="font-medium text-foreground">
-                    {flow.application?.name}
-                  </span>
-                  .
-                </p>
+              {flow.step === 2 ? (
                 <FileDropzone
                   application={flow.application}
                   phase={flow.phase}
@@ -85,27 +95,17 @@ export function UploadPage() {
                   onFile={(file) => flow.processFile(file, flow.application)}
                   onClear={flow.resetFile}
                 />
-              </div>
-            ) : null}
+              ) : null}
 
-            {flow.step === 3 ? (
-              <div className="space-y-3">
-                <p className="text-[0.8125rem] text-muted-foreground">
-                  Confirm version metadata. Notes and channel are yours to edit.
-                </p>
+              {flow.step === 3 ? (
                 <StepVersion
                   version={flow.version}
                   onChange={flow.updateVersion}
                   onChannel={flow.setChannel}
                 />
-              </div>
-            ) : null}
+              ) : null}
 
-            {flow.step === 4 && flow.application && flow.parsed ? (
-              <div className="space-y-3">
-                <p className="text-[0.8125rem] text-muted-foreground">
-                  Review once, then publish.
-                </p>
+              {flow.step === 4 && flow.application && flow.parsed ? (
                 <StepReview
                   application={flow.application}
                   parsed={flow.parsed}
@@ -113,26 +113,31 @@ export function UploadPage() {
                   publishError={flow.publishError}
                   draftSaved={flow.draftSaved}
                 />
-              </div>
-            ) : null}
+              ) : null}
+            </div>
           </div>
         </div>
 
-        {/* Sticky footer actions */}
+        {/*
+          Footer spans the main column only (not under sidebar), then uses the
+          same PageContainer padding + UPLOAD_COL so Cancel/Next line up with content.
+        */}
         <div
           className={cn(
             'fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-background/90 backdrop-blur-md',
             'dark:border-border',
+            'lg:left-[var(--sidebar-width)]',
           )}
         >
-          <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-[var(--page-padding-x)] py-3">
-            <div className="flex items-center gap-2">
+          <div className="mx-auto w-full max-w-[var(--content-max-width)] px-[var(--page-padding-x)]">
+            <div
+              className={cn(UPLOAD_COL, 'flex items-center justify-end gap-2.5 py-3.5')}
+            >
               {flow.step > 1 ? (
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 text-muted-foreground"
+                  variant="outline"
+                  className="h-10 min-w-[6.5rem] gap-1.5 rounded-lg border-0 bg-muted/40 text-muted-foreground ring-1 ring-border/60 hover:text-foreground"
                   onClick={flow.goBack}
                   disabled={flow.publishing}
                 >
@@ -142,23 +147,19 @@ export function UploadPage() {
               ) : (
                 <Button
                   asChild
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
+                  variant="outline"
+                  className="h-10 min-w-[6.5rem] rounded-lg border-0 bg-muted/40 text-muted-foreground ring-1 ring-border/60 hover:text-foreground"
                 >
                   <Link to="/">Cancel</Link>
                 </Button>
               )}
-            </div>
 
-            <div className="flex items-center gap-2">
               {flow.step === 4 ? (
                 <>
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    className="rounded-lg border-0 bg-muted/40 ring-1 ring-border/60"
+                    className="h-10 min-w-[6.5rem] rounded-lg border-0 bg-muted/40 ring-1 ring-border/60"
                     disabled={flow.publishing}
                     onClick={() => void flow.saveDraft()}
                   >
@@ -166,8 +167,7 @@ export function UploadPage() {
                   </Button>
                   <Button
                     type="button"
-                    size="sm"
-                    className="rounded-lg"
+                    className="h-10 min-w-[6.5rem] rounded-lg"
                     disabled={flow.publishing}
                     onClick={() => void flow.publish()}
                   >
@@ -177,8 +177,7 @@ export function UploadPage() {
               ) : (
                 <Button
                   type="button"
-                  size="sm"
-                  className="gap-1.5 rounded-lg"
+                  className="h-10 min-w-[6.5rem] gap-1.5 rounded-lg"
                   disabled={!flow.canNext}
                   onClick={flow.goNext}
                 >

@@ -13,6 +13,8 @@
 
   html {
     @apply font-sans antialiased;
+    /* Reserve scrollbar gutter so layout width is stable when overflow toggles */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -21,6 +23,15 @@
 
   #root {
     @apply min-h-dvh;
+  }
+
+  /**
+   * Main content column only.
+   * Do NOT put scrollbar-gutter on the sidebar — short nav lists would
+   * reserve a useless track and clip the active item background.
+   */
+  [data-slot='content-area'] {
+    scrollbar-gutter: stable;
   }
 
   :focus-visible {

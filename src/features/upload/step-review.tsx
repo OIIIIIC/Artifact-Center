@@ -39,7 +39,7 @@ export function StepReview({
   draftSaved,
 }: StepReviewProps) {
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="w-full space-y-4">
       {publishError === 'duplicate_version' ? (
         <div
           className={cn(

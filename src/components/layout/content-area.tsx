@@ -16,7 +16,8 @@ export function ContentArea({ children, className }: ContentAreaProps) {
     <div
       data-slot="content-area"
       className={cn(
-        'min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden',
+        // scrollbar-gutter: reserve track so content does not shift L/R when bar appears
+        'min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]',
         className,
       )}
     >

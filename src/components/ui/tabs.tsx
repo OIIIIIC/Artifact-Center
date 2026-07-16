@@ -25,7 +25,8 @@ const tabsListVariants = cva(
     variants: {
       variant: {
         default: 'bg-muted',
-        line: 'gap-1 bg-transparent',
+        // Line tabs need auto height + visible overflow so the active underline is not clipped
+        line: 'h-auto gap-0 overflow-visible bg-transparent group-data-horizontal/tabs:h-auto',
       },
     },
     defaultVariants: {
@@ -62,6 +63,8 @@ function TabsTrigger({
         'group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent',
         'data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground',
         'after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100',
+        // Keep underline inside the trigger for line variant (avoids clip + phantom scrollbar)
+        'group-data-[variant=line]/tabs-list:h-auto group-data-[variant=line]/tabs-list:after:bottom-0',
         className,
       )}
       {...props}

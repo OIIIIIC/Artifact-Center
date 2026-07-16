@@ -169,7 +169,7 @@ export function FileDropzone({
         ) : null}
 
         {phase === 'ready' && parsed ? (
-          <div className="flex w-full max-w-md flex-col items-stretch gap-3 text-left">
+          <div className="flex w-full max-w-xl flex-col items-stretch gap-3 text-left sm:mx-0">
             <div className="flex items-start gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-background ring-1 ring-border/70">
                 <FileArchive className="size-4 text-muted-foreground" strokeWidth={1.5} />

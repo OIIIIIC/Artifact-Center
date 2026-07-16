@@ -1,9 +1,9 @@
 import { Pin, Search, Clock } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 
-import { MOCK_APPLICATIONS } from '@/mocks/applications'
-import { PINNED_APP_IDS, RECENT_APP_IDS } from '@/features/upload/upload-meta'
 import { PLATFORM_ICON, PLATFORM_LABEL } from '@/features/applications/platform-meta'
+import { PINNED_APP_IDS, RECENT_APP_IDS } from '@/features/upload/upload-meta'
+import { MOCK_APPLICATIONS } from '@/mocks/applications'
 import { cn } from '@/lib/utils'
 import type { Application } from '@/types/application'
 
@@ -41,6 +41,7 @@ function AppRow({
           : 'hover:bg-muted/40',
       )}
       aria-pressed={selected}
+      aria-label={selected ? `${app.name}, selected` : app.name}
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-[11px] font-semibold text-muted-foreground">
         {initials}
@@ -49,17 +50,23 @@ function AppRow({
         <span className="block truncate text-[0.875rem] font-medium text-foreground">
           {app.name}
         </span>
-        <span className="mt-0.5 flex items-center gap-1.5 text-[0.75rem] text-muted-foreground">
-          <Icon className="size-3 opacity-70" strokeWidth={1.75} />
-          {PLATFORM_LABEL[app.platform]}
-          <span className="text-muted-foreground/40">·</span>
-          <span className="truncate font-mono text-[0.6875rem]">{app.packageName}</span>
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[0.75rem] text-muted-foreground">
+          <Icon className="size-3 shrink-0 opacity-70" strokeWidth={1.75} />
+          <span className="shrink-0">{PLATFORM_LABEL[app.platform]}</span>
+          <span className="text-muted-foreground/40" aria-hidden>
+            ·
+          </span>
+          <span
+            className="min-w-0 truncate font-mono text-[0.6875rem]"
+            title={app.packageName}
+          >
+            {app.packageName}
+          </span>
         </span>
       </span>
+      {/* Status via ring/bg only — no "Selected" label noise */}
       {selected ? (
-        <span className="shrink-0 text-[0.6875rem] font-medium text-foreground">
-          Selected
-        </span>
+        <span className="size-1.5 shrink-0 rounded-full bg-foreground/70" aria-hidden />
       ) : null}
     </button>
   )
@@ -75,8 +82,8 @@ function Section({
   children: ReactNode
 }) {
   return (
-    <section className="space-y-2">
-      <h3 className="flex items-center gap-1.5 px-1 text-[0.6875rem] font-medium tracking-wide text-muted-foreground/70 uppercase">
+    <section className="space-y-1.5">
+      <h3 className="flex items-center gap-1.5 px-2.5 text-[0.6875rem] font-medium tracking-wide text-muted-foreground/70 uppercase">
         <Icon className="size-3 opacity-70" strokeWidth={1.75} />
         {title}
       </h3>
@@ -86,7 +93,8 @@ function Section({
 }
 
 /**
- * Modern application selector — not a native <select>.
+ * Modern application selector — search + list in one surface.
+ * Pinned / Recent / All are de-duplicated (no repeated rows).
  */
 export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
   const [query, setQuery] = useState('')
@@ -110,26 +118,29 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
     [filtered],
   )
 
-  const recent = useMemo(
-    () =>
-      RECENT_APP_IDS.map((id) => filtered.find((a) => a.id === id)).filter(
-        Boolean,
-      ) as Application[],
-    [filtered],
-  )
+  /** Recent excludes anything already in Pinned */
+  const recent = useMemo(() => {
+    const pinnedSet = new Set(PINNED_APP_IDS)
+    return RECENT_APP_IDS.map((id) => filtered.find((a) => a.id === id)).filter(
+      (a): a is Application => Boolean(a) && !pinnedSet.has(a!.id),
+    )
+  }, [filtered])
 
+  /** All excludes Pinned + Recent when browsing grouped */
   const rest = useMemo(() => {
     const hide = new Set([...PINNED_APP_IDS, ...RECENT_APP_IDS])
-    return filtered.filter((a) => !hide.has(a.id) || query.trim())
-  }, [filtered, query])
+    return filtered.filter((a) => !hide.has(a.id))
+  }, [filtered])
 
   const showGrouped = !query.trim()
 
   return (
-    <div className="space-y-4">
-      <div className="relative">
+    <div
+      className={cn('overflow-hidden rounded-2xl ring-1 ring-border/60 dark:ring-border')}
+    >
+      <div className="relative border-b border-border/50">
         <Search
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
           strokeWidth={1.75}
         />
         <input
@@ -138,18 +149,16 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
           placeholder="Search applications…"
           aria-label="Search applications"
           className={cn(
-            'h-11 w-full rounded-xl bg-muted/35 pr-3 pl-10 text-[0.875rem] outline-none',
-            'ring-1 ring-border/60 placeholder:text-muted-foreground/70',
-            'transition-[box-shadow,background-color] duration-[var(--duration-hover)]',
-            'focus-visible:bg-card focus-visible:ring-[3px] focus-visible:ring-ring/30',
+            'h-12 w-full bg-transparent pr-3 pl-10 text-[0.875rem] outline-none',
+            'placeholder:text-muted-foreground/70',
+            'focus-visible:bg-muted/20',
           )}
         />
       </div>
 
       <div
         className={cn(
-          'max-h-[min(28rem,55vh)] space-y-5 overflow-y-auto rounded-2xl p-2',
-          'ring-1 ring-border/60 dark:ring-border',
+          'max-h-[min(32rem,58vh)] space-y-5 overflow-y-auto p-2 [scrollbar-gutter:stable]',
         )}
       >
         {filtered.length === 0 ? (
@@ -182,16 +191,18 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
                 ))}
               </Section>
             ) : null}
-            <Section title="All applications" icon={Search}>
-              {(rest.length ? rest : filtered).map((app) => (
-                <AppRow
-                  key={app.id}
-                  app={app}
-                  selected={value === app.id}
-                  onSelect={() => onChange(app.id)}
-                />
-              ))}
-            </Section>
+            {rest.length > 0 ? (
+              <Section title="All applications" icon={Search}>
+                {rest.map((app) => (
+                  <AppRow
+                    key={app.id}
+                    app={app}
+                    selected={value === app.id}
+                    onSelect={() => onChange(app.id)}
+                  />
+                ))}
+              </Section>
+            ) : null}
           </>
         ) : (
           <div className="space-y-0.5">

@@ -50,7 +50,7 @@ const inputClass = cn(
  */
 export function StepVersion({ version, onChange, onChannel }: StepVersionProps) {
   return (
-    <div className="mx-auto max-w-lg space-y-5">
+    <div className="w-full space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Version" hint="Auto-detected">
           <input

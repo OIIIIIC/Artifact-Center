@@ -12,7 +12,7 @@ interface StepSuccessProps {
 
 export function StepSuccess({ application, version, onAnother }: StepSuccessProps) {
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center py-10 text-center sm:py-14">
+    <div className="flex w-full flex-col items-center py-10 text-center sm:py-14">
       <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-muted/40 ring-1 ring-border/60">
         <CheckCircle2 className="size-7 text-foreground" strokeWidth={1.5} />
       </div>

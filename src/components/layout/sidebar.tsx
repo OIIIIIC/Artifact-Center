@@ -41,7 +41,10 @@ export function Sidebar({
         {logo}
       </div>
 
-      <nav className="flex-1 space-y-8 overflow-y-auto px-3 pb-4 pt-2" aria-label="Main">
+      <nav
+        className="min-h-0 flex-1 space-y-8 overflow-x-hidden overflow-y-auto px-3 pt-2 pb-6"
+        aria-label="Main"
+      >
         {groups.map((group) => (
           <SidebarGroup key={group.id} group={group} />
         ))}
