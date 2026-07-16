@@ -124,9 +124,11 @@ export function ApplicationDetailHeader({
           <Download className="size-3.5" strokeWidth={1.75} />
           Download Latest
         </Button>
-        <Button type="button" size="sm" className="h-9 gap-1.5 rounded-lg">
-          <Upload className="size-3.5" strokeWidth={1.75} />
-          Upload Artifact
+        <Button asChild size="sm" className="h-9 gap-1.5 rounded-lg">
+          <Link to={`/upload?app=${application.id}`}>
+            <Upload className="size-3.5" strokeWidth={1.75} />
+            Upload Artifact
+          </Link>
         </Button>
         <Button
           asChild
