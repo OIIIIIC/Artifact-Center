@@ -21,20 +21,31 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center rounded-xl border border-border bg-surface px-6 py-16 text-center',
+        'flex flex-col items-center justify-center rounded-2xl border border-dashed border-border',
+        'bg-transparent px-8 py-20 text-center',
         className,
       )}
     >
       {Icon ? (
-        <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-surface-muted text-muted-foreground">
-          <Icon className="size-6" strokeWidth={1.5} aria-hidden />
+        <div
+          className={cn(
+            'mb-5 flex size-12 items-center justify-center rounded-2xl',
+            'border border-border bg-surface-muted/60 text-muted-foreground',
+            'dark:bg-surface-muted/40',
+          )}
+        >
+          <Icon className="size-5" strokeWidth={1.5} aria-hidden />
         </div>
       ) : null}
-      <h3 className="text-h3 text-foreground">{title}</h3>
+      <h3 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
+        {title}
+      </h3>
       {description ? (
-        <p className="mt-2 max-w-sm text-caption text-muted-foreground">{description}</p>
+        <p className="mt-2 max-w-xs text-[0.8125rem] leading-relaxed text-muted-foreground">
+          {description}
+        </p>
       ) : null}
-      {action ? <div className="mt-6">{action}</div> : null}
+      {action ? <div className="mt-7">{action}</div> : null}
     </div>
   )
 }
