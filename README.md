@@ -10,8 +10,9 @@
 
 - 文档规范：`docs/`
 - 前端已初始化：Vite + React + TypeScript + Tailwind v4 + shadcn/ui
-- **允许页面**：`/design-system`（Token/组件）、`/layout`（布局体系）
-- **禁止**：业务页面（Upload / Dashboard / Login 等）
+- **首页**：`/` Applications（应用目录，非 Dashboard）
+- **Foundation**：`/design-system`、`/layout`
+- **禁止**：Dashboard / 统计大盘 / Login 等未规划页
 
 ## 规范（必读）
 

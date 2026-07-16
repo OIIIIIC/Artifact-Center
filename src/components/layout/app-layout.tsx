@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 import { ContentArea } from './content-area'
-import { getFoundationNavGroups } from './foundation-nav'
+import { getProductNavGroups } from './product-nav'
 import { Sidebar, SidebarBrand } from './sidebar'
 import { Topbar } from './topbar'
 import type { BreadcrumbItem, SidebarNavGroup } from './types'
@@ -37,17 +37,17 @@ export function AppLayout({
   sidebarLogo,
   sidebarFooter,
   breadcrumbs,
-  showSearch = true,
+  showSearch = false,
   onSearchClick,
   hideSidebar = false,
   contentClassName,
 }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { pathname } = useLocation()
-  const resolvedGroups = navGroups ?? getFoundationNavGroups(pathname)
+  const resolvedGroups = navGroups ?? getProductNavGroups(pathname)
 
   const logo = sidebarLogo ?? (
-    <SidebarBrand title="Artifact Center" subtitle="Foundation" href="/layout" />
+    <SidebarBrand title="Artifact Center" subtitle="Internal" href="/" />
   )
 
   const sidebar = !hideSidebar ? (

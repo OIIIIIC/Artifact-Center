@@ -45,8 +45,8 @@ export const radiusTokens = {
 export const shadowTokens = ['none', 'xs', 'sm', 'md'] as const
 
 export const motionTokens = {
-  hover: 100,
-  page: 150,
+  hover: 160,
+  page: 160,
   modal: 180,
 } as const
 

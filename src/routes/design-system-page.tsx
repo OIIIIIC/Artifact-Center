@@ -268,29 +268,34 @@ export function DesignSystemPage() {
         <Section
           id={anchorId('Badge')}
           title="Badge"
-          description="中性优先；状态用浅底语义色。同行徽章 ≤ 3。"
+          description="Quiet chips only. Application lifecycle uses unified StatusBadge — no chroma."
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge>Default</Badge>
-            <Badge variant="secondary">Secondary</Badge>
-            <Badge variant="outline">Outline</Badge>
-            <Badge variant="destructive">Destructive</Badge>
-            <StatusBadge status="success">success</StatusBadge>
-            <StatusBadge status="warning">warning</StatusBadge>
-            <StatusBadge status="danger">danger</StatusBadge>
-            <StatusBadge status="info">info</StatusBadge>
-            <StatusBadge status="muted">muted</StatusBadge>
-            <Avatar size="sm">
-              <AvatarFallback>AC</AvatarFallback>
-            </Avatar>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Tooltip
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Calm, professional tooltip</TooltipContent>
-            </Tooltip>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>Default</Badge>
+              <Badge variant="secondary">Secondary</Badge>
+              <Badge variant="outline">Outline</Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-caption text-muted-foreground mr-1">Application</span>
+              <StatusBadge status="new">NEW</StatusBadge>
+              <StatusBadge status="beta">Beta</StatusBadge>
+              <StatusBadge status="deprecated">Deprecated</StatusBadge>
+              <StatusBadge status="archived">Archived</StatusBadge>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Avatar size="sm">
+                <AvatarFallback>AC</AvatarFallback>
+              </Avatar>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Tooltip
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Calm, professional tooltip</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </Section>
 
