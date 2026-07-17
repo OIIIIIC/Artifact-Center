@@ -28,12 +28,15 @@ export const useShareStore = create<ShareState>()(
           throw new Error('artifactId required for artifact share')
         }
 
-        /** Token embeds app/version/expiry — works in any browser without shared DB. */
+        const createdBy = input.createdBy?.trim() || 'Demo User'
+
+        /** Token embeds app/version/expiry/sharer — works in any browser without shared DB. */
         const token = encodeShareToken({
           applicationId: input.applicationId,
           mode: input.mode,
           artifactId: input.artifactId,
           expiresAt,
+          createdBy,
         })
 
         const link: ShareLink = {
@@ -44,7 +47,7 @@ export const useShareStore = create<ShareState>()(
           artifactId: input.mode === 'artifact' ? input.artifactId : undefined,
           createdAt: new Date(now).toISOString(),
           expiresAt,
-          createdBy: input.createdBy?.trim() || 'Demo User',
+          createdBy,
         }
 
         set((s) => ({ links: [link, ...s.links] }))

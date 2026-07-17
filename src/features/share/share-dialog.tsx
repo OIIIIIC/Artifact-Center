@@ -63,7 +63,8 @@ export function ShareDialog({
         mode,
         artifactId: mode === 'artifact' ? artifact!.id : undefined,
         expiresInDays: expiry === 0 ? 0 : expiry,
-        createdBy: user?.name,
+        /** Prefer full name; falls back in store */
+        createdBy: user?.name || user?.email,
       })
       const url = shareUrlForToken(link.token)
       await navigator.clipboard.writeText(url)

@@ -14,7 +14,7 @@ import { getArtifactChannel } from '@/types/artifact'
 
 /**
  * Public share landing — `/d/:token`
- * Show what will be downloaded; user must click to download (no auto-start).
+ * Show what will be downloaded + who shared it; user must click to download.
  */
 export function ShareDownloadPage() {
   const { token = '' } = useParams()
@@ -22,7 +22,6 @@ export function ShareDownloadPage() {
   void i18n.language
   const { download, isBusy } = useDownloadArtifact()
 
-  // Re-resolve after zustand persist rehydrates
   const [tick, setTick] = useState(0)
   useEffect(() => {
     const id = window.setTimeout(() => setTick((n) => n + 1), 50)
@@ -38,7 +37,9 @@ export function ShareDownloadPage() {
         ? t('share.expiredTitle')
         : result.reason === 'artifact_missing'
           ? t('share.noArtifactTitle')
-          : t('share.invalidTitle')
+          : result.reason === 'app_missing'
+            ? t('share.invalidTitle')
+            : t('share.invalidTitle')
     const desc =
       result.reason === 'expired'
         ? t('share.expiredDesc')
@@ -58,6 +59,20 @@ export function ShareDownloadPage() {
           <p className="mt-2 text-[0.875rem] leading-relaxed text-muted-foreground">
             {desc}
           </p>
+          {result.applicationName ? (
+            <p className="mt-2 text-[0.8125rem] text-muted-foreground">
+              {t('share.aboutApp', { name: result.applicationName })}
+            </p>
+          ) : null}
+          {result.sharedBy ? (
+            <p className="mt-4 text-[0.875rem] text-foreground">
+              {t('share.contactSharer', { name: result.sharedBy })}
+            </p>
+          ) : (
+            <p className="mt-4 text-[0.8125rem] text-muted-foreground">
+              {t('share.contactUnknown')}
+            </p>
+          )}
           <Button asChild size="lg" className="mt-8">
             <Link to="/login">{t('share.goLogin')}</Link>
           </Button>
@@ -66,7 +81,7 @@ export function ShareDownloadPage() {
     )
   }
 
-  const { application, artifact, link } = result
+  const { application, artifact, link, sharedBy } = result
   const PlatformIcon = PLATFORM_ICON[artifact.platform]
   const channel = getArtifactChannel(artifact)
 
@@ -82,6 +97,11 @@ export function ShareDownloadPage() {
         <p className="mt-1 text-[0.875rem] text-muted-foreground">
           {link.mode === 'latest' ? t('share.landingLatest') : t('share.landingPinned')}
         </p>
+        {sharedBy ? (
+          <p className="mt-2 text-[0.8125rem] text-muted-foreground">
+            {t('share.sharedByLine', { name: sharedBy })}
+          </p>
+        ) : null}
 
         <div
           className={cn(
@@ -144,6 +164,14 @@ export function ShareDownloadPage() {
                 </time>
               </dd>
             </div>
+            {sharedBy ? (
+              <div className="col-span-2">
+                <dt className="text-[0.6875rem] text-muted-foreground/80 uppercase">
+                  {t('share.metaSharedBy')}
+                </dt>
+                <dd className="mt-0.5 text-foreground">{sharedBy}</dd>
+              </div>
+            ) : null}
           </dl>
         </div>
 

@@ -16,6 +16,8 @@ export type SharePayloadV1 = {
   i?: string
   /** expiresAt as unix ms */
   e?: number
+  /** shared by (display name) — so recipients know who to contact */
+  b?: string
 }
 
 export function encodeShareToken(input: {
@@ -23,6 +25,7 @@ export function encodeShareToken(input: {
   mode: ShareMode
   artifactId?: string
   expiresAt: string | null
+  createdBy?: string
 }): string {
   const payload: SharePayloadV1 = {
     v: 1,
@@ -35,9 +38,10 @@ export function encodeShareToken(input: {
   if (input.expiresAt) {
     payload.e = new Date(input.expiresAt).getTime()
   }
+  const by = input.createdBy?.trim()
+  if (by) payload.b = by.slice(0, 64)
 
   const json = JSON.stringify(payload)
-  // UTF-8 safe base64url
   const b64 = btoa(unescape(encodeURIComponent(json)))
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
