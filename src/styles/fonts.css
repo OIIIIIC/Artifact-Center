@@ -1,0 +1,88 @@
+/**
+ * Product fonts
+ * - Latin / English: JetBrains Mono (first in stack → preferred for Latin glyphs)
+ * - Chinese: Alibaba PuHuiTi (covers CJK when Mono has no glyph)
+ */
+
+/* ——— Alibaba PuHuiTi 2 ——— */
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  src: url('/fonts/alibaba-puhuiti/AlibabaPuHuiTi-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  src: url('/fonts/alibaba-puhuiti/AlibabaPuHuiTi-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  src: url('/fonts/alibaba-puhuiti/AlibabaPuHuiTi-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  src: url('/fonts/alibaba-puhuiti/AlibabaPuHuiTi-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Map common bold request (800+) to Bold file */
+@font-face {
+  font-family: 'Alibaba PuHuiTi';
+  src: url('/fonts/alibaba-puhuiti/AlibabaPuHuiTi-Bold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ——— JetBrains Mono (NFM) ——— */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono/JetBrainsMono-Thin.ttf') format('truetype');
+  font-weight: 100 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono/JetBrainsMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono/JetBrainsMono-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono/JetBrainsMono-SemiBold.ttf') format('truetype');
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono/JetBrainsMono-SemiBoldItalic.ttf') format('truetype');
+  font-weight: 500 700;
+  font-style: italic;
+  font-display: swap;
+}

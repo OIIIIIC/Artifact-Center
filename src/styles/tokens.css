@@ -47,9 +47,16 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* ——— Typography ——— */
-  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-sans);
-  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  /*
+   * English → JetBrains Mono (first font that has Latin glyphs)
+   * Chinese → Alibaba PuHuiTi (CJK fallback when Mono has no glyph)
+   */
+  --font-sans: 'JetBrains Mono', 'Alibaba PuHuiTi', ui-sans-serif, system-ui, sans-serif;
+  --font-heading:
+    'JetBrains Mono', 'Alibaba PuHuiTi', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono', 'Alibaba PuHuiTi', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
+    monospace;
 
   --text-display: 2rem;
   --text-display--line-height: 1.2;
