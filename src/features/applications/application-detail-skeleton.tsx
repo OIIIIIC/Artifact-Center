@@ -14,8 +14,9 @@ export function ApplicationDetailSkeleton({ className }: { className?: string })
           </div>
         </div>
         <div className="flex gap-2">
-          <Skeleton className="h-9 w-32 rounded-lg" />
-          <Skeleton className="h-9 w-36 rounded-lg" />
+          {/* Match detail header buttons: default h-9 + primary */}
+          <Skeleton className="h-9 w-28 rounded-lg" />
+          <Skeleton className="h-9 w-28 rounded-lg" />
         </div>
       </div>
 

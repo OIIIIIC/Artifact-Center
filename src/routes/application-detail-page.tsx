@@ -102,7 +102,7 @@ export function ApplicationDetailPage() {
                   key={tab.value}
                   value={tab.value}
                   className={cn(
-                    'h-auto min-h-10 flex-1 rounded-none px-3 pt-2.5 pb-2.5 text-[0.8125rem]',
+                    'h-auto min-h-10 flex-none rounded-none px-3.5 pt-2.5 pb-2.5 text-[0.8125rem]',
                     'data-active:bg-transparent dark:data-active:bg-transparent',
                     'after:bottom-0 after:h-0.5',
                   )}
@@ -126,7 +126,10 @@ export function ApplicationDetailPage() {
                   {t('detail.recentVersionsHint')}
                 </p>
               </div>
-              <OverviewRecentVersions artifacts={recentVersions} />
+              <OverviewRecentVersions
+                artifacts={recentVersions}
+                applicationId={application.id}
+              />
             </TabsContent>
 
             <TabsContent value="artifacts" className="mt-0 space-y-4 outline-none">
@@ -138,11 +141,11 @@ export function ApplicationDetailPage() {
                   {t('detail.artifactsHint')}
                 </p>
               </div>
-              <ArtifactsTable artifacts={artifacts} />
+              <ArtifactsTable artifacts={artifacts} applicationId={application.id} />
             </TabsContent>
 
             <TabsContent value="release-notes" className="mt-0 outline-none">
-              <ReleaseNotesPanel artifacts={artifacts} />
+              <ReleaseNotesPanel artifacts={artifacts} applicationId={application.id} />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-0 outline-none">

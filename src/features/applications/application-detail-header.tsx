@@ -196,60 +196,61 @@ export function ApplicationDetailHeader({
 
       <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end lg:pt-1">
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={downloading || !hasVersion}
-                className={cn(
-                  'h-9 gap-1.5 rounded-lg border-0 bg-muted/40 text-foreground ring-1 ring-border/60',
-                  'hover:bg-muted/55',
-                  'disabled:opacity-50',
-                )}
-                onClick={() => {
-                  const filename =
-                    latest?.filename ??
-                    `${application.packageName.split('.').pop() ?? 'app'}-${latestVersion}.${extFor(application.platform)}`
-                  void download({
-                    id: latestKey,
-                    filename,
-                    version: latestVersion,
-                    sizeBytes: latest?.sizeBytes,
-                  })
-                }}
-              >
-                {downloading ? (
-                  <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
-                ) : (
-                  <Download className="size-3.5" strokeWidth={1.75} />
-                )}
-                <span className="font-medium">{downloadLabel}</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-xs">
-              {downloadTooltip}
-            </TooltipContent>
-          </Tooltip>
-          <Button asChild size="sm" className="h-9 gap-1.5 rounded-lg">
+          {/* Download only when a version exists — avoids a dead primary-looking control */}
+          {hasVersion ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={downloading}
+                  className={cn(
+                    'border-0 bg-muted/40 text-foreground ring-1 ring-border/60',
+                    'hover:bg-muted/55',
+                    'disabled:opacity-50',
+                  )}
+                  onClick={() => {
+                    const filename =
+                      latest?.filename ??
+                      `${application.packageName.split('.').pop() ?? 'app'}-${latestVersion}.${extFor(application.platform)}`
+                    void download({
+                      id: latestKey,
+                      filename,
+                      version: latestVersion,
+                      sizeBytes: latest?.sizeBytes,
+                    })
+                  }}
+                >
+                  {downloading ? (
+                    <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
+                  ) : (
+                    <Download className="size-3.5" strokeWidth={1.75} />
+                  )}
+                  <span className="font-medium">{downloadLabel}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                {downloadTooltip}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
+          <Button asChild>
             <Link to={`/upload?app=${application.id}`}>
               <Upload className="size-3.5" strokeWidth={1.75} />
               {t('detail.uploadArtifact')}
             </Link>
           </Button>
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="h-9 text-muted-foreground lg:hidden"
-          >
+          <Button asChild variant="ghost" className="text-muted-foreground lg:hidden">
             <Link to="/">{t('detail.back')}</Link>
           </Button>
         </div>
         {hasVersion && latest?.buildNumber ? (
           <p className="text-right text-[0.6875rem] text-muted-foreground">
             {t('detail.downloadLatestHint', { build: latest.buildNumber })}
+          </p>
+        ) : !hasVersion ? (
+          <p className="text-right text-[0.6875rem] text-muted-foreground">
+            {t('detail.noLatestYet')}
           </p>
         ) : null}
       </div>

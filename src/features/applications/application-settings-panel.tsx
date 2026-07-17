@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { AlertTriangle, Archive, CheckCircle2, Loader2, Trash2 } from 'lucide-react'
+import { AlertTriangle, Loader2, Pencil, Trash2, X } from 'lucide-react'
 
 import { StatusBadge } from '@/components/common'
 import { Button } from '@/components/ui/button'
@@ -20,14 +20,19 @@ const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
 
 const STATUSES: ApplicationStatus[] = ['active', 'new', 'beta', 'deprecated', 'archived']
 
+/** Light container — aligned with detail summary / release-note cards. */
+const sectionCardClass = cn(
+  'rounded-2xl bg-muted/25 p-5 ring-1 ring-border/60 sm:p-6',
+  'dark:bg-muted/15 dark:ring-border/80',
+)
+
 interface ApplicationSettingsPanelProps {
   application: Application
 }
 
 /**
  * Application Detail → Settings tab.
- * Full-width like Overview / Artifacts (matches meta + tabs).
- * Two-column field grid on sm+; no page-level FormStack narrow column.
+ * Three first-level cards: identity (read-first), lifecycle, delete danger zone.
  */
 export function ApplicationSettingsPanel({ application }: ApplicationSettingsPanelProps) {
   const { t } = useTranslation()
@@ -35,25 +40,24 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
   const updateApplication = useApplicationsStore((s) => s.updateApplication)
   const deleteApplication = useApplicationsStore((s) => s.deleteApplication)
 
+  const [editing, setEditing] = useState(false)
   const [name, setName] = useState(application.name)
   const [description, setDescription] = useState(application.description)
   const [packageName, setPackageName] = useState(application.packageName)
   const [platform, setPlatform] = useState(application.platform)
   const [repository, setRepository] = useState(application.repository)
   const [owner, setOwner] = useState(application.owner)
-  const [status, setStatus] = useState(application.status)
+  const [status, setStatus] = useState<ApplicationStatus>(application.status)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteConfirmName, setDeleteConfirmName] = useState('')
   const [deleting, setDeleting] = useState(false)
-  const [archiving, setArchiving] = useState(false)
   const deleteConfirmRef = useRef<HTMLDivElement>(null)
   const deleteInputRef = useRef<HTMLInputElement>(null)
 
   // Form state is initialized from application props; remount via key={application.id} on parent when app changes.
 
-  /** Keep confirm UI in view — no manual scroll after opening delete. */
   useEffect(() => {
     if (!confirmDelete) return
     const el = deleteConfirmRef.current
@@ -65,7 +69,6 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
         block: 'center',
         inline: 'nearest',
       })
-      // Focus after scroll starts so keyboard users land on the field
       window.setTimeout(() => {
         deleteInputRef.current?.focus({ preventScroll: true })
       }, 180)
@@ -76,14 +79,16 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
 
   const deleteNameMatches = deleteConfirmName.trim() === application.name.trim()
 
-  const dirty =
+  const infoDirty =
     name.trim() !== application.name ||
     description.trim() !== application.description ||
     packageName.trim() !== application.packageName ||
     platform !== application.platform ||
     repository.trim() !== application.repository ||
-    owner.trim() !== application.owner ||
-    status !== application.status
+    owner.trim() !== application.owner
+
+  const statusDirty = status !== application.status
+  const dirty = infoDirty || statusDirty
 
   const fieldClass = cn(
     'h-10 w-full rounded-lg bg-muted/30 px-3 text-[0.875rem] outline-none',
@@ -101,15 +106,31 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
         : 'bg-muted/40 text-muted-foreground hover:text-foreground',
     )
 
-  const cardClass = cn(
-    'rounded-2xl bg-muted/25 p-5 ring-1 ring-border/60 sm:p-6',
-    'dark:bg-muted/15 dark:ring-border/80',
-  )
+  const resetInfoFromApp = () => {
+    setName(application.name)
+    setDescription(application.description)
+    setPackageName(application.packageName)
+    setPlatform(application.platform)
+    setRepository(application.repository)
+    setOwner(application.owner)
+    setError(null)
+  }
+
+  const startEditing = () => {
+    resetInfoFromApp()
+    setEditing(true)
+  }
+
+  const cancelEditing = () => {
+    resetInfoFromApp()
+    setEditing(false)
+  }
 
   const onSave = async () => {
     setError(null)
     if (!name.trim() || !description.trim() || !packageName.trim()) {
       setError(t('appSettings.errorRequired'))
+      if (!editing) setEditing(true)
       return
     }
     setSaving(true)
@@ -128,24 +149,10 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
       setError(t('appSettings.errorRequired'))
       return
     }
+    setEditing(false)
+    setStatus(result.application.status)
     toast.success(t('appSettings.saved'), {
       description: result.application.name,
-    })
-  }
-
-  const onArchive = async () => {
-    if (status === 'archived') return
-    setArchiving(true)
-    await new Promise((r) => setTimeout(r, 280))
-    const result = updateApplication(application.id, { status: 'archived' })
-    setArchiving(false)
-    if (!result.ok) {
-      toast.error(t('appSettings.errorGeneric'))
-      return
-    }
-    setStatus('archived')
-    toast.success(t('appSettings.archived'), {
-      description: application.name,
     })
   }
 
@@ -177,117 +184,168 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
 
   return (
     <div className="w-full space-y-4">
-      {/* Same section chrome as Overview / Artifacts tabs */}
-      <div>
-        <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
-          {t('appSettings.title')}
-        </h2>
-        <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
-          {t('appSettings.description')}
-        </p>
-      </div>
-
-      {/* General — full width, 2-col fields */}
-      <section className={cn(cardClass, 'space-y-5')}>
-        <h3 className="text-[0.8125rem] font-medium text-foreground">
-          {t('appSettings.sectionGeneral')}
-        </h3>
-
-        <div className="grid gap-4 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-5">
-          <label className="block space-y-1.5">
-            <span className="text-[0.8125rem] font-medium text-foreground">
-              {t('createApp.fieldName')}
-            </span>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-10 rounded-lg"
-              disabled={saving}
-            />
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-[0.8125rem] font-medium text-foreground">
-              {t('createApp.fieldPackage')}
-            </span>
-            <Input
-              value={packageName}
-              onChange={(e) => setPackageName(e.target.value)}
-              className="h-10 rounded-lg font-mono text-[0.8125rem]"
-              disabled={saving}
-            />
-          </label>
-
-          <label className="block space-y-1.5 sm:col-span-2">
-            <span className="text-[0.8125rem] font-medium text-foreground">
-              {t('createApp.fieldDescription')}
-            </span>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              disabled={saving}
-              className={cn(
-                fieldClass,
-                'h-auto min-h-[5rem] resize-y py-2.5 leading-relaxed',
-              )}
-            />
-          </label>
-
-          <div className="space-y-1.5 sm:col-span-2">
-            <span className="text-[0.8125rem] font-medium text-foreground">
-              {t('createApp.fieldPlatform')}
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {PLATFORMS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  disabled={saving}
-                  onClick={() => setPlatform(p)}
-                  className={platformChipClass(platform === p)}
-                  aria-pressed={platform === p}
-                >
-                  {t(`platform.${p}`)}
-                </button>
-              ))}
-            </div>
+      {/* ── 1. 应用信息 ── */}
+      <section className={cn(sectionCardClass, 'space-y-5')}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
+              {t('appSettings.sectionInfo')}
+            </h2>
+            <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+              {t('appSettings.sectionInfoHint')}
+            </p>
           </div>
-
-          <label className="block space-y-1.5">
-            <span className="text-[0.8125rem] font-medium text-foreground">
-              {t('createApp.fieldRepository')}
-            </span>
-            <Input
-              value={repository}
-              onChange={(e) => setRepository(e.target.value)}
-              className="h-10 rounded-lg font-mono text-[0.8125rem]"
+          {!editing ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn(
+                'border-0 bg-background/80 text-foreground ring-1 ring-border/60',
+                'hover:bg-muted/50',
+                'dark:bg-background/40 dark:hover:bg-muted/30',
+              )}
+              onClick={startEditing}
+            >
+              <Pencil className="size-3.5 opacity-70" strokeWidth={1.75} />
+              {t('appSettings.edit')}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
               disabled={saving}
-            />
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-[0.8125rem] font-medium text-foreground">
-              {t('appSettings.fieldOwner')}
-            </span>
-            <Input
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              className="h-10 rounded-lg"
-              disabled={saving}
-            />
-          </label>
+              onClick={cancelEditing}
+            >
+              <X className="size-3.5 opacity-70" strokeWidth={1.75} />
+              {t('appSettings.cancelEdit')}
+            </Button>
+          )}
         </div>
+
+        {!editing ? (
+          <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+            <InfoCell label={t('createApp.fieldName')}>{application.name}</InfoCell>
+            <InfoCell label={t('createApp.fieldPackage')} mono>
+              {application.packageName}
+            </InfoCell>
+            <InfoCell label={t('createApp.fieldDescription')} className="sm:col-span-2">
+              <span className="leading-relaxed text-muted-foreground">
+                {application.description}
+              </span>
+            </InfoCell>
+            <InfoCell label={t('createApp.fieldPlatform')}>
+              {t(`platform.${application.platform}`)}
+            </InfoCell>
+            <InfoCell label={t('appSettings.fieldOwner')}>{application.owner}</InfoCell>
+            <InfoCell
+              label={t('createApp.fieldRepository')}
+              mono
+              className="sm:col-span-2"
+            >
+              {application.repository || t('appSettings.emptyValue')}
+            </InfoCell>
+          </dl>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-5">
+            <label className="block space-y-1.5">
+              <span className="text-[0.8125rem] font-medium text-foreground">
+                {t('createApp.fieldName')}
+              </span>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-10 rounded-lg"
+                disabled={saving}
+                autoFocus
+              />
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="text-[0.8125rem] font-medium text-foreground">
+                {t('createApp.fieldPackage')}
+              </span>
+              <Input
+                value={packageName}
+                onChange={(e) => setPackageName(e.target.value)}
+                className="h-10 rounded-lg font-mono text-[0.8125rem]"
+                disabled={saving}
+              />
+            </label>
+
+            <label className="block space-y-1.5 sm:col-span-2">
+              <span className="text-[0.8125rem] font-medium text-foreground">
+                {t('createApp.fieldDescription')}
+              </span>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                disabled={saving}
+                className={cn(
+                  fieldClass,
+                  'h-auto min-h-[5rem] resize-y py-2.5 leading-relaxed',
+                )}
+              />
+            </label>
+
+            <div className="space-y-1.5 sm:col-span-2">
+              <span className="text-[0.8125rem] font-medium text-foreground">
+                {t('createApp.fieldPlatform')}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {PLATFORMS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    disabled={saving}
+                    onClick={() => setPlatform(p)}
+                    className={platformChipClass(platform === p)}
+                    aria-pressed={platform === p}
+                  >
+                    {t(`platform.${p}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="block space-y-1.5">
+              <span className="text-[0.8125rem] font-medium text-foreground">
+                {t('createApp.fieldRepository')}
+              </span>
+              <Input
+                value={repository}
+                onChange={(e) => setRepository(e.target.value)}
+                className="h-10 rounded-lg font-mono text-[0.8125rem]"
+                disabled={saving}
+              />
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="text-[0.8125rem] font-medium text-foreground">
+                {t('appSettings.fieldOwner')}
+              </span>
+              <Input
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                className="h-10 rounded-lg"
+                disabled={saving}
+              />
+            </label>
+          </div>
+        )}
       </section>
 
-      {/* Status — semantic colors (aligned with StatusBadge / cards) */}
-      <section className={cn(cardClass, 'space-y-4')}>
+      {/* ── 2. 生命周期状态 ── */}
+      <section className={cn(sectionCardClass, 'space-y-4')}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-[0.8125rem] font-medium text-foreground">
+          <div className="min-w-0">
+            <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
               {t('appSettings.sectionStatus')}
-            </h3>
-            <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
+            </h2>
+            <p className="mt-0.5 max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
               {t('appSettings.statusHint')}
             </p>
           </div>
@@ -318,21 +376,13 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
                 onClick={() => setStatus(s)}
                 aria-pressed={selected}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[0.8125rem] font-medium',
+                  'inline-flex items-center rounded-lg px-3 py-2 text-[0.8125rem] font-medium',
                   'transition-[background-color,box-shadow,color,opacity] duration-[var(--duration-hover)]',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
                   'disabled:pointer-events-none disabled:opacity-50',
                   selected ? meta.selected : meta.idle,
                 )}
               >
-                <span
-                  className={cn(
-                    'size-1.5 shrink-0 rounded-full transition-transform duration-[var(--duration-hover)]',
-                    meta.dot,
-                    selected && 'scale-110',
-                  )}
-                  aria-hidden
-                />
                 {t(`appSettings.status.${s}`)}
               </button>
             )
@@ -341,25 +391,30 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
       </section>
 
       {error ? (
-        <p className="text-[0.8125rem] text-muted-foreground" role="alert">
+        <p className="px-0.5 text-[0.8125rem] text-muted-foreground" role="alert">
           {error}
         </p>
       ) : null}
 
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          className="h-10 min-w-[6.5rem] rounded-lg"
-          disabled={saving || !dirty}
-          onClick={() => void onSave()}
-        >
-          {saving ? t('appSettings.saving') : t('appSettings.save')}
-        </Button>
-      </div>
+      {/* Single primary — only after changes */}
+      {dirty ? (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="lg"
+            className="min-w-[6.5rem]"
+            disabled={saving}
+            onClick={() => void onSave()}
+          >
+            {saving ? t('appSettings.saving') : t('appSettings.save')}
+          </Button>
+        </div>
+      ) : null}
 
       {/*
-        Danger zone — GitHub-style red outline.
-        Border is clearly red; fill stays soft so content stays readable.
+        ── 3. 危险操作 ──
+        Outer card carries all danger chrome. Confirm expands in-place
+        with flat layout only — no nested red panel.
       */}
       <section
         className={cn(
@@ -387,67 +442,50 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
             <AlertTriangle className="size-4" strokeWidth={1.75} />
           </span>
           <div className="min-w-0">
-            <h3 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
+            <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
               {t('appSettings.dangerTitle')}
-            </h3>
+            </h2>
             <p className="mt-0.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
               {t('appSettings.dangerDesc')}
             </p>
           </div>
         </header>
 
-        <ul className="divide-y divide-border/60 bg-card/50 dark:bg-card/30">
-          {/* Archive — reversible, stays neutral-amber, not in the red wash */}
-          <li className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-6">
-            <div className="min-w-0 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[0.875rem] font-medium text-foreground">
-                  {t('appSettings.archiveTitle')}
+        <div className="px-5 py-5 sm:px-6">
+          {!confirmDelete ? (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[0.875rem] font-medium text-foreground">
+                    {t('appSettings.deleteTitle')}
+                  </p>
+                  <span className="text-[0.6875rem] text-muted-foreground">
+                    · {t('appSettings.severityIrreversible')}
+                  </span>
+                </div>
+                <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
+                  {t('appSettings.deleteDesc')}
                 </p>
-                <span className="text-[0.6875rem] text-muted-foreground">
-                  · {t('appSettings.severityReversible')}
-                </span>
               </div>
-              <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-                {t('appSettings.archiveDesc')}
-              </p>
-              {status === 'archived' ? (
-                <p className="inline-flex items-center gap-1.5 pt-1 text-[0.75rem] text-muted-foreground">
-                  <CheckCircle2 className="size-3.5 opacity-70" strokeWidth={1.75} />
-                  {t('appSettings.alreadyArchivedHint')}
-                </p>
-              ) : null}
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full shrink-0 sm:w-auto"
+                disabled={deleting}
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="size-3.5" strokeWidth={1.75} />
+                {t('appSettings.deleteAction')}
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className={cn(
-                'h-9 w-full shrink-0 gap-1.5 rounded-lg border-0 sm:w-auto',
-                'bg-background text-foreground ring-1 ring-border/70',
-                'hover:bg-muted/50',
-                'dark:bg-background/50 dark:hover:bg-muted/30',
-                'disabled:opacity-50',
-              )}
-              disabled={saving || archiving || status === 'archived'}
-              onClick={() => void onArchive()}
+          ) : (
+            <div
+              ref={deleteConfirmRef}
+              className="space-y-4"
+              role="region"
+              aria-label={t('appSettings.deleteConfirmRegion')}
             >
-              {archiving ? (
-                <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
-              ) : (
-                <Archive className="size-3.5 opacity-70" strokeWidth={1.75} />
-              )}
-              {status === 'archived'
-                ? t('appSettings.alreadyArchived')
-                : archiving
-                  ? t('appSettings.archiving')
-                  : t('appSettings.archiveAction')}
-            </Button>
-          </li>
-
-          {/* Delete — confirm replaces the row (compact) + auto-scroll into view */}
-          <li className="px-5 py-5 sm:px-6">
-            {!confirmDelete ? (
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-[0.875rem] font-medium text-foreground">
@@ -458,60 +496,24 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
                     </span>
                   </div>
                   <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-                    {t('appSettings.deleteDesc')}
+                    {t('appSettings.deleteConfirmLead', {
+                      name: application.name,
+                    })}
                   </p>
                 </div>
                 <Button
                   type="button"
-                  variant="outline"
-                  className={cn(
-                    'h-9 w-full shrink-0 gap-1.5 rounded-lg border-0 sm:w-auto',
-                    'bg-background text-destructive ring-1 ring-destructive/30',
-                    'hover:bg-destructive/[0.06] hover:ring-destructive/40',
-                    'dark:bg-background/40 dark:hover:bg-destructive/10',
-                  )}
-                  disabled={deleting || archiving}
-                  onClick={() => setConfirmDelete(true)}
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                  disabled={deleting}
+                  onClick={cancelDeleteConfirm}
                 >
-                  <Trash2 className="size-3.5" strokeWidth={1.75} />
-                  {t('appSettings.deleteAction')}
+                  {t('common.cancel')}
                 </Button>
               </div>
-            ) : (
-              <div
-                ref={deleteConfirmRef}
-                className={cn(
-                  'space-y-3 rounded-xl p-4',
-                  'bg-destructive/[0.05] ring-1 ring-destructive/20',
-                  'dark:bg-destructive/[0.09] dark:ring-destructive/25',
-                  'animate-in fade-in-0 slide-in-from-top-1 duration-200',
-                )}
-                role="region"
-                aria-label={t('appSettings.deleteConfirmRegion')}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="text-[0.875rem] font-medium text-foreground">
-                      {t('appSettings.deleteTitle')}
-                    </p>
-                    <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
-                      {t('appSettings.deleteConfirmLead', {
-                        name: application.name,
-                      })}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 shrink-0 rounded-md text-muted-foreground hover:text-foreground"
-                    disabled={deleting}
-                    onClick={cancelDeleteConfirm}
-                  >
-                    {t('common.cancel')}
-                  </Button>
-                </div>
 
+              <div className="border-t border-border/50 pt-4">
                 <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
                   <label className="min-w-0 flex-1 space-y-1.5">
                     <span className="text-[0.75rem] font-medium text-foreground">
@@ -528,9 +530,9 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
                       disabled={deleting}
                       autoComplete="off"
                       className={cn(
-                        'h-10 rounded-lg bg-background/80',
-                        'ring-1 ring-destructive/20 focus-visible:ring-destructive/35',
-                        'dark:bg-background/40',
+                        'h-10 rounded-lg',
+                        /* Calm focus: thin ring instead of default ring-3 */
+                        'focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/35',
                       )}
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') {
@@ -546,9 +548,10 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
                   </label>
                   <Button
                     type="button"
+                    size="lg"
+                    variant="destructive"
                     className={cn(
-                      'h-10 w-full shrink-0 gap-1.5 rounded-lg sm:w-auto sm:min-w-[7.5rem]',
-                      'bg-destructive text-white hover:bg-destructive/90',
+                      'w-full shrink-0 sm:w-auto sm:min-w-[7.5rem]',
                       'disabled:opacity-40',
                     )}
                     disabled={deleting || !deleteNameMatches}
@@ -565,10 +568,38 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
                   </Button>
                 </div>
               </div>
-            )}
-          </li>
-        </ul>
+            </div>
+          )}
+        </div>
       </section>
+    </div>
+  )
+}
+
+function InfoCell({
+  label,
+  children,
+  mono,
+  className,
+}: {
+  label: string
+  children: ReactNode
+  mono?: boolean
+  className?: string
+}) {
+  return (
+    <div className={cn('min-w-0 space-y-1', className)}>
+      <dt className="text-[0.6875rem] font-medium tracking-wide text-muted-foreground/70 uppercase">
+        {label}
+      </dt>
+      <dd
+        className={cn(
+          'min-w-0 text-[0.875rem] text-foreground',
+          mono && 'font-mono text-[0.8125rem] text-muted-foreground',
+        )}
+      >
+        {children}
+      </dd>
     </div>
   )
 }

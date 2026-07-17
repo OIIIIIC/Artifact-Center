@@ -1,6 +1,9 @@
-import { Download, Loader2 } from 'lucide-react'
+import { Download, Loader2, Package, Upload } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
+import { EmptyState } from '@/components/feedback'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -18,24 +21,37 @@ import type { Artifact } from '@/types/artifact'
 
 interface ArtifactsTableProps {
   artifacts: Artifact[]
+  /** When empty, upload CTA deep-links with this app id */
+  applicationId?: string
   className?: string
 }
 
-export function ArtifactsTable({ artifacts, className }: ArtifactsTableProps) {
+export function ArtifactsTable({
+  artifacts,
+  applicationId,
+  className,
+}: ArtifactsTableProps) {
   const { t, i18n } = useTranslation()
   void i18n.language
   const { download, isBusy } = useDownloadArtifact()
 
   if (artifacts.length === 0) {
+    const uploadTo = applicationId ? `/upload?app=${applicationId}` : '/upload'
     return (
-      <div className="rounded-xl border border-dashed border-border/80 px-6 py-16 text-center">
-        <p className="text-[0.9375rem] font-medium text-foreground">
-          {t('detail.emptyArtifactsTitle')}
-        </p>
-        <p className="mt-1.5 text-[0.8125rem] text-muted-foreground">
-          {t('detail.emptyArtifactsDesc')}
-        </p>
-      </div>
+      <EmptyState
+        icon={Package}
+        title={t('detail.emptyArtifactsTitle')}
+        description={t('detail.emptyArtifactsDesc')}
+        className="py-14"
+        action={
+          <Button asChild size="lg">
+            <Link to={uploadTo}>
+              <Upload className="size-3.5" strokeWidth={1.75} />
+              {t('detail.uploadArtifact')}
+            </Link>
+          </Button>
+        }
+      />
     )
   }
 
@@ -115,16 +131,12 @@ export function ArtifactsTable({ artifacts, className }: ArtifactsTableProps) {
                   <ArtifactReleaseBadges artifact={art} />
                 </TableCell>
                 <TableCell className="px-4 py-3.5 text-right">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     disabled={busy}
-                    className={cn(
-                      'inline-flex h-8 items-center gap-1 rounded-md px-2',
-                      'text-[0.8125rem] font-medium text-muted-foreground',
-                      'transition-colors duration-[var(--duration-hover)]',
-                      'hover:bg-muted/60 hover:text-foreground',
-                      'disabled:pointer-events-none disabled:opacity-50',
-                    )}
+                    className="text-muted-foreground hover:text-foreground"
                     aria-label={`${t('common.download')} ${art.filename}`}
                     onClick={() =>
                       void download({
@@ -141,7 +153,7 @@ export function ArtifactsTable({ artifacts, className }: ArtifactsTableProps) {
                       <Download className="size-3.5" strokeWidth={1.75} />
                     )}
                     <span className="hidden sm:inline">{t('common.download')}</span>
-                  </button>
+                  </Button>
                 </TableCell>
               </TableRow>
             )

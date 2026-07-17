@@ -68,12 +68,18 @@ export function ApplicationSummary({
           <time dateTime={lastUpload}>{formatRelativeTime(lastUpload)}</time>
         </Cell>
         <Cell label={t('detail.package')}>
-          <span className="font-mono text-[0.75rem] text-muted-foreground">
+          <span
+            className="block min-w-0 truncate font-mono text-[0.75rem] text-muted-foreground"
+            title={application.packageName}
+          >
             {application.packageName}
           </span>
         </Cell>
         <Cell label={t('detail.repository')}>
-          <span className="font-mono text-[0.75rem] text-muted-foreground">
+          <span
+            className="block min-w-0 truncate font-mono text-[0.75rem] text-muted-foreground"
+            title={application.repository}
+          >
             {application.repository}
           </span>
         </Cell>

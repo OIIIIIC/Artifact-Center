@@ -1,23 +1,27 @@
-import { FileText } from 'lucide-react'
+import { FileText, Upload } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 import { EmptyState } from '@/components/feedback'
+import { Button } from '@/components/ui/button'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Artifact } from '@/types/artifact'
 
 interface ReleaseNotesPanelProps {
   artifacts: Artifact[]
+  applicationId?: string
 }
 
 /**
  * Application Detail → Release notes tab.
  * Lists version notes from artifact history (mock-friendly, no separate CMS).
  */
-export function ReleaseNotesPanel({ artifacts }: ReleaseNotesPanelProps) {
+export function ReleaseNotesPanel({ artifacts, applicationId }: ReleaseNotesPanelProps) {
   const { t } = useTranslation()
 
   const withNotes = artifacts.filter((a) => a.releaseNotes?.trim())
+  const uploadTo = applicationId ? `/upload?app=${applicationId}` : '/upload'
 
   if (withNotes.length === 0) {
     return (
@@ -25,7 +29,15 @@ export function ReleaseNotesPanel({ artifacts }: ReleaseNotesPanelProps) {
         icon={FileText}
         title={t('detail.releaseNotesEmptyTitle')}
         description={t('detail.releaseNotesEmptyDesc')}
-        className="py-16"
+        className="py-14"
+        action={
+          <Button asChild size="lg">
+            <Link to={uploadTo}>
+              <Upload className="size-3.5" strokeWidth={1.75} />
+              {t('detail.uploadArtifact')}
+            </Link>
+          </Button>
+        }
       />
     )
   }
