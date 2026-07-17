@@ -5,25 +5,37 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 /**
- * Unified quiet status chips — no high-chroma fills.
- * Used for NEW / Beta / Deprecated / Archived and semantic UI states.
+ * Status chips with quiet semantic color.
+ * Soft tinted fills — readable differentiation without neon / ERP rainbow.
  */
 const statusBadgeVariants = cva(
   'h-5 border-transparent px-1.5 text-[10px] font-medium tracking-wide',
   {
     variants: {
       status: {
-        default: 'bg-muted/70 text-muted-foreground',
-        muted: 'bg-muted/50 text-muted-foreground/80',
-        new: 'bg-muted/70 text-foreground/70 tracking-wider uppercase',
-        beta: 'bg-muted/60 text-muted-foreground normal-case',
-        deprecated: 'bg-muted/50 text-muted-foreground/75 normal-case',
+        /** Stable / neutral default */
+        default:
+          'bg-sky-500/10 text-sky-800 normal-case dark:bg-sky-400/15 dark:text-sky-200',
+        muted:
+          'bg-stone-500/10 text-stone-600 normal-case dark:bg-stone-400/15 dark:text-stone-300',
+        /** NEW — fresh intake */
+        new: 'bg-teal-500/12 text-teal-800 tracking-wider uppercase dark:bg-teal-400/15 dark:text-teal-300',
+        /** Beta — experimental */
+        beta: 'bg-violet-500/12 text-violet-800 normal-case dark:bg-violet-400/15 dark:text-violet-300',
+        /** Deprecated — caution */
+        deprecated:
+          'bg-amber-500/12 text-amber-900 normal-case dark:bg-amber-400/15 dark:text-amber-200',
+        /** Archived — retired */
         archived:
-          'bg-transparent text-muted-foreground/65 normal-case ring-1 ring-border/80',
-        success: 'bg-muted/70 text-muted-foreground',
-        warning: 'bg-muted/70 text-muted-foreground',
-        danger: 'bg-muted/70 text-muted-foreground',
-        info: 'bg-muted/70 text-muted-foreground',
+          'bg-stone-500/10 text-stone-600 normal-case ring-1 ring-stone-400/25 dark:bg-stone-400/10 dark:text-stone-400 dark:ring-stone-500/30',
+        /** Active / healthy */
+        success:
+          'bg-emerald-500/12 text-emerald-800 normal-case dark:bg-emerald-400/15 dark:text-emerald-300',
+        warning:
+          'bg-amber-500/12 text-amber-900 normal-case dark:bg-amber-400/15 dark:text-amber-200',
+        danger:
+          'bg-rose-500/12 text-rose-800 normal-case dark:bg-rose-400/15 dark:text-rose-300',
+        info: 'bg-sky-500/12 text-sky-800 normal-case dark:bg-sky-400/15 dark:text-sky-200',
       },
     },
     defaultVariants: {

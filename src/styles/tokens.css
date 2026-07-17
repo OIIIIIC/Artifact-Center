@@ -101,8 +101,16 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* ——— Layout ——— */
-  /* Wider desktop stage so 4-col cards can breathe without feeling center-stuck */
+  /*
+   * Product shell width is shared by ALL product pages (list, detail, settings, search…).
+   * Do not invent per-page max-width on PageContainer. Narrow only form fields via
+   * --form-max-width, never the page chrome.
+   */
   --content-max-width: 88rem;
+  /* Single-column forms / reading blocks inside the shell (left-aligned, not centered) */
+  --form-max-width: 40rem;
+  /* Settings section rail inside the product shell */
+  --settings-nav-width: 13rem;
   --page-padding-x: 1.5rem;
   --page-padding-y: 2rem;
   --section-gap: 2.5rem;
@@ -155,7 +163,8 @@
   --accent: oklch(0.96 0.003 260);
   --accent-foreground: oklch(0.22 0.01 260);
 
-  --destructive: oklch(0.55 0.2 25);
+  /* Solid red (~25°), not pink/rose (~10–15°) */
+  --destructive: oklch(0.52 0.18 27);
 
   --border: oklch(0.9 0.005 260);
   --border-strong: oklch(0.78 0.01 260);
@@ -207,7 +216,8 @@
   --accent: oklch(0.24 0.008 260);
   --accent-foreground: oklch(0.94 0.005 260);
 
-  --destructive: oklch(0.65 0.16 25);
+  /* Solid red, slightly desaturated for dark UI */
+  --destructive: oklch(0.62 0.15 27);
 
   --border: oklch(1 0 0 / 9%);
   --border-strong: oklch(1 0 0 / 16%);

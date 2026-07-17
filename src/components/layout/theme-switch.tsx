@@ -1,4 +1,5 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -6,21 +7,21 @@ import { cn } from '@/lib/utils'
 import { useThemeStore } from '@/store/theme-store'
 import type { ThemeMode } from '@/types/theme'
 
-const options: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { value: 'light', label: '浅色', icon: Sun },
-  { value: 'dark', label: '深色', icon: Moon },
-  { value: 'system', label: '跟随系统', icon: Monitor },
-]
-
 interface ThemeSwitchProps {
   className?: string
-  /** Compact icon-only cycle button for Topbar */
   compact?: boolean
 }
 
 export function ThemeSwitch({ className, compact = true }: ThemeSwitchProps) {
+  const { t } = useTranslation()
   const theme = useThemeStore((s) => s.theme)
   const setTheme = useThemeStore((s) => s.setTheme)
+
+  const options: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
+    { value: 'light', label: t('common.themeLight'), icon: Sun },
+    { value: 'dark', label: t('common.themeDark'), icon: Moon },
+    { value: 'system', label: t('common.themeSystem'), icon: Monitor },
+  ]
 
   if (compact) {
     const order: ThemeMode[] = ['light', 'dark', 'system']
@@ -36,16 +37,18 @@ export function ThemeSwitch({ className, compact = true }: ThemeSwitchProps) {
             variant="ghost"
             size="icon"
             className={cn(
-              'size-9 text-muted-foreground transition-colors duration-hover hover:text-foreground',
+              'size-9 text-muted-foreground transition-colors duration-[var(--duration-hover)] hover:text-foreground',
               className,
             )}
             onClick={() => setTheme(next)}
-            aria-label={`主题：${current.label}，点击切换`}
+            aria-label={t('common.themeAria', { label: current.label })}
           >
             <Icon className="size-4" strokeWidth={1.75} />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>主题：{current.label}</TooltipContent>
+        <TooltipContent>
+          {t('common.theme')}: {current.label}
+        </TooltipContent>
       </Tooltip>
     )
   }
@@ -57,7 +60,7 @@ export function ThemeSwitch({ className, compact = true }: ThemeSwitchProps) {
         className,
       )}
       role="group"
-      aria-label="主题"
+      aria-label={t('common.theme')}
     >
       {options.map(({ value, label, icon: Icon }) => (
         <Button
@@ -65,7 +68,7 @@ export function ThemeSwitch({ className, compact = true }: ThemeSwitchProps) {
           type="button"
           size="sm"
           variant={theme === value ? 'secondary' : 'ghost'}
-          className="h-8 gap-1.5 px-2.5 transition-colors duration-hover"
+          className="h-8 gap-1.5 px-2.5 transition-colors duration-[var(--duration-hover)]"
           onClick={() => setTheme(value)}
           aria-pressed={theme === value}
         >

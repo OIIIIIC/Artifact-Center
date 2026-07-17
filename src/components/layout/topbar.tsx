@@ -1,16 +1,20 @@
 import { Fragment, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { Search } from 'lucide-react'
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { useModKeyLabel } from '@/hooks/use-mod-key-label'
 import { cn } from '@/lib/utils'
 
+import { LocaleSwitch } from './locale-switch'
 import { ThemeSwitch } from './theme-switch'
+import { UserMenu } from './user-menu'
 import type { BreadcrumbItem } from './types'
 
 interface TopbarProps {
   logo?: ReactNode
   breadcrumbs?: BreadcrumbItem[]
-  /** Kept for API compat; Applications home uses in-page search */
   showSearch?: boolean
   onSearchClick?: () => void
   leading?: ReactNode
@@ -19,10 +23,20 @@ interface TopbarProps {
 }
 
 /**
- * Minimal chrome: Breadcrumb · Theme · Avatar.
- * No search, stats, notifications, or help.
+ * Minimal chrome: Search · Breadcrumb · Locale · Theme · Avatar.
  */
-export function Topbar({ logo, breadcrumbs, leading, className, trailing }: TopbarProps) {
+export function Topbar({
+  logo,
+  breadcrumbs,
+  showSearch = true,
+  onSearchClick,
+  leading,
+  className,
+  trailing,
+}: TopbarProps) {
+  const { t } = useTranslation()
+  const shortcut = useModKeyLabel('K')
+
   return (
     <header
       data-slot="topbar"
@@ -39,7 +53,7 @@ export function Topbar({ logo, breadcrumbs, leading, className, trailing }: Topb
 
       <div className="min-w-0 flex-1">
         {breadcrumbs && breadcrumbs.length > 0 ? (
-          <nav aria-label="Breadcrumb" className="min-w-0">
+          <nav aria-label={t('common.breadcrumb')} className="min-w-0">
             <ol className="flex min-w-0 items-center gap-1.5 overflow-hidden">
               {breadcrumbs.map((item, index) => {
                 const isLast = index === breadcrumbs.length - 1
@@ -81,11 +95,29 @@ export function Topbar({ logo, breadcrumbs, leading, className, trailing }: Topb
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5">
+        {showSearch && onSearchClick ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              'h-9 gap-2 rounded-lg px-2.5 text-muted-foreground',
+              'transition-colors duration-[var(--duration-hover)]',
+              'hover:text-foreground sm:px-3',
+            )}
+            onClick={onSearchClick}
+            aria-label={t('search.openAria', { shortcut })}
+          >
+            <Search className="size-4" strokeWidth={1.75} />
+            <span className="hidden text-[0.8125rem] sm:inline">{t('search.open')}</span>
+            <kbd className="hidden rounded-md bg-muted/70 px-1.5 py-0.5 font-mono text-[0.625rem] text-muted-foreground md:inline">
+              {shortcut}
+            </kbd>
+          </Button>
+        ) : null}
+        <LocaleSwitch compact />
         <ThemeSwitch compact />
         {trailing}
-        <Avatar size="sm" className="ml-1 size-7">
-          <AvatarFallback className="text-[11px] font-medium">U</AvatarFallback>
-        </Avatar>
+        <UserMenu />
       </div>
     </header>
   )
