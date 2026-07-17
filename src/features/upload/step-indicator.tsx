@@ -1,15 +1,19 @@
 import { Check } from 'lucide-react'
 import { Fragment } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
-import { STEP_LABELS, type UploadStep } from '@/types/upload'
+import type { UploadStep } from '@/types/upload'
 
 const STEPS: UploadStep[] = [1, 2, 3, 4]
 
-/**
- * Full-width step rail: first step flush left, last flush right —
- * matches Application Picker / dropzone column edges (no visual gap).
- */
+const STEP_KEYS: Record<UploadStep, string> = {
+  1: 'upload.stepApplication',
+  2: 'upload.stepArtifact',
+  3: 'upload.stepVersion',
+  4: 'upload.stepReview',
+}
+
 export function StepIndicator({
   step,
   className,
@@ -17,6 +21,8 @@ export function StepIndicator({
   step: UploadStep
   className?: string
 }) {
+  const { t } = useTranslation()
+
   return (
     <nav aria-label="Upload progress" className={cn('w-full', className)}>
       <ol className="flex w-full items-center">
@@ -47,7 +53,7 @@ export function StepIndicator({
                     active ? 'font-medium text-foreground' : 'text-muted-foreground',
                   )}
                 >
-                  {STEP_LABELS[s]}
+                  {t(STEP_KEYS[s])}
                 </span>
               </li>
 

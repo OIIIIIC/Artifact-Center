@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
+import { CHANNEL_CHIP } from '@/features/upload/channel-meta'
 import { cn } from '@/lib/utils'
 import type { ApplicationPlatform } from '@/types/application'
 import type { UploadChannel, VersionDraft } from '@/types/upload'
-import { CHANNEL_LABEL } from '@/types/upload'
 
 const CHANNELS: UploadChannel[] = ['stable', 'beta', 'internal', 'deprecated']
-
 const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
 
 interface StepVersionProps {
@@ -45,14 +45,13 @@ const inputClass = cn(
   'disabled:cursor-not-allowed disabled:opacity-60',
 )
 
-/**
- * Step 3 — mostly prefilled; only notes + channel need thought.
- */
 export function StepVersion({ version, onChange, onChannel }: StepVersionProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="w-full space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Version" hint="Auto-detected">
+        <Field label={t('upload.fieldVersion')} hint={t('upload.hintAuto')}>
           <input
             className={cn(inputClass, 'font-mono')}
             value={version.version}
@@ -60,7 +59,7 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
             placeholder="1.0.0"
           />
         </Field>
-        <Field label="Build number" hint="Auto">
+        <Field label={t('upload.fieldBuild')} hint={t('upload.hintAutoShort')}>
           <input
             className={cn(inputClass, 'font-mono')}
             value={version.buildNumber}
@@ -70,7 +69,7 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
         </Field>
       </div>
 
-      <Field label="Package name" hint="Auto">
+      <Field label={t('upload.fieldPackage')} hint={t('upload.hintAutoShort')}>
         <input
           className={cn(inputClass, 'font-mono text-[0.8125rem]')}
           value={version.packageName}
@@ -79,7 +78,7 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
         />
       </Field>
 
-      <Field label="Platform" hint="Auto">
+      <Field label={t('upload.fieldPlatform')} hint={t('upload.hintAutoShort')}>
         <div className="flex flex-wrap gap-1.5">
           {PLATFORMS.map((p) => {
             const active = version.platform === p
@@ -89,42 +88,59 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
                 type="button"
                 onClick={() => onChange({ platform: p })}
                 className={cn(
-                  'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium capitalize',
+                  'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium',
                   'transition-colors duration-[var(--duration-hover)]',
                   active
                     ? 'bg-foreground text-background'
                     : 'bg-muted/40 text-muted-foreground hover:text-foreground',
                 )}
               >
-                {p}
+                {t(`platform.${p}`)}
               </button>
             )
           })}
         </div>
       </Field>
 
-      <Field label="Channel">
-        <div className="inline-flex max-w-full flex-wrap rounded-lg bg-muted/40 p-0.5 dark:bg-muted/25">
+      <Field label={t('upload.fieldChannel')}>
+        <div
+          className="flex max-w-full flex-wrap gap-1.5"
+          role="group"
+          aria-label={t('upload.fieldChannel')}
+        >
           {CHANNELS.map((c) => {
             const active = version.channel === c
+            const meta = CHANNEL_CHIP[c]
             return (
               <button
                 key={c}
                 type="button"
+                title={t(`channelHint.${c}`)}
                 onClick={() => onChannel(c)}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-[0.8125rem] font-medium',
-                  'transition-[color,background-color] duration-[var(--duration-hover)]',
-                  active
-                    ? 'bg-background text-foreground shadow-[var(--shadow-xs)] dark:bg-card'
-                    : 'text-muted-foreground hover:text-foreground',
+                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium',
+                  'transition-[background-color,box-shadow,color] duration-[var(--duration-hover)]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+                  active ? meta.selected : meta.idle,
                 )}
+                aria-pressed={active}
               >
-                {CHANNEL_LABEL[c]}
+                <span
+                  className={cn(
+                    'size-1.5 shrink-0 rounded-full',
+                    meta.dot,
+                    !active && 'opacity-70',
+                  )}
+                  aria-hidden
+                />
+                {t(`channel.${c}`)}
               </button>
             )
           })}
         </div>
+        <p className="mt-1.5 text-[0.75rem] leading-relaxed text-muted-foreground">
+          {t(`channelHint.${version.channel}`)}
+        </p>
       </Field>
 
       <label className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
@@ -134,15 +150,15 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
           onChange={(e) => onChange({ markLatest: e.target.checked })}
           className="size-3.5 rounded border-border"
         />
-        Mark as Latest (automatic when published)
+        {t('upload.markLatest')}
       </label>
 
-      <Field label="Release notes" hint="Optional">
+      <Field label={t('upload.fieldNotes')} hint={t('upload.hintOptional')}>
         <textarea
           value={version.releaseNotes}
           onChange={(e) => onChange({ releaseNotes: e.target.value })}
           rows={4}
-          placeholder="What changed in this build…"
+          placeholder={t('upload.notesPlaceholder')}
           className={cn(
             inputClass,
             'h-auto min-h-[6.5rem] resize-y py-2.5 leading-relaxed',

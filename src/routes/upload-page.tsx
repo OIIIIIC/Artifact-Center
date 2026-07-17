@@ -1,7 +1,8 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
-import { AppLayout, PageContainer } from '@/components/layout'
+import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { ApplicationPicker } from '@/features/upload/application-picker'
 import { FileDropzone } from '@/features/upload/file-dropzone'
@@ -11,72 +12,71 @@ import { StepSuccess } from '@/features/upload/step-success'
 import { StepVersion } from '@/features/upload/step-version'
 import { useUploadFlow } from '@/features/upload/use-upload-flow'
 import { cn } from '@/lib/utils'
-import { STEP_LABELS } from '@/types/upload'
+import type { UploadStep } from '@/types/upload'
 
-/** Shared upload column — same width for every step + footer actions */
-const UPLOAD_COL = 'mx-auto w-full max-w-4xl'
+const STEP_LABEL_KEYS: Record<UploadStep, string> = {
+  1: 'upload.stepApplication',
+  2: 'upload.stepArtifact',
+  3: 'upload.stepVersion',
+  4: 'upload.stepReview',
+}
 
-/**
- * Upload Artifact — multi-step flow (Vercel Deploy / GitHub Release style).
- * All processing is mocked.
- */
 export function UploadPage() {
+  const { t } = useTranslation()
   const flow = useUploadFlow()
 
   if (flow.done && flow.application) {
     return (
       <AppLayout
-        breadcrumbs={[{ label: 'Applications', href: '/' }, { label: 'Upload' }]}
-        showSearch={false}
+        breadcrumbs={[
+          { label: t('nav.applications'), href: '/' },
+          { label: t('upload.breadcrumbUpload') },
+        ]}
       >
-        <PageContainer className="pb-20 pt-10">
-          <div className={UPLOAD_COL}>
-            <StepSuccess
-              application={flow.application}
-              version={flow.version.version}
-              onAnother={flow.resetAll}
-            />
-          </div>
+        <PageContainer rhythm="product">
+          <StepSuccess
+            application={flow.application}
+            version={flow.version.version}
+            onAnother={flow.resetAll}
+          />
         </PageContainer>
       </AppLayout>
     )
   }
 
-  const stepHint: Record<1 | 2 | 3 | 4, string> = {
-    1: 'Choose where this build belongs.',
-    2: flow.application
-      ? `Drop the package for ${flow.application.name}.`
-      : 'Drop the package.',
-    3: 'Confirm version metadata. Notes and channel are yours to edit.',
-    4: 'Review once, then publish.',
-  }
+  const stepHint =
+    flow.step === 1
+      ? t('upload.hint1')
+      : flow.step === 2
+        ? flow.application
+          ? t('upload.hint2', { name: flow.application.name })
+          : t('upload.hint2Fallback')
+        : flow.step === 3
+          ? t('upload.hint3')
+          : t('upload.hint4')
 
   return (
     <AppLayout
-      breadcrumbs={[{ label: 'Applications', href: '/' }, { label: 'Upload' }]}
-      showSearch={false}
+      breadcrumbs={[
+        { label: t('nav.applications'), href: '/' },
+        { label: t('upload.breadcrumbUpload') },
+      ]}
     >
-      <PageContainer className="pb-28 pt-8 sm:pt-10">
-        {/*
-          Single column shell: header / steps / body share identical width.
-          Step components must stay w-full (no nested max-w-*) to avoid jump.
-        */}
-        <div className={cn(UPLOAD_COL, 'space-y-7 sm:space-y-8')}>
-          <header className="space-y-1">
-            <h1 className="text-[1.75rem] font-semibold tracking-tight text-foreground sm:text-[1.875rem]">
-              Upload Artifact
-            </h1>
-            <p className="text-[0.875rem] text-muted-foreground">
-              Step {flow.step} of 4 · {STEP_LABELS[flow.step]}
-            </p>
-          </header>
+      <PageContainer rhythm="product" className="pb-28">
+        <div className="space-y-7 sm:space-y-8">
+          <PageHeader
+            title={t('upload.title')}
+            description={t('upload.stepOf', {
+              current: flow.step,
+              total: 4,
+              label: t(STEP_LABEL_KEYS[flow.step]),
+            })}
+          />
 
           <StepIndicator step={flow.step} className="w-full" />
 
           <div className="w-full space-y-3">
-            <p className="text-[0.8125rem] text-muted-foreground">
-              {stepHint[flow.step]}
-            </p>
+            <p className="text-[0.8125rem] text-muted-foreground">{stepHint}</p>
 
             <div className="w-full">
               {flow.step === 1 ? (
@@ -118,10 +118,6 @@ export function UploadPage() {
           </div>
         </div>
 
-        {/*
-          Footer spans the main column only (not under sidebar), then uses the
-          same PageContainer padding + UPLOAD_COL so Cancel/Next line up with content.
-        */}
         <div
           className={cn(
             'fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-background/90 backdrop-blur-md',
@@ -130,9 +126,7 @@ export function UploadPage() {
           )}
         >
           <div className="mx-auto w-full max-w-[var(--content-max-width)] px-[var(--page-padding-x)]">
-            <div
-              className={cn(UPLOAD_COL, 'flex items-center justify-end gap-2.5 py-3.5')}
-            >
+            <div className="flex items-center justify-end gap-2.5 py-3.5">
               {flow.step > 1 ? (
                 <Button
                   type="button"
@@ -142,7 +136,7 @@ export function UploadPage() {
                   disabled={flow.publishing}
                 >
                   <ArrowLeft className="size-3.5" />
-                  Back
+                  {t('upload.back')}
                 </Button>
               ) : (
                 <Button
@@ -150,7 +144,7 @@ export function UploadPage() {
                   variant="outline"
                   className="h-10 min-w-[6.5rem] rounded-lg border-0 bg-muted/40 text-muted-foreground ring-1 ring-border/60 hover:text-foreground"
                 >
-                  <Link to="/">Cancel</Link>
+                  <Link to="/">{t('upload.cancel')}</Link>
                 </Button>
               )}
 
@@ -163,7 +157,7 @@ export function UploadPage() {
                     disabled={flow.publishing}
                     onClick={() => void flow.saveDraft()}
                   >
-                    Save Draft
+                    {t('upload.saveDraft')}
                   </Button>
                   <Button
                     type="button"
@@ -171,7 +165,7 @@ export function UploadPage() {
                     disabled={flow.publishing}
                     onClick={() => void flow.publish()}
                   >
-                    {flow.publishing ? 'Publishing…' : 'Publish'}
+                    {flow.publishing ? t('upload.publishing') : t('upload.publish')}
                   </Button>
                 </>
               ) : (
@@ -181,7 +175,7 @@ export function UploadPage() {
                   disabled={!flow.canNext}
                   onClick={flow.goNext}
                 >
-                  Next
+                  {t('upload.next')}
                   <ArrowRight className="size-3.5" />
                 </Button>
               )}

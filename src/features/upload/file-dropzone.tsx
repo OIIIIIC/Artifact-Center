@@ -7,15 +7,15 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { ENABLED_FILE_TYPES, ACCEPT_ATTR } from '@/features/upload/upload-meta'
+import { ACCEPT_ATTR, ENABLED_FILE_TYPES } from '@/features/upload/upload-meta'
 import { formatFileSize } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Application } from '@/types/application'
 import type { ParsedArtifactFile, UploadFileError, UploadPhase } from '@/types/upload'
 import { UPLOAD_MAX_BYTES } from '@/types/upload'
-import { PLATFORM_LABEL } from '@/features/applications/platform-meta'
 
 interface FileDropzoneProps {
   application?: Application
@@ -26,22 +26,6 @@ interface FileDropzoneProps {
   onClear: () => void
 }
 
-const PHASE_COPY: Record<Exclude<UploadPhase, 'idle' | 'error' | 'ready'>, string> = {
-  uploading: 'Uploading…',
-  verifying: 'Verifying…',
-  hashing: 'Calculating hash…',
-}
-
-const ERROR_COPY: Record<UploadFileError, string> = {
-  too_large: `File is too large. Max size is ${formatFileSize(UPLOAD_MAX_BYTES)}.`,
-  wrong_platform: 'File type does not match the selected application platform.',
-  unsupported: 'This format is not enabled yet (IPA / Firmware / Docker).',
-  empty: 'Empty file. Choose another artifact.',
-}
-
-/**
- * Visual center of the upload flow — deploy-style dropzone.
- */
 export function FileDropzone({
   application,
   phase,
@@ -50,6 +34,7 @@ export function FileDropzone({
   onFile,
   onClear,
 }: FileDropzoneProps) {
+  const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
 
@@ -62,6 +47,25 @@ export function FileDropzone({
   )
 
   const busy = phase === 'uploading' || phase === 'verifying' || phase === 'hashing'
+
+  const phaseLabel =
+    phase === 'uploading'
+      ? t('upload.uploading')
+      : phase === 'verifying'
+        ? t('upload.verifying')
+        : phase === 'hashing'
+          ? t('upload.hashing')
+          : ''
+
+  const errorMessage = (err: UploadFileError) => {
+    if (err === 'too_large')
+      return t('upload.errTooLarge', {
+        size: formatFileSize(UPLOAD_MAX_BYTES),
+      })
+    if (err === 'wrong_platform') return t('upload.errWrongPlatform')
+    if (err === 'unsupported') return t('upload.errUnsupported')
+    return t('upload.errEmpty')
+  }
 
   return (
     <div className="space-y-5">
@@ -98,7 +102,7 @@ export function FileDropzone({
           'relative flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl px-6 py-12 text-center',
           'bg-muted/25 ring-1 ring-border/70 transition-[background-color,box-shadow,ring-color] duration-[var(--duration-page)]',
           'dark:bg-muted/15',
-          dragOver && 'bg-muted/45 ring-border-strong ring-2',
+          dragOver && 'bg-muted/45 ring-2 ring-border-strong',
           phase === 'error' && 'ring-destructive/30',
           phase === 'ready' && 'cursor-default ring-border/50',
           busy && 'cursor-wait',
@@ -122,11 +126,15 @@ export function FileDropzone({
               <UploadCloud className="size-5 text-muted-foreground" strokeWidth={1.5} />
             </div>
             <p className="text-[0.9375rem] font-medium text-foreground">
-              Drop artifact here
+              {t('upload.dropHere')}
             </p>
             <p className="mt-1 max-w-sm text-[0.8125rem] text-muted-foreground">
-              or click to browse · APK / AAB / EXE / ZIP
-              {application ? ` · target ${PLATFORM_LABEL[application.platform]}` : ''}
+              {t('upload.dropHint')}
+              {application
+                ? t('upload.dropTarget', {
+                    platform: t(`platform.${application.platform}`),
+                  })
+                : ''}
             </p>
           </>
         ) : null}
@@ -138,11 +146,9 @@ export function FileDropzone({
               strokeWidth={1.5}
             />
             <div className="space-y-1">
-              <p className="text-[0.9375rem] font-medium text-foreground">
-                {PHASE_COPY[phase as keyof typeof PHASE_COPY]}
-              </p>
+              <p className="text-[0.9375rem] font-medium text-foreground">{phaseLabel}</p>
               <p className="text-[0.75rem] text-muted-foreground">
-                Mock pipeline — no real upload
+                {t('upload.mockPipeline')}
               </p>
             </div>
             <div className="mt-2 flex w-48 gap-1">
@@ -151,16 +157,11 @@ export function FileDropzone({
                   key={p}
                   className={cn(
                     'h-1 flex-1 rounded-full transition-colors duration-[var(--duration-page)]',
-                    phase === p ||
-                      (phase === 'verifying' && p === 'uploading') ||
-                      (phase === 'hashing' && p !== 'hashing') ||
-                      phase === 'hashing'
+                    phase === 'hashing' ||
+                      (phase === 'verifying' && p !== 'hashing') ||
+                      (phase === 'uploading' && p === 'uploading')
                       ? 'bg-foreground/70'
                       : 'bg-border',
-                    phase === 'hashing' && 'bg-foreground/70',
-                    phase === 'verifying' && p === 'uploading' && 'bg-foreground/70',
-                    phase === 'verifying' && p === 'verifying' && 'bg-foreground/70',
-                    phase === 'uploading' && p === 'uploading' && 'bg-foreground/70',
                   )}
                 />
               ))}
@@ -180,7 +181,7 @@ export function FileDropzone({
                 </p>
                 <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
                   {formatFileSize(parsed.sizeBytes)}
-                  {parsed.platform ? ` · ${PLATFORM_LABEL[parsed.platform]}` : ''}
+                  {parsed.platform ? ` · ${t(`platform.${parsed.platform}`)}` : ''}
                   {parsed.kind ? ` · ${parsed.kind.toUpperCase()}` : ''}
                 </p>
               </div>
@@ -191,13 +192,13 @@ export function FileDropzone({
             </div>
             <dl className="grid gap-2 rounded-xl bg-background/60 p-3 text-[0.75rem] ring-1 ring-border/50">
               <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">SHA-256</dt>
+                <dt className="text-muted-foreground">{t('upload.sha256')}</dt>
                 <dd className="truncate font-mono text-foreground/90">
                   {parsed.hash.slice(0, 16)}…{parsed.hash.slice(-8)}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">Detected version</dt>
+                <dt className="text-muted-foreground">{t('upload.detectedVersion')}</dt>
                 <dd className="font-mono text-foreground">v{parsed.suggestedVersion}</dd>
               </div>
             </dl>
@@ -212,7 +213,7 @@ export function FileDropzone({
               }}
             >
               <X className="size-3.5" />
-              Replace file
+              {t('upload.replaceFile')}
             </Button>
           </div>
         ) : null}
@@ -220,9 +221,11 @@ export function FileDropzone({
         {phase === 'error' && fileError ? (
           <div className="flex max-w-sm flex-col items-center gap-3">
             <AlertCircle className="size-8 text-muted-foreground" strokeWidth={1.5} />
-            <p className="text-[0.9375rem] font-medium text-foreground">Upload failed</p>
+            <p className="text-[0.9375rem] font-medium text-foreground">
+              {t('upload.uploadFailed')}
+            </p>
             <p className="text-[0.8125rem] text-muted-foreground">
-              {ERROR_COPY[fileError]}
+              {errorMessage(fileError)}
             </p>
             <Button
               type="button"
@@ -235,25 +238,25 @@ export function FileDropzone({
                 inputRef.current?.click()
               }}
             >
-              Try another file
+              {t('upload.tryAnother')}
             </Button>
           </div>
         ) : null}
       </div>
 
       <div className="flex flex-wrap justify-center gap-1.5">
-        {ENABLED_FILE_TYPES.map((t) => (
+        {ENABLED_FILE_TYPES.map((item) => (
           <span
-            key={t.kind}
+            key={item.kind}
             className={cn(
               'rounded-md px-2 py-1 text-[0.6875rem] font-medium tracking-wide',
-              t.enabled
+              item.enabled
                 ? 'bg-muted/50 text-muted-foreground'
                 : 'bg-transparent text-muted-foreground/45 line-through ring-1 ring-border/40',
             )}
           >
-            {t.label}
-            {!t.enabled ? ' · soon' : ''}
+            {item.label}
+            {!item.enabled ? ` · ${t('upload.soon')}` : ''}
           </span>
         ))}
       </div>

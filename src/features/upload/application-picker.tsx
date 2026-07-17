@@ -1,10 +1,11 @@
 import { Pin, Search, Clock } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
-import { PLATFORM_ICON, PLATFORM_LABEL } from '@/features/applications/platform-meta'
+import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { PINNED_APP_IDS, RECENT_APP_IDS } from '@/features/upload/upload-meta'
-import { MOCK_APPLICATIONS } from '@/mocks/applications'
 import { cn } from '@/lib/utils'
+import { useApplicationsStore } from '@/store/applications-store'
 import type { Application } from '@/types/application'
 
 interface ApplicationPickerProps {
@@ -21,6 +22,7 @@ function AppRow({
   selected: boolean
   onSelect: () => void
 }) {
+  const { t } = useTranslation()
   const Icon = PLATFORM_ICON[app.platform]
   const initials = app.name
     .split(/\s+/)
@@ -41,7 +43,7 @@ function AppRow({
           : 'hover:bg-muted/40',
       )}
       aria-pressed={selected}
-      aria-label={selected ? `${app.name}, selected` : app.name}
+      aria-label={selected ? `${app.name}, ${t('common.selected')}` : app.name}
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-[11px] font-semibold text-muted-foreground">
         {initials}
@@ -52,7 +54,7 @@ function AppRow({
         </span>
         <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[0.75rem] text-muted-foreground">
           <Icon className="size-3 shrink-0 opacity-70" strokeWidth={1.75} />
-          <span className="shrink-0">{PLATFORM_LABEL[app.platform]}</span>
+          <span className="shrink-0">{t(`platform.${app.platform}`)}</span>
           <span className="text-muted-foreground/40" aria-hidden>
             ·
           </span>
@@ -64,7 +66,6 @@ function AppRow({
           </span>
         </span>
       </span>
-      {/* Status via ring/bg only — no "Selected" label noise */}
       {selected ? (
         <span className="size-1.5 shrink-0 rounded-full bg-foreground/70" aria-hidden />
       ) : null}
@@ -92,23 +93,28 @@ function Section({
   )
 }
 
-/**
- * Modern application selector — search + list in one surface.
- * Pinned / Recent / All are de-duplicated (no repeated rows).
- */
 export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
+  const created = useApplicationsStore((s) => s.created)
+  const overrides = useApplicationsStore((s) => s.overrides)
+  const deletedIds = useApplicationsStore((s) => s.deletedIds)
+  const getCatalog = useApplicationsStore((s) => s.getCatalog)
+  const catalog = useMemo(
+    () => getCatalog(),
+    [created, overrides, deletedIds, getCatalog],
+  )
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return MOCK_APPLICATIONS
-    return MOCK_APPLICATIONS.filter(
+    if (!q) return catalog
+    return catalog.filter(
       (a) =>
         a.name.toLowerCase().includes(q) ||
         a.packageName.toLowerCase().includes(q) ||
         a.owner.toLowerCase().includes(q),
     )
-  }, [query])
+  }, [query, catalog])
 
   const pinned = useMemo(
     () =>
@@ -118,7 +124,6 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
     [filtered],
   )
 
-  /** Recent excludes anything already in Pinned */
   const recent = useMemo(() => {
     const pinnedSet = new Set(PINNED_APP_IDS)
     return RECENT_APP_IDS.map((id) => filtered.find((a) => a.id === id)).filter(
@@ -126,7 +131,6 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
     )
   }, [filtered])
 
-  /** All excludes Pinned + Recent when browsing grouped */
   const rest = useMemo(() => {
     const hide = new Set([...PINNED_APP_IDS, ...RECENT_APP_IDS])
     return filtered.filter((a) => !hide.has(a.id))
@@ -135,9 +139,7 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
   const showGrouped = !query.trim()
 
   return (
-    <div
-      className={cn('overflow-hidden rounded-2xl ring-1 ring-border/60 dark:ring-border')}
-    >
+    <div className="overflow-hidden rounded-2xl ring-1 ring-border/60 dark:ring-border">
       <div className="relative border-b border-border/50">
         <Search
           className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -146,8 +148,8 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search applications…"
-          aria-label="Search applications"
+          placeholder={t('upload.searchApps')}
+          aria-label={t('upload.searchAppsAria')}
           className={cn(
             'h-12 w-full bg-transparent pr-3 pl-10 text-[0.875rem] outline-none',
             'placeholder:text-muted-foreground/70',
@@ -156,19 +158,15 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
         />
       </div>
 
-      <div
-        className={cn(
-          'max-h-[min(32rem,58vh)] space-y-5 overflow-y-auto p-2 [scrollbar-gutter:stable]',
-        )}
-      >
+      <div className="max-h-[min(32rem,58vh)] space-y-5 overflow-y-auto p-2 [scrollbar-gutter:stable]">
         {filtered.length === 0 ? (
           <p className="px-3 py-10 text-center text-[0.8125rem] text-muted-foreground">
-            No applications match “{query}”.
+            {t('upload.noMatch', { query })}
           </p>
         ) : showGrouped ? (
           <>
             {pinned.length > 0 ? (
-              <Section title="Pinned" icon={Pin}>
+              <Section title={t('upload.pinned')} icon={Pin}>
                 {pinned.map((app) => (
                   <AppRow
                     key={app.id}
@@ -180,7 +178,7 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
               </Section>
             ) : null}
             {recent.length > 0 ? (
-              <Section title="Recent" icon={Clock}>
+              <Section title={t('upload.recent')} icon={Clock}>
                 {recent.map((app) => (
                   <AppRow
                     key={app.id}
@@ -192,7 +190,7 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
               </Section>
             ) : null}
             {rest.length > 0 ? (
-              <Section title="All applications" icon={Search}>
+              <Section title={t('upload.allApps')} icon={Search}>
                 {rest.map((app) => (
                   <AppRow
                     key={app.id}

@@ -1,13 +1,15 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-import { MOCK_APPLICATIONS } from '@/mocks/applications'
 import {
   detectFileKind,
   isEnabledKind,
   mockParseFile,
 } from '@/features/upload/mock-parse'
-import type { Application } from '@/types/application'
+import { useApplicationsStore } from '@/store/applications-store'
+import { useArtifactsStore } from '@/store/artifacts-store'
+import { useAuthStore } from '@/store/auth-store'
+import type { Application, ApplicationPlatform } from '@/types/application'
 import type {
   ParsedArtifactFile,
   PublishError,
@@ -35,9 +37,23 @@ export function useUploadFlow() {
   const [params] = useSearchParams()
   const presetApp = params.get('app') ?? ''
 
+  const created = useApplicationsStore((s) => s.created)
+  const overrides = useApplicationsStore((s) => s.overrides)
+  const deletedIds = useApplicationsStore((s) => s.deletedIds)
+  const getById = useApplicationsStore((s) => s.getById)
+  const getCatalog = useApplicationsStore((s) => s.getCatalog)
+  const publishArtifact = useArtifactsStore((s) => s.publishArtifact)
+  const getArtifacts = useArtifactsStore((s) => s.getForApplication)
+  const user = useAuthStore((s) => s.user)
+
+  const catalog = useMemo(
+    () => getCatalog(),
+    [created, overrides, deletedIds, getCatalog],
+  )
+
   const [step, setStep] = useState<UploadStep>(1)
-  const [applicationId, setApplicationId] = useState(
-    MOCK_APPLICATIONS.some((a) => a.id === presetApp) ? presetApp : '',
+  const [applicationId, setApplicationId] = useState(() =>
+    catalog.some((a) => a.id === presetApp) ? presetApp : '',
   )
   const [phase, setPhase] = useState<UploadPhase>('idle')
   const [fileError, setFileError] = useState<UploadFileError | null>(null)
@@ -55,8 +71,8 @@ export function useUploadFlow() {
   }
 
   const application: Application | undefined = useMemo(
-    () => MOCK_APPLICATIONS.find((a) => a.id === applicationId),
-    [applicationId],
+    () => (applicationId ? getById(applicationId) : undefined),
+    [applicationId, created, overrides, deletedIds, getById],
   )
 
   const selectApplication = useCallback((id: string) => {
@@ -103,7 +119,6 @@ export function useUploadFlow() {
     const t2 = window.setTimeout(() => setPhase('hashing'), 1400)
     const t3 = window.setTimeout(() => {
       const result = mockParseFile({ name: file.name, size: file.size }, app)
-      // Platform mismatch mock: e.g. windows app + apk
       if (
         app &&
         result.platform &&
@@ -111,7 +126,6 @@ export function useUploadFlow() {
         result.platform !== app.platform &&
         !(app.platform === 'android' && (result.kind === 'apk' || result.kind === 'aab'))
       ) {
-        // Allow zip app any; android accepts apk/aab; otherwise flag wrong platform
         if (
           (app.platform === 'windows' && result.platform !== 'windows') ||
           (app.platform === 'android' && result.platform !== 'android')
@@ -155,15 +169,16 @@ export function useUploadFlow() {
   const goNext = useCallback(() => {
     if (!canNext) return
     if (step === 3) {
-      // Surface duplicate as warning on review, still allow navigation
-      if (application && version.version === application.latestVersion) {
-        setPublishError('duplicate_version')
+      if (application) {
+        const existing = getArtifacts(application.id)
+        const dup = existing.some((a) => a.version === version.version.trim())
+        setPublishError(dup ? 'duplicate_version' : null)
       } else {
         setPublishError(null)
       }
     }
     if (step < 4) setStep((s) => (s + 1) as UploadStep)
-  }, [canNext, step, application, version.version])
+  }, [canNext, step, application, version.version, getArtifacts])
 
   const goBack = useCallback(() => {
     setPublishError(null)
@@ -188,15 +203,33 @@ export function useUploadFlow() {
 
     await new Promise((r) => setTimeout(r, 900))
 
-    if (version.version === application.latestVersion) {
+    const existing = getArtifacts(application.id)
+    if (existing.some((a) => a.version === version.version.trim())) {
       setPublishError('duplicate_version')
       setPublishing(false)
       return
     }
 
+    const platform = (version.platform ||
+      parsed.platform ||
+      application.platform) as ApplicationPlatform
+
+    publishArtifact({
+      applicationId: application.id,
+      version: version.version,
+      buildNumber: version.buildNumber,
+      platform,
+      sizeBytes: parsed.sizeBytes,
+      filename: parsed.name,
+      releaseNotes: version.releaseNotes,
+      channel: version.channel,
+      markLatest: version.markLatest,
+      uploader: user?.name,
+    })
+
     setPublishing(false)
     setDone(true)
-  }, [application, parsed, version.version])
+  }, [application, parsed, version, getArtifacts, publishArtifact, user?.name])
 
   const saveDraft = useCallback(async () => {
     setPublishing(true)
