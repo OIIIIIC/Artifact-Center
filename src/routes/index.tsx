@@ -9,16 +9,19 @@ import { LoginPage } from '@/routes/login-page'
 import { RequireAuth } from '@/routes/require-auth'
 import { SearchPage } from '@/routes/search-page'
 import { SettingsPage } from '@/routes/settings-page'
+import { ShareDownloadPage } from '@/routes/share-download-page'
 import { UploadPage } from '@/routes/upload-page'
 
 /**
  * Product routes behind mock auth.
- * Login is public; everything else requires session.
+ * Login + share download links are public; everything else requires session.
  */
 export function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Capability URL — open without login; user chooses to download */}
+      <Route path="/d/:token" element={<ShareDownloadPage />} />
 
       <Route
         path="/"

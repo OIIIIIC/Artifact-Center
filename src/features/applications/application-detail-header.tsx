@@ -1,4 +1,5 @@
-import { Download, Loader2, Upload } from 'lucide-react'
+import { Download, Loader2, Share2, Upload } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -9,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ArtifactReleaseBadges } from '@/features/applications/artifact-release-badges'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
+import { ShareDialog } from '@/features/share/share-dialog'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Application } from '@/types/application'
@@ -42,6 +44,7 @@ export function ApplicationDetailHeader({
   const { t, i18n } = useTranslation()
   void i18n.language
   const { download, isBusy } = useDownloadArtifact()
+  const [shareOpen, setShareOpen] = useState(false)
   const latestKey = `latest:${application.id}`
   const downloading = isBusy(latestKey)
 
@@ -235,6 +238,18 @@ export function ApplicationDetailHeader({
               </TooltipContent>
             </Tooltip>
           ) : null}
+          {hasVersion ? (
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="border-0 bg-muted/40 ring-1 ring-border/60"
+              onClick={() => setShareOpen(true)}
+            >
+              <Share2 className="size-3.5" strokeWidth={1.75} />
+              {t('share.action')}
+            </Button>
+          ) : null}
           <Button asChild size="lg">
             <Link to={`/upload?app=${application.id}`}>
               <Upload className="size-3.5" strokeWidth={1.75} />
@@ -260,6 +275,14 @@ export function ApplicationDetailHeader({
           </p>
         ) : null}
       </div>
+
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        applicationId={application.id}
+        applicationName={application.name}
+        artifact={latest}
+      />
     </header>
   )
 }

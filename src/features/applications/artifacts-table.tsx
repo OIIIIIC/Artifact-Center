@@ -1,9 +1,11 @@
-import { Download, Loader2, Package, Upload } from 'lucide-react'
+import { Download, Loader2, Package, Share2, Upload } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { EmptyState } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
+import { ShareDialog } from '@/features/share/share-dialog'
 import {
   Table,
   TableBody,
@@ -23,17 +25,20 @@ interface ArtifactsTableProps {
   artifacts: Artifact[]
   /** When empty, upload CTA deep-links with this app id */
   applicationId?: string
+  applicationName?: string
   className?: string
 }
 
 export function ArtifactsTable({
   artifacts,
   applicationId,
+  applicationName,
   className,
 }: ArtifactsTableProps) {
   const { t, i18n } = useTranslation()
   void i18n.language
   const { download, isBusy } = useDownloadArtifact()
+  const [shareArt, setShareArt] = useState<Artifact | null>(null)
 
   if (artifacts.length === 0) {
     const uploadTo = applicationId ? `/upload?app=${applicationId}` : '/upload'
@@ -131,35 +136,62 @@ export function ArtifactsTable({
                   <ArtifactReleaseBadges artifact={art} />
                 </TableCell>
                 <TableCell className="px-4 py-3.5 text-right">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={busy}
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label={`${t('common.download')} ${art.filename}`}
-                    onClick={() =>
-                      void download({
-                        id: art.id,
-                        filename: art.filename,
-                        version: art.version,
-                        sizeBytes: art.sizeBytes,
-                      })
-                    }
-                  >
-                    {busy ? (
-                      <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
-                    ) : (
-                      <Download className="size-3.5" strokeWidth={1.75} />
-                    )}
-                    <span className="hidden sm:inline">{t('common.download')}</span>
-                  </Button>
+                  <div className="inline-flex items-center justify-end gap-0.5">
+                    {applicationId && applicationName ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label={`${t('share.action')} v${art.version}`}
+                        onClick={() => setShareArt(art)}
+                      >
+                        <Share2 className="size-3.5" strokeWidth={1.75} />
+                        <span className="hidden sm:inline">{t('share.action')}</span>
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={`${t('common.download')} ${art.filename}`}
+                      onClick={() =>
+                        void download({
+                          id: art.id,
+                          filename: art.filename,
+                          version: art.version,
+                          sizeBytes: art.sizeBytes,
+                        })
+                      }
+                    >
+                      {busy ? (
+                        <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
+                      ) : (
+                        <Download className="size-3.5" strokeWidth={1.75} />
+                      )}
+                      <span className="hidden sm:inline">{t('common.download')}</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )
           })}
         </TableBody>
       </Table>
+
+      {applicationId && applicationName && shareArt ? (
+        <ShareDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setShareArt(null)
+          }}
+          applicationId={applicationId}
+          applicationName={applicationName}
+          artifact={shareArt}
+        />
+      ) : null}
     </div>
   )
 }

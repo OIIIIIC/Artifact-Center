@@ -129,6 +129,7 @@ export function ApplicationDetailPage() {
               <OverviewRecentVersions
                 artifacts={recentVersions}
                 applicationId={application.id}
+                applicationName={application.name}
               />
             </TabsContent>
 
@@ -141,7 +142,11 @@ export function ApplicationDetailPage() {
                   {t('detail.artifactsHint')}
                 </p>
               </div>
-              <ArtifactsTable artifacts={artifacts} applicationId={application.id} />
+              <ArtifactsTable
+                artifacts={artifacts}
+                applicationId={application.id}
+                applicationName={application.name}
+              />
             </TabsContent>
 
             <TabsContent value="release-notes" className="mt-0 outline-none">
