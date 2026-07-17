@@ -189,7 +189,7 @@ export function DesignSystemPage() {
         <Section
           id={anchorId('Button')}
           title="Button"
-          description="每区最多一个 Primary。Danger 仅用于破坏性确认。"
+          description="每区最多一个 Primary。尺寸：sm≈32 · default≈36 · lg≈40（页头/底栏）。Danger 仅用于破坏性确认。"
         >
           <div className="flex flex-wrap items-center gap-3">
             <Button>Primary</Button>
@@ -199,7 +199,8 @@ export function DesignSystemPage() {
             <Button variant="link">Link</Button>
             <Button variant="destructive">Danger</Button>
             <Button size="sm">Small</Button>
-            <Button size="lg">Large</Button>
+            <Button size="default">Default</Button>
+            <Button size="lg">Large / page</Button>
             <Button disabled>Disabled</Button>
             <Button>
               <Loader2 className="animate-spin" />

@@ -136,7 +136,7 @@ export function LoginPage() {
               </p>
             ) : null}
 
-            <Button type="submit" className="h-10 w-full rounded-lg" disabled={loading}>
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
               {loading ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
 

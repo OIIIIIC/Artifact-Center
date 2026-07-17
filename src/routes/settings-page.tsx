@@ -480,7 +480,8 @@ export function SettingsPage() {
                     <div className="flex justify-end">
                       <Button
                         type="button"
-                        className="h-10 min-w-[6.5rem] rounded-lg"
+                        size="lg"
+                        className="min-w-[6.5rem]"
                         disabled={profileSaving || !profileDirty}
                         onClick={() => void saveProfile()}
                       >
@@ -563,7 +564,8 @@ export function SettingsPage() {
                       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/50 pt-4">
                         <Button
                           type="button"
-                          className="h-10 min-w-[7rem] rounded-lg"
+                          size="lg"
+                          className="min-w-[7rem]"
                           disabled={
                             passwordSaving ||
                             !currentPassword ||
@@ -683,7 +685,7 @@ export function SettingsPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-9 gap-1.5 rounded-lg border-0 bg-muted/40 ring-1 ring-border/60"
+                    className="border-0 bg-muted/40 ring-1 ring-border/60"
                     onClick={() => {
                       setShowAddMember((v) => !v)
                       setAddError(null)
@@ -765,7 +767,7 @@ export function SettingsPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-9 rounded-lg border-0 bg-muted/40 ring-1 ring-border/60"
+                        className="border-0 bg-muted/40 ring-1 ring-border/60"
                         disabled={adding}
                         onClick={() => {
                           setShowAddMember(false)
@@ -776,7 +778,7 @@ export function SettingsPage() {
                       </Button>
                       <Button
                         type="button"
-                        className="h-9 rounded-lg"
+                        size="lg"
                         disabled={adding}
                         onClick={() => void onAddMember()}
                       >
@@ -951,7 +953,7 @@ export function SettingsPage() {
                               <Button
                                 type="button"
                                 variant="outline"
-                                className="h-9 rounded-lg border-0 bg-muted/40 ring-1 ring-border/60"
+                                className="border-0 bg-muted/40 ring-1 ring-border/60"
                                 disabled={resetting}
                                 onClick={() => {
                                   setResetMemberId(null)
@@ -962,7 +964,7 @@ export function SettingsPage() {
                               </Button>
                               <Button
                                 type="button"
-                                className="h-9 rounded-lg"
+                                size="lg"
                                 disabled={resetting || !resetPassword || !resetConfirm}
                                 onClick={() => void onAdminReset(m.name, m.email)}
                               >
@@ -1062,7 +1064,8 @@ export function SettingsPage() {
                   <div className="flex justify-end">
                     <Button
                       type="button"
-                      className="h-10 min-w-[6.5rem] rounded-lg"
+                      size="lg"
+                      className="min-w-[6.5rem]"
                       disabled={retentionSaving}
                       onClick={() => void saveRetention()}
                     >
@@ -1118,14 +1121,14 @@ export function SettingsPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-9 rounded-lg border-0 bg-muted/40 ring-1 ring-border/60"
+                        className="border-0 bg-muted/40 ring-1 ring-border/60"
                         onClick={() => setConfirmLogout(false)}
                       >
                         {t('common.cancel')}
                       </Button>
                       <Button
                         type="button"
-                        className="h-9 rounded-lg bg-destructive text-white hover:bg-destructive/90"
+                        className="bg-destructive text-white hover:bg-destructive/90"
                         onClick={onLogout}
                       >
                         {t('settings.logoutConfirmAction')}

@@ -101,7 +101,7 @@ export function AvatarUpload({
           <Button
             type="button"
             variant="outline"
-            className="h-9 rounded-lg border-0 bg-muted/40 ring-1 ring-border/60"
+            className="border-0 bg-muted/40 ring-1 ring-border/60"
             disabled={disabled}
             onClick={onPick}
           >
@@ -111,7 +111,7 @@ export function AvatarUpload({
             <Button
               type="button"
               variant="ghost"
-              className="h-9 gap-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground"
               disabled={disabled}
               onClick={() => {
                 setError(null)

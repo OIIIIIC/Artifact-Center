@@ -100,7 +100,7 @@ export function Topbar({
             type="button"
             variant="ghost"
             className={cn(
-              'h-9 gap-2 rounded-lg px-2.5 text-muted-foreground',
+              'gap-2 px-2.5 text-muted-foreground',
               'transition-colors duration-[var(--duration-hover)]',
               'hover:text-foreground sm:px-3',
             )}
