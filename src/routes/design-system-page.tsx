@@ -268,7 +268,7 @@ export function DesignSystemPage() {
         <Section
           id={anchorId('Badge')}
           title="Badge"
-          description="Quiet chips only. Application lifecycle uses unified StatusBadge — no chroma."
+          description="Soft semantic tints — differentiated but calm (not neon)."
         >
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -277,11 +277,19 @@ export function DesignSystemPage() {
               <Badge variant="outline">Outline</Badge>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-caption text-muted-foreground mr-1">Application</span>
+              <span className="text-caption mr-1 text-muted-foreground">Lifecycle</span>
               <StatusBadge status="new">NEW</StatusBadge>
+              <StatusBadge status="default">Stable</StatusBadge>
               <StatusBadge status="beta">Beta</StatusBadge>
               <StatusBadge status="deprecated">Deprecated</StatusBadge>
               <StatusBadge status="archived">Archived</StatusBadge>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-caption mr-1 text-muted-foreground">Semantic</span>
+              <StatusBadge status="success">Success</StatusBadge>
+              <StatusBadge status="info">Info</StatusBadge>
+              <StatusBadge status="warning">Warning</StatusBadge>
+              <StatusBadge status="danger">Danger</StatusBadge>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Avatar size="sm">
