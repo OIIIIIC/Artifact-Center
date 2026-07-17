@@ -92,7 +92,8 @@ export const useApplicationsStore = create<ApplicationsState>()(
           packageName: input.packageName.trim(),
           platform: input.platform,
           repository: input.repository?.trim() || `git.enterprise.local/${base}`,
-          latestVersion: '0.1.0',
+          /** Empty until first artifact is published */
+          latestVersion: '',
           updatedAt: now,
           createdAt: now,
           owner: input.owner?.trim() || 'Demo User',

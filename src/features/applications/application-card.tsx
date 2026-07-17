@@ -22,7 +22,8 @@ const iconTone: Record<Application['platform'], string> = {
 
 function statusKey(status: ApplicationStatus): string | null {
   if (status === 'active') return null
-  return `status.${status}`
+  /** Same keys as detail / settings — one lifecycle vocabulary */
+  return `appSettings.status.${status}`
 }
 
 export function ApplicationCard({ application, className }: ApplicationCardProps) {
@@ -115,9 +116,11 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
           <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} aria-hidden />
           {t(`platform.${application.platform}`)}
         </span>
-        <span className="inline-flex h-5 items-center rounded-md bg-muted/40 px-1.5 font-mono text-[11px] text-muted-foreground dark:bg-muted/30">
-          v{application.latestVersion}
-        </span>
+        {application.latestVersion.trim() ? (
+          <span className="inline-flex h-5 items-center rounded-md bg-muted/40 px-1.5 font-mono text-[11px] text-muted-foreground dark:bg-muted/30">
+            v{application.latestVersion}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-4 flex items-center gap-2">

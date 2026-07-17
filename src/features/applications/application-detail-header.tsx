@@ -83,7 +83,7 @@ export function ApplicationDetailHeader({
         }
 
   const latestVersion = latest?.version ?? application.latestVersion
-  const hasVersion = Boolean(latestVersion)
+  const hasVersion = Boolean(latestVersion?.trim())
   const downloadLabel = hasVersion
     ? t('detail.downloadLatestVersion', { version: latestVersion })
     : t('detail.downloadLatest')
@@ -202,6 +202,7 @@ export function ApplicationDetailHeader({
               <TooltipTrigger asChild>
                 <Button
                   type="button"
+                  size="lg"
                   variant="outline"
                   disabled={downloading}
                   className={cn(
@@ -234,13 +235,18 @@ export function ApplicationDetailHeader({
               </TooltipContent>
             </Tooltip>
           ) : null}
-          <Button asChild>
+          <Button asChild size="lg">
             <Link to={`/upload?app=${application.id}`}>
               <Upload className="size-3.5" strokeWidth={1.75} />
               {t('detail.uploadArtifact')}
             </Link>
           </Button>
-          <Button asChild variant="ghost" className="text-muted-foreground lg:hidden">
+          <Button
+            asChild
+            size="lg"
+            variant="ghost"
+            className="text-muted-foreground lg:hidden"
+          >
             <Link to="/">{t('detail.back')}</Link>
           </Button>
         </div>

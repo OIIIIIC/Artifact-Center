@@ -34,7 +34,7 @@ export function ApplicationSummary({
   const { t, i18n } = useTranslation()
   void i18n.language
   const lastUpload = latest?.uploadedAt ?? application.updatedAt
-  const latestVersion = latest?.version ?? application.latestVersion
+  const latestVersion = (latest?.version ?? application.latestVersion).trim()
 
   return (
     <section
