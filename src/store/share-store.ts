@@ -1,19 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+import { encodeShareToken } from '@/features/share/share-token'
 import type { CreateShareInput, ShareLink } from '@/types/share'
 
 interface ShareState {
+  /** Creator-side history (optional; resolution uses the self-contained token). */
   links: ShareLink[]
   createLink: (input: CreateShareInput) => ShareLink
   getByToken: (token: string) => ShareLink | undefined
   revoke: (id: string) => void
-}
-
-function randomToken(): string {
-  const a = Math.random().toString(36).slice(2, 10)
-  const b = Math.random().toString(36).slice(2, 6)
-  return `${a}${b}`
 }
 
 export const useShareStore = create<ShareState>()(
@@ -32,9 +28,17 @@ export const useShareStore = create<ShareState>()(
           throw new Error('artifactId required for artifact share')
         }
 
+        /** Token embeds app/version/expiry — works in any browser without shared DB. */
+        const token = encodeShareToken({
+          applicationId: input.applicationId,
+          mode: input.mode,
+          artifactId: input.artifactId,
+          expiresAt,
+        })
+
         const link: ShareLink = {
           id: `share-${now.toString(36)}`,
-          token: randomToken(),
+          token,
           applicationId: input.applicationId,
           mode: input.mode,
           artifactId: input.mode === 'artifact' ? input.artifactId : undefined,

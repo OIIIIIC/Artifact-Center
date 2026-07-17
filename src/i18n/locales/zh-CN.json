@@ -493,11 +493,11 @@
     "downloading": "准备下载…",
     "landingFooter": "仅限内网协作分发",
     "invalidTitle": "链接无效",
-    "invalidDesc": "链接不存在或已失效，请向分享者索取新链接。",
+    "invalidDesc": "链接格式不正确或已损坏，请向分享者索取新链接。",
     "expiredTitle": "链接已过期",
     "expiredDesc": "此分享链接已超过有效期，请联系分享者重新生成。",
     "noArtifactTitle": "暂无可下载版本",
-    "noArtifactDesc": "该应用还没有可分享的制品，或固定版本已被移除。",
+    "noArtifactDesc": "该应用还没有可分享的制品，或固定版本在此环境中不可用。",
     "goLogin": "前往登录"
   }
 }
