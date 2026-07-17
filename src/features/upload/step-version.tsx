@@ -15,6 +15,7 @@ interface StepVersionProps {
   onChannel: (c: UploadChannel) => void
 }
 
+/** Single control field — safe to use native label. */
 function Field({
   label,
   hint,
@@ -37,6 +38,32 @@ function Field({
   )
 }
 
+/**
+ * Multi-control group (chips) — never wrap in <label>, or browsers may
+ * keep treating the first chip as “associated” and look multi-selected.
+ */
+function FieldGroup({
+  label,
+  hint,
+  children,
+}: {
+  label: string
+  hint?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="block space-y-1.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[0.8125rem] font-medium text-foreground">{label}</span>
+        {hint ? (
+          <span className="text-[0.6875rem] text-muted-foreground">{hint}</span>
+        ) : null}
+      </div>
+      {children}
+    </div>
+  )
+}
+
 const inputClass = cn(
   'h-10 w-full rounded-lg bg-muted/30 px-3 text-[0.875rem] text-foreground outline-none',
   'ring-1 ring-border/60 transition-[box-shadow,background-color] duration-[var(--duration-hover)]',
@@ -47,6 +74,7 @@ const inputClass = cn(
 
 export function StepVersion({ version, onChange, onChannel }: StepVersionProps) {
   const { t } = useTranslation()
+  const channel = version.channel || 'stable'
 
   return (
     <div className="w-full space-y-5">
@@ -78,18 +106,25 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
         />
       </Field>
 
-      <Field label={t('upload.fieldPlatform')} hint={t('upload.hintAutoShort')}>
-        <div className="flex flex-wrap gap-1.5">
+      <FieldGroup label={t('upload.fieldPlatform')} hint={t('upload.hintAutoShort')}>
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="radiogroup"
+          aria-label={t('upload.fieldPlatform')}
+        >
           {PLATFORMS.map((p) => {
             const active = version.platform === p
             return (
               <button
                 key={p}
                 type="button"
+                role="radio"
+                aria-checked={active}
                 onClick={() => onChange({ platform: p })}
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium',
                   'transition-colors duration-[var(--duration-hover)]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
                   active
                     ? 'bg-foreground text-background'
                     : 'bg-muted/40 text-muted-foreground hover:text-foreground',
@@ -100,21 +135,23 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
             )
           })}
         </div>
-      </Field>
+      </FieldGroup>
 
-      <Field label={t('upload.fieldChannel')}>
+      <FieldGroup label={t('upload.fieldChannel')}>
         <div
           className="flex max-w-full flex-wrap gap-1.5"
-          role="group"
+          role="radiogroup"
           aria-label={t('upload.fieldChannel')}
         >
           {CHANNELS.map((c) => {
-            const active = version.channel === c
+            const active = channel === c
             const meta = CHANNEL_CHIP[c]
             return (
               <button
                 key={c}
                 type="button"
+                role="radio"
+                aria-checked={active}
                 title={t(`channelHint.${c}`)}
                 onClick={() => onChannel(c)}
                 className={cn(
@@ -123,13 +160,11 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
                   active ? meta.selected : meta.idle,
                 )}
-                aria-pressed={active}
               >
                 <span
                   className={cn(
                     'size-1.5 shrink-0 rounded-full',
-                    meta.dot,
-                    !active && 'opacity-70',
+                    active ? meta.dot : meta.dotIdle,
                   )}
                   aria-hidden
                 />
@@ -139,9 +174,9 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
           })}
         </div>
         <p className="mt-1.5 text-[0.75rem] leading-relaxed text-muted-foreground">
-          {t(`channelHint.${version.channel}`)}
+          {t(`channelHint.${channel}`)}
         </p>
-      </Field>
+      </FieldGroup>
 
       <label className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
         <input
