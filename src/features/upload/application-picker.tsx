@@ -1,6 +1,7 @@
-import { Pin, Search, Clock } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { Pin, Search, Clock, Plus } from 'lucide-react'
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { PINNED_APP_IDS, RECENT_APP_IDS } from '@/features/upload/upload-meta'
@@ -11,7 +12,12 @@ import type { Application } from '@/types/application'
 interface ApplicationPickerProps {
   value: string
   onChange: (id: string) => void
+  className?: string
 }
+
+/** Small gap between picker bottom and fixed upload footer. */
+const FOOTER_GAP_PX = 12
+const MIN_SHELL_PX = 200
 
 function AppRow({
   app,
@@ -93,19 +99,73 @@ function Section({
   )
 }
 
-export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
+/**
+ * Measure remaining viewport from picker top down to the fixed upload footer.
+ * Avoids fragile flex height chains through ContentArea / PageContainer.
+ */
+function usePickerShellHeight(shellRef: RefObject<HTMLDivElement | null>) {
+  const [height, setHeight] = useState<number | undefined>(undefined)
+
+  useLayoutEffect(() => {
+    const shell = shellRef.current
+    if (!shell) return
+
+    const measure = () => {
+      // Use viewport coords so page scroll (if any) does not double-count padding.
+      const top = shell.getBoundingClientRect().top
+      const footer = document.querySelector<HTMLElement>('[data-slot="upload-footer"]')
+      const bottom = footer ? footer.getBoundingClientRect().top : window.innerHeight
+      const next = Math.floor(bottom - top - FOOTER_GAP_PX)
+      setHeight((prev) => {
+        const h = Math.max(MIN_SHELL_PX, next)
+        return prev === h ? prev : h
+      })
+    }
+
+    measure()
+    // Second pass after paint — top padding / fonts can shift top by a few px.
+    const raf = window.requestAnimationFrame(measure)
+
+    window.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('resize', measure)
+    window.visualViewport?.addEventListener('scroll', measure)
+
+    const ro = new ResizeObserver(measure)
+    ro.observe(document.documentElement)
+    const parent = shell.parentElement
+    if (parent) ro.observe(parent)
+
+    return () => {
+      window.cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('scroll', measure)
+      ro.disconnect()
+    }
+  }, [shellRef])
+
+  return height
+}
+
+export function ApplicationPicker({
+  value,
+  onChange,
+  className,
+}: ApplicationPickerProps) {
   const { t } = useTranslation()
+  const shellRef = useRef<HTMLDivElement>(null)
+  const shellHeight = usePickerShellHeight(shellRef)
   const [query, setQuery] = useState('')
   const created = useApplicationsStore((s) => s.created)
   const overrides = useApplicationsStore((s) => s.overrides)
   const deletedIds = useApplicationsStore((s) => s.deletedIds)
   const getCatalog = useApplicationsStore((s) => s.getCatalog)
-  const catalog = useMemo(
-    () => getCatalog(),
-    [created, overrides, deletedIds, getCatalog],
-  )
+  void created
+  void overrides
+  void deletedIds
+  const catalog = getCatalog()
 
-  const filtered = useMemo(() => {
+  const filtered = (() => {
     const q = query.trim().toLowerCase()
     if (!q) return catalog
     return catalog.filter(
@@ -114,33 +174,32 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
         a.packageName.toLowerCase().includes(q) ||
         a.owner.toLowerCase().includes(q),
     )
-  }, [query, catalog])
+  })()
 
-  const pinned = useMemo(
-    () =>
-      PINNED_APP_IDS.map((id) => filtered.find((a) => a.id === id)).filter(
-        Boolean,
-      ) as Application[],
-    [filtered],
+  const pinned = PINNED_APP_IDS.map((id) => filtered.find((a) => a.id === id)).filter(
+    Boolean,
+  ) as Application[]
+
+  const pinnedSet = new Set(PINNED_APP_IDS)
+  const recent = RECENT_APP_IDS.map((id) => filtered.find((a) => a.id === id)).filter(
+    (a): a is Application => Boolean(a) && !pinnedSet.has(a!.id),
   )
 
-  const recent = useMemo(() => {
-    const pinnedSet = new Set(PINNED_APP_IDS)
-    return RECENT_APP_IDS.map((id) => filtered.find((a) => a.id === id)).filter(
-      (a): a is Application => Boolean(a) && !pinnedSet.has(a!.id),
-    )
-  }, [filtered])
-
-  const rest = useMemo(() => {
-    const hide = new Set([...PINNED_APP_IDS, ...RECENT_APP_IDS])
-    return filtered.filter((a) => !hide.has(a.id))
-  }, [filtered])
+  const hide = new Set([...PINNED_APP_IDS, ...RECENT_APP_IDS])
+  const rest = filtered.filter((a) => !hide.has(a.id))
 
   const showGrouped = !query.trim()
 
   return (
-    <div className="overflow-hidden rounded-2xl ring-1 ring-border/60 dark:ring-border">
-      <div className="relative border-b border-border/50">
+    <div
+      ref={shellRef}
+      className={cn(
+        'flex flex-col overflow-hidden rounded-2xl ring-1 ring-border/60 dark:ring-border',
+        className,
+      )}
+      style={shellHeight != null ? { height: shellHeight } : undefined}
+    >
+      <div className="relative shrink-0 border-b border-border/50">
         <Search
           className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
           strokeWidth={1.75}
@@ -151,18 +210,32 @@ export function ApplicationPicker({ value, onChange }: ApplicationPickerProps) {
           placeholder={t('upload.searchApps')}
           aria-label={t('upload.searchAppsAria')}
           className={cn(
-            'h-12 w-full bg-transparent pr-3 pl-10 text-[0.875rem] outline-none',
+            'h-10 w-full bg-transparent pr-3 pl-10 text-[0.875rem] outline-none',
             'placeholder:text-muted-foreground/70',
             'focus-visible:bg-muted/20',
           )}
         />
       </div>
 
-      <div className="max-h-[min(32rem,58vh)] space-y-5 overflow-y-auto p-2 [scrollbar-gutter:stable]">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-2 [scrollbar-gutter:stable]">
         {filtered.length === 0 ? (
-          <p className="px-3 py-10 text-center text-[0.8125rem] text-muted-foreground">
-            {t('upload.noMatch', { query })}
-          </p>
+          <div className="flex flex-col items-center gap-3 px-3 py-10 text-center">
+            <p className="text-[0.8125rem] text-muted-foreground">
+              {query.trim() ? t('upload.noMatch', { query }) : t('upload.noAppsYet')}
+            </p>
+            <Link
+              to="/applications/new"
+              className={cn(
+                'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5',
+                'text-[0.8125rem] font-medium text-foreground',
+                'ring-1 ring-border/60 transition-colors duration-[var(--duration-hover)]',
+                'hover:bg-muted/50',
+              )}
+            >
+              <Plus className="size-3.5 opacity-70" strokeWidth={1.75} />
+              {t('upload.createApplication')}
+            </Link>
+          </div>
         ) : showGrouped ? (
           <>
             {pinned.length > 0 ? (

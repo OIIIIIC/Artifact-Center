@@ -51,9 +51,12 @@ export function useUploadFlow() {
     [created, overrides, deletedIds, getCatalog],
   )
 
-  const [step, setStep] = useState<UploadStep>(1)
+  const hasValidPreset = Boolean(presetApp && catalog.some((a) => a.id === presetApp))
+
+  /** Deep-link from detail (?app=) skips application pick — user can still go back to change. */
+  const [step, setStep] = useState<UploadStep>(() => (hasValidPreset ? 2 : 1))
   const [applicationId, setApplicationId] = useState(() =>
-    catalog.some((a) => a.id === presetApp) ? presetApp : '',
+    hasValidPreset ? presetApp : '',
   )
   const [phase, setPhase] = useState<UploadPhase>('idle')
   const [fileError, setFileError] = useState<UploadFileError | null>(null)

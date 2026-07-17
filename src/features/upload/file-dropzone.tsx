@@ -205,7 +205,7 @@ export function FileDropzone({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="default"
               className="self-start text-muted-foreground"
               onClick={(e) => {
                 e.stopPropagation()
@@ -230,7 +230,7 @@ export function FileDropzone({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="default"
               className="mt-1"
               onClick={(e) => {
                 e.stopPropagation()

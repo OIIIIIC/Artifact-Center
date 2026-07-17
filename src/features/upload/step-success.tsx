@@ -30,15 +30,16 @@ export function StepSuccess({ application, version, onAnother }: StepSuccessProp
         {t('upload.publishedDesc')}
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-        <Button asChild className="rounded-lg">
+        <Button asChild size="lg">
           <Link to={`/applications/${application.id}`}>
             {t('upload.viewApplication')}
           </Link>
         </Button>
         <Button
           type="button"
+          size="lg"
           variant="outline"
-          className="rounded-lg border-0 bg-muted/40 ring-1 ring-border/60"
+          className="border-0 bg-muted/40 ring-1 ring-border/60"
           onClick={onAnother}
         >
           {t('upload.uploadAnother')}
