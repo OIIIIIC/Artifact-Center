@@ -1,29 +1,34 @@
-const relativeFormatter = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' })
+import i18n from '@/i18n'
+
+function localeTag(): string {
+  return i18n.language === 'en-US' ? 'en-US' : 'zh-CN'
+}
 
 export function formatRelativeTime(iso: string, now = Date.now()): string {
   const date = new Date(iso).getTime()
   if (Number.isNaN(date)) return iso
 
+  const formatter = new Intl.RelativeTimeFormat(localeTag(), { numeric: 'auto' })
   const diffSec = Math.round((date - now) / 1000)
   const abs = Math.abs(diffSec)
 
-  if (abs < 60) return relativeFormatter.format(diffSec, 'second')
+  if (abs < 60) return formatter.format(diffSec, 'second')
   const diffMin = Math.round(diffSec / 60)
-  if (Math.abs(diffMin) < 60) return relativeFormatter.format(diffMin, 'minute')
+  if (Math.abs(diffMin) < 60) return formatter.format(diffMin, 'minute')
   const diffHour = Math.round(diffMin / 60)
-  if (Math.abs(diffHour) < 24) return relativeFormatter.format(diffHour, 'hour')
+  if (Math.abs(diffHour) < 24) return formatter.format(diffHour, 'hour')
   const diffDay = Math.round(diffHour / 24)
-  if (Math.abs(diffDay) < 30) return relativeFormatter.format(diffDay, 'day')
+  if (Math.abs(diffDay) < 30) return formatter.format(diffDay, 'day')
   const diffMonth = Math.round(diffDay / 30)
-  if (Math.abs(diffMonth) < 12) return relativeFormatter.format(diffMonth, 'month')
+  if (Math.abs(diffMonth) < 12) return formatter.format(diffMonth, 'month')
   const diffYear = Math.round(diffMonth / 12)
-  return relativeFormatter.format(diffYear, 'year')
+  return formatter.format(diffYear, 'year')
 }
 
 export function formatAbsoluteDate(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(localeTag(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

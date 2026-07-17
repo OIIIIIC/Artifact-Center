@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from '@/app/app'
 import { AppProviders } from '@/providers/app-providers'
 
+import '@/i18n'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(

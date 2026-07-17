@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 
+import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryProvider } from '@/providers/query-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
@@ -14,7 +15,10 @@ export function AppProviders({ children }: AppProvidersProps) {
     <QueryProvider>
       <ThemeProvider>
         <BrowserRouter>
-          <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+          <TooltipProvider delayDuration={200}>
+            {children}
+            <Toaster />
+          </TooltipProvider>
         </BrowserRouter>
       </ThemeProvider>
     </QueryProvider>
