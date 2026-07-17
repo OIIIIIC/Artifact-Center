@@ -872,7 +872,8 @@ export function SettingsPage() {
                                 {/* Cancel on the right: same side as trash icon — avoids double-click delete */}
                                 <Button
                                   type="button"
-                                  className="h-8 rounded-md bg-destructive px-2.5 text-[0.75rem] text-white hover:bg-destructive/90"
+                                  size="sm"
+                                  className="bg-destructive px-2.5 text-[0.75rem] text-white hover:bg-destructive/90"
                                   onClick={() => onRemoveMember(m.id, m.name)}
                                 >
                                   {t('settings.confirmRemove')}
@@ -880,7 +881,8 @@ export function SettingsPage() {
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  className="h-8 rounded-md border-0 bg-muted/40 px-2.5 text-[0.75rem] ring-1 ring-border/60"
+                                  size="sm"
+                                  className="border-0 bg-muted/40 px-2.5 text-[0.75rem] ring-1 ring-border/60"
                                   onClick={() => setRemoveConfirmId(null)}
                                 >
                                   {t('common.cancel')}

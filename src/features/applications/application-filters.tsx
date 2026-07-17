@@ -82,7 +82,7 @@ export function ApplicationFiltersBar({
       )}
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <Segmented aria-label={t('platform.all')}>
+        <Segmented aria-label={t('filters.platform')}>
           {PLATFORMS.map((p) => (
             <SegmentButton
               key={p}

@@ -24,7 +24,7 @@ export function StepIndicator({
   const { t } = useTranslation()
 
   return (
-    <nav aria-label="Upload progress" className={cn('w-full', className)}>
+    <nav aria-label={t('upload.progressAria')} className={cn('w-full', className)}>
       <ol className="flex w-full items-center">
         {STEPS.map((s, index) => {
           const done = s < step

@@ -419,23 +419,16 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
       <section
         className={cn(
           'overflow-hidden rounded-2xl',
-          'border border-destructive/55 bg-destructive/[0.02]',
-          'dark:border-destructive/60 dark:bg-destructive/[0.04]',
-          'shadow-[0_0_0_1px_color-mix(in_oklab,var(--destructive)_18%,transparent)]',
+          'border border-destructive/40 bg-destructive/[0.02]',
+          'dark:border-destructive/45 dark:bg-destructive/[0.03]',
         )}
       >
-        <header
-          className={cn(
-            'flex items-start gap-3 border-b border-destructive/25 px-5 py-4 sm:px-6',
-            'bg-gradient-to-br from-destructive/[0.09] via-destructive/[0.04] to-transparent',
-            'dark:border-destructive/30 dark:from-destructive/[0.14] dark:via-destructive/[0.06]',
-          )}
-        >
+        <header className="flex items-start gap-3 border-b border-destructive/25 px-5 py-4 sm:px-6 dark:border-destructive/30">
           <span
             className={cn(
               'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
-              'bg-destructive/12 text-destructive',
-              'dark:bg-destructive/18 dark:text-red-300',
+              'bg-destructive/10 text-destructive',
+              'dark:bg-destructive/15',
             )}
             aria-hidden
           >

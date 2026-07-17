@@ -43,7 +43,7 @@
     "failedHint": "Please try again, or contact the project admin."
   },
   "auth": {
-    "subtitle": "Sign in to manage enterprise artifacts",
+    "subtitle": "Sign in to Artifact Center",
     "email": "Email",
     "password": "Password",
     "emailPlaceholder": "name@company.com",
@@ -112,6 +112,9 @@
     "beta": "Pre-release for testing",
     "internal": "Team-only distribution",
     "deprecated": "Do not use for new installs"
+  },
+  "filters": {
+    "platform": "Filter by platform"
   },
   "sort": {
     "updated": "Recently updated",
@@ -324,7 +327,7 @@
     "count": "{{count}} applications",
     "loading": "Loading applications",
     "emptyTitle": "No applications yet",
-    "emptyDescription": "Upload the first artifact and apps will show up here.",
+    "emptyDescription": "Register an application first, then upload and distribute artifacts.",
     "noMatchTitle": "No matching applications",
     "noMatchDescription": "Try another keyword, or clear filters.",
     "artifactsCount": "{{count}} artifacts",
@@ -334,7 +337,7 @@
     "breadcrumbApps": "Applications",
     "notFound": "Not found",
     "notFoundTitle": "Application not found",
-    "notFoundDescription": "This app does not exist, or is missing from mock data.",
+    "notFoundDescription": "This app does not exist, or you do not have access.",
     "backToApps": "Back to Applications",
     "loading": "Loading application",
     "downloadLatest": "Download Latest",
@@ -364,8 +367,9 @@
     "releaseNotesHint": "Version notes from uploads, newest first.",
     "releaseNotesEmptyTitle": "No release notes yet",
     "releaseNotesEmptyDesc": "Notes appear here after you upload builds with release notes.",
+    "releaseNotesEmptyHasBuilds": "Builds exist, but none include release notes yet. Add notes on the next upload.",
     "settingsTitle": "Settings",
-    "settingsDesc": "Manage this app’s profile, status, and danger-zone actions.",
+    "settingsDesc": "Application identity and lifecycle.",
     "noVersionsTitle": "No versions yet",
     "noVersions": "Upload the first artifact and recent builds will show up here.",
     "build": "Build {{number}}",
@@ -412,7 +416,8 @@
     "uploading": "Uploading…",
     "verifying": "Verifying…",
     "hashing": "Calculating hash…",
-    "mockPipeline": "Mock pipeline — no real upload",
+    "mockPipeline": "Demo pipeline — files are not uploaded for real",
+    "progressAria": "Upload progress",
     "sha256": "SHA-256",
     "detectedVersion": "Detected version",
     "replaceFile": "Replace file",
@@ -446,7 +451,7 @@
     "reviewNotes": "Release notes",
     "duplicateTitle": "Duplicate version",
     "duplicateDesc": "v{{version}} already exists as the latest for {{name}}. Change the version before publishing.",
-    "draftSaved": "Draft saved locally (mock). You can publish when ready.",
+    "draftSaved": "Draft saved on this device. You can publish when ready.",
     "published": "Published",
     "publishedDesc": "The artifact is in the catalog — open the app to view and download.",
     "viewApplication": "View Application",

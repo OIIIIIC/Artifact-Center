@@ -51,7 +51,7 @@ export function ApplicationDetailPage() {
             title={t('detail.notFoundTitle')}
             description={t('detail.notFoundDescription')}
             action={
-              <Button asChild variant="outline" size="sm">
+              <Button asChild size="lg">
                 <Link to="/">{t('detail.backToApps')}</Link>
               </Button>
             }

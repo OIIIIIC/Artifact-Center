@@ -22,21 +22,28 @@ export function ReleaseNotesPanel({ artifacts, applicationId }: ReleaseNotesPane
 
   const withNotes = artifacts.filter((a) => a.releaseNotes?.trim())
   const uploadTo = applicationId ? `/upload?app=${applicationId}` : '/upload'
+  const hasArtifacts = artifacts.length > 0
 
   if (withNotes.length === 0) {
     return (
       <EmptyState
         icon={FileText}
         title={t('detail.releaseNotesEmptyTitle')}
-        description={t('detail.releaseNotesEmptyDesc')}
+        description={
+          hasArtifacts
+            ? t('detail.releaseNotesEmptyHasBuilds')
+            : t('detail.releaseNotesEmptyDesc')
+        }
         className="py-14"
         action={
-          <Button asChild size="lg">
-            <Link to={uploadTo}>
-              <Upload className="size-3.5" strokeWidth={1.75} />
-              {t('detail.uploadArtifact')}
-            </Link>
-          </Button>
+          hasArtifacts ? undefined : (
+            <Button asChild size="lg">
+              <Link to={uploadTo}>
+                <Upload className="size-3.5" strokeWidth={1.75} />
+                {t('detail.uploadArtifact')}
+              </Link>
+            </Button>
+          )
         }
       />
     )

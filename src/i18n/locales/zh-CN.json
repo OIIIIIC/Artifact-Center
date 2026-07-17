@@ -43,7 +43,7 @@
     "failedHint": "请稍后重试，或联系项目管理员。"
   },
   "auth": {
-    "subtitle": "登录以管理企业内制品",
+    "subtitle": "登录以访问制品中心",
     "email": "邮箱",
     "password": "密码",
     "emailPlaceholder": "name@company.com",
@@ -112,6 +112,9 @@
     "beta": "测试验证用的预发布构建",
     "internal": "仅团队内部使用",
     "deprecated": "勿再用于新安装"
+  },
+  "filters": {
+    "platform": "按平台筛选"
   },
   "sort": {
     "updated": "最近更新",
@@ -324,7 +327,7 @@
     "count": "{{count}} 个应用",
     "loading": "正在加载应用列表",
     "emptyTitle": "还没有应用",
-    "emptyDescription": "上传第一个制品后，应用会出现在这里。",
+    "emptyDescription": "先登记一个应用，再上传与分发制品。",
     "noMatchTitle": "没有匹配的应用",
     "noMatchDescription": "换个关键词，或清除筛选后再试。",
     "artifactsCount": "{{count}} 个制品",
@@ -334,7 +337,7 @@
     "breadcrumbApps": "应用",
     "notFound": "未找到",
     "notFoundTitle": "应用不存在",
-    "notFoundDescription": "该应用不存在，或 Mock 数据中没有对应 id。",
+    "notFoundDescription": "该应用不存在，或你没有访问权限。",
     "backToApps": "返回应用列表",
     "loading": "正在加载应用",
     "downloadLatest": "下载最新版",
@@ -364,8 +367,9 @@
     "releaseNotesHint": "按版本汇总的构建备注，来自上传时的发布说明。",
     "releaseNotesEmptyTitle": "暂无发布说明",
     "releaseNotesEmptyDesc": "上传制品并填写发布说明后，会出现在这里。",
+    "releaseNotesEmptyHasBuilds": "已有构建，但尚未填写发布说明。下次上传时可补充。",
     "settingsTitle": "设置",
-    "settingsDesc": "管理本应用的资料、状态与危险操作。",
+    "settingsDesc": "应用身份信息与生命周期。",
     "noVersionsTitle": "还没有版本",
     "noVersions": "上传第一个制品后，最近版本会出现在这里。",
     "build": "构建 {{number}}",
@@ -412,7 +416,8 @@
     "uploading": "上传中…",
     "verifying": "校验中…",
     "hashing": "计算哈希…",
-    "mockPipeline": "模拟流程 — 非真实上传",
+    "mockPipeline": "演示流程 — 不会真实上传文件",
+    "progressAria": "上传进度",
     "sha256": "SHA-256",
     "detectedVersion": "识别版本",
     "replaceFile": "更换文件",
@@ -446,7 +451,7 @@
     "reviewNotes": "发布说明",
     "duplicateTitle": "版本重复",
     "duplicateDesc": "v{{version}} 已是「{{name}}」的最新版本。请修改版本号后再发布。",
-    "draftSaved": "草稿已本地保存（模拟）。准备好后可发布。",
+    "draftSaved": "草稿已保存在本机。准备好后可发布。",
     "published": "已发布",
     "publishedDesc": "制品已写入目录，可在应用详情中查看与下载。",
     "viewApplication": "查看应用",
