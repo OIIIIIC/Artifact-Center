@@ -12,6 +12,7 @@
 | [05-CODING-STANDARD.md](./05-CODING-STANDARD.md)           | 编码规范             |
 | [06-COMPONENT-GUIDELINES.md](./06-COMPONENT-GUIDELINES.md) | 组件分层与清单       |
 | [07-UI-PRINCIPLES.md](./07-UI-PRINCIPLES.md)               | UI 决策原则          |
+| [TODO.md](./TODO.md)                                       | 待办与后端后优先项   |
 
 ## 阅读顺序（新人 / AI）
 
@@ -19,10 +20,12 @@
 2. **DESIGN → UI Principles**（做任何界面前必读）
 3. Architecture → Roadmap
 4. Coding Standard → Component Guidelines
+5. **TODO**（前端收口与后续能力）
 
 ## 当前阶段
 
-**P0 Foundation**：仅规范与目录，不初始化应用工程、不写业务代码。
+- **前端 Mock 壳**：核心页面与主路径已基本完成（见 `TODO.md` 已完成项）。
+- **下一阶段**：后端与真实存储；后端可用后优先做 **操作记录（审计）**（见 `TODO.md`）。
 
 相关目录：
 
