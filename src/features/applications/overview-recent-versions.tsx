@@ -1,7 +1,9 @@
-import { Download, Eye } from 'lucide-react'
+import { Download, Eye, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
-import { ArtifactStatusBadge } from '@/features/applications/artifact-status-badge'
-import { PLATFORM_ICON, PLATFORM_LABEL } from '@/features/applications/platform-meta'
+import { ArtifactReleaseBadges } from '@/features/applications/artifact-release-badges'
+import { PLATFORM_ICON } from '@/features/applications/platform-meta'
+import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Artifact } from '@/types/artifact'
@@ -11,18 +13,17 @@ interface OverviewRecentVersionsProps {
   className?: string
 }
 
-/**
- * Overview: last three builds — scan then act (View / Download quiet).
- */
 export function OverviewRecentVersions({
   artifacts,
   className,
 }: OverviewRecentVersionsProps) {
+  const { t, i18n } = useTranslation()
+  void i18n.language
+  const { download, isBusy } = useDownloadArtifact()
+
   if (artifacts.length === 0) {
     return (
-      <p className="text-[0.875rem] text-muted-foreground">
-        还没有版本记录。上传第一个 Artifact 后会出现在这里。
-      </p>
+      <p className="text-[0.875rem] text-muted-foreground">{t('detail.noVersions')}</p>
     )
   }
 
@@ -30,6 +31,7 @@ export function OverviewRecentVersions({
     <ul className={cn('space-y-3', className)}>
       {artifacts.map((art) => {
         const PlatformIcon = PLATFORM_ICON[art.platform]
+        const busy = isBusy(art.id)
         return (
           <li
             key={art.id}
@@ -46,17 +48,17 @@ export function OverviewRecentVersions({
                 <span className="font-mono text-[0.9375rem] font-medium text-foreground">
                   v{art.version}
                 </span>
-                <ArtifactStatusBadge status={art.status} />
+                <ArtifactReleaseBadges artifact={art} />
                 <span className="inline-flex items-center gap-1 text-[0.75rem] text-muted-foreground">
                   <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} />
-                  {PLATFORM_LABEL[art.platform]}
+                  {t(`platform.${art.platform}`)}
                 </span>
               </div>
               <p className="line-clamp-2 text-[0.8125rem] leading-relaxed text-muted-foreground">
                 {art.releaseNotes}
               </p>
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-[0.75rem] text-muted-foreground/80">
-                <span>Build {art.buildNumber}</span>
+                <span>{t('detail.build', { number: art.buildNumber })}</span>
                 <span aria-hidden>·</span>
                 <time dateTime={art.uploadedAt}>
                   {formatRelativeTime(art.uploadedAt)}
@@ -78,18 +80,32 @@ export function OverviewRecentVersions({
                 )}
               >
                 <Eye className="size-3.5 opacity-70" strokeWidth={1.75} />
-                View
+                {t('common.view')}
               </button>
               <button
                 type="button"
+                disabled={busy}
                 className={cn(
                   'inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-[0.8125rem] font-medium',
                   'text-muted-foreground transition-colors duration-[var(--duration-hover)]',
                   'hover:bg-muted/60 hover:text-foreground',
+                  'disabled:pointer-events-none disabled:opacity-50',
                 )}
+                onClick={() =>
+                  void download({
+                    id: art.id,
+                    filename: art.filename,
+                    version: art.version,
+                    sizeBytes: art.sizeBytes,
+                  })
+                }
               >
-                <Download className="size-3.5 opacity-70" strokeWidth={1.75} />
-                Download
+                {busy ? (
+                  <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
+                ) : (
+                  <Download className="size-3.5 opacity-70" strokeWidth={1.75} />
+                )}
+                {t('common.download')}
               </button>
             </div>
           </li>

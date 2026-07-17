@@ -1,16 +1,19 @@
+import { useTranslation } from 'react-i18next'
+
 import { StatusBadge } from '@/components/common'
 import { cn } from '@/lib/utils'
-import { ARTIFACT_STATUS_LABEL, type ArtifactStatus } from '@/types/artifact'
+import type { ArtifactStatus } from '@/types/artifact'
 
+/** Map artifact lifecycle → semantic badge color */
 const statusMap: Record<
   ArtifactStatus,
   'new' | 'default' | 'beta' | 'deprecated' | 'archived'
 > = {
-  latest: 'new',
-  stable: 'default',
-  beta: 'beta',
-  deprecated: 'deprecated',
-  archived: 'archived',
+  latest: 'new', // emerald — current
+  stable: 'default', // sky — production-safe
+  beta: 'beta', // violet — experimental
+  deprecated: 'deprecated', // amber — caution
+  archived: 'archived', // stone — retired
 }
 
 export function ArtifactStatusBadge({
@@ -20,6 +23,8 @@ export function ArtifactStatusBadge({
   status: ArtifactStatus
   className?: string
 }) {
+  const { t } = useTranslation()
+
   return (
     <StatusBadge
       status={statusMap[status]}
@@ -28,7 +33,7 @@ export function ArtifactStatusBadge({
         className,
       )}
     >
-      {ARTIFACT_STATUS_LABEL[status]}
+      {t(`status.${status}`)}
     </StatusBadge>
   )
 }

@@ -1,4 +1,5 @@
 import { Search, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { useModKeyLabel } from '@/hooks/use-mod-key-label'
@@ -10,15 +11,12 @@ interface ApplicationSearchProps {
   className?: string
 }
 
-/**
- * Visual center of Applications home.
- * Shortcut chip is decorative only.
- */
 export function ApplicationSearch({
   value,
   onChange,
   className,
 }: ApplicationSearchProps) {
+  const { t } = useTranslation()
   const shortcut = useModKeyLabel('K')
 
   return (
@@ -32,8 +30,8 @@ export function ApplicationSearch({
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Search by name, package, or owner…"
-        aria-label="Search applications"
+        placeholder={t('applications.searchPlaceholder')}
+        aria-label={t('applications.searchAria')}
         className={cn(
           'h-12 w-full rounded-xl bg-muted/35 pr-24 pl-11',
           'text-[0.9375rem] text-foreground placeholder:text-muted-foreground/70',
@@ -52,7 +50,7 @@ export function ApplicationSearch({
             size="icon"
             className="size-8 text-muted-foreground transition-colors duration-[var(--duration-hover)] hover:text-foreground"
             onClick={() => onChange('')}
-            aria-label="Clear search"
+            aria-label={t('applications.clearSearch')}
           >
             <X className="size-4" />
           </Button>

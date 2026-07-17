@@ -1,8 +1,9 @@
-import { Inbox, SearchX, Upload } from 'lucide-react'
+import { Inbox, Plus, SearchX, Upload } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { EmptyState } from '@/components/feedback'
-import { AppLayout, PageContainer } from '@/components/layout'
+import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { ApplicationFiltersBar } from '@/features/applications/application-filters'
 import { ApplicationGrid } from '@/features/applications/application-grid'
@@ -11,52 +12,52 @@ import { ApplicationSearch } from '@/features/applications/application-search'
 import { useApplications } from '@/features/applications/use-applications'
 import { cn } from '@/lib/utils'
 
-/**
- * Applications home — README screenshot quality.
- * Copy policy (Scheme B): product terms in English; descriptive body in Chinese.
- */
 export function ApplicationsPage() {
+  const { t } = useTranslation()
   const { loading, filtered, filters, setFilters, isEmptyCatalog, isSearchEmpty } =
     useApplications()
 
   return (
-    <AppLayout breadcrumbs={[{ label: 'Applications' }]} showSearch={false}>
-      <PageContainer className="pb-24 pt-9 sm:pt-11 md:pt-12">
-        {/* Header + Search: one continuous stack, search is the focus */}
+    <AppLayout breadcrumbs={[{ label: t('nav.applications') }]}>
+      <PageContainer rhythm="product">
         <div className="space-y-6 sm:space-y-7">
-          <header className="max-w-2xl space-y-1.5">
-            <h1 className="text-[1.875rem] leading-tight font-semibold tracking-tight text-foreground sm:text-[2rem] md:text-[2.125rem]">
-              Applications
-            </h1>
-            <p className="text-[0.875rem] leading-relaxed text-muted-foreground/85">
-              浏览企业内部应用，查找并进入制品。
-            </p>
-          </header>
+          <PageHeader
+            title={t('applications.title')}
+            description={t('applications.description')}
+            action={
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  asChild
+                  variant="outline"
+                  className={cn(
+                    'h-12 gap-2 rounded-xl px-4',
+                    'border-0 bg-muted/40 text-[0.8125rem] font-medium text-muted-foreground',
+                    'ring-1 ring-border/60',
+                    'transition-[color,background-color,ring-color] duration-[var(--duration-hover)]',
+                    'hover:bg-muted/55 hover:text-foreground hover:ring-border',
+                    'dark:bg-muted/25 dark:hover:bg-muted/35',
+                  )}
+                >
+                  <Link to="/applications/new">
+                    <Plus className="size-3.5" strokeWidth={1.75} />
+                    {t('applications.newApplication')}
+                  </Link>
+                </Button>
+                <Button asChild className="h-12 gap-2 rounded-xl px-4 text-[0.8125rem]">
+                  <Link to="/upload">
+                    <Upload className="size-3.5" strokeWidth={1.75} />
+                    {t('applications.uploadArtifact')}
+                  </Link>
+                </Button>
+              </div>
+            }
+          />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <ApplicationSearch
-              value={filters.query}
-              onChange={(query) => setFilters({ ...filters, query })}
-              className="min-w-0 flex-1"
-            />
-            <Button
-              asChild
-              variant="outline"
-              className={cn(
-                'h-12 shrink-0 gap-2 rounded-xl px-4',
-                'border-0 bg-muted/40 text-[0.8125rem] font-medium text-muted-foreground',
-                'ring-1 ring-border/60',
-                'transition-[color,background-color,ring-color] duration-[var(--duration-hover)]',
-                'hover:bg-muted/55 hover:text-foreground hover:ring-border',
-                'dark:bg-muted/25 dark:hover:bg-muted/35',
-              )}
-            >
-              <Link to="/upload">
-                <Upload className="size-3.5" strokeWidth={1.75} />
-                Upload Artifact
-              </Link>
-            </Button>
-          </div>
+          <ApplicationSearch
+            value={filters.query}
+            onChange={(query) => setFilters({ ...filters, query })}
+            className="min-w-0 w-full"
+          />
         </div>
 
         <div className="mt-8 space-y-5 sm:mt-9">
@@ -65,16 +66,16 @@ export function ApplicationsPage() {
             onChange={setFilters}
             meta={
               !loading && !isEmptyCatalog && !isSearchEmpty
-                ? `${filtered.length} applications`
+                ? t('applications.count', { count: filtered.length })
                 : !loading && isSearchEmpty
-                  ? '0 applications'
+                  ? t('applications.count', { count: 0 })
                   : undefined
             }
           />
 
           {loading ? (
             <div aria-busy="true" aria-live="polite">
-              <p className="sr-only">Loading applications</p>
+              <p className="sr-only">{t('applications.loading')}</p>
               <ApplicationGridSkeleton />
             </div>
           ) : null}
@@ -82,18 +83,13 @@ export function ApplicationsPage() {
           {!loading && isEmptyCatalog ? (
             <EmptyState
               icon={Inbox}
-              title="No applications yet"
-              description="上传第一个 Artifact 后，应用会出现在这里。"
+              title={t('applications.emptyTitle')}
+              description={t('applications.emptyDescription')}
               action={
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 rounded-lg border-0 bg-muted/40 ring-1 ring-border/70"
-                >
-                  <Link to="/upload">
-                    <Upload className="size-3.5" strokeWidth={1.75} />
-                    Upload Artifact
+                <Button asChild size="sm" className="gap-1.5 rounded-lg">
+                  <Link to="/applications/new">
+                    <Plus className="size-3.5" strokeWidth={1.75} />
+                    {t('applications.newApplication')}
                   </Link>
                 </Button>
               }
@@ -103,8 +99,8 @@ export function ApplicationsPage() {
           {!loading && isSearchEmpty ? (
             <EmptyState
               icon={SearchX}
-              title="No matching applications"
-              description="换个关键词，或清除筛选后再试。"
+              title={t('applications.noMatchTitle')}
+              description={t('applications.noMatchDescription')}
               action={
                 <Button
                   type="button"
@@ -119,7 +115,7 @@ export function ApplicationsPage() {
                     })
                   }
                 >
-                  Clear filters
+                  {t('common.clearFilters')}
                 </Button>
               }
             />

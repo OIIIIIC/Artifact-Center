@@ -1,4 +1,5 @@
 import { ArrowUpRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { APPLICATION_STATUS_LABEL, StatusBadge } from '@/components/common/status-badge'
@@ -20,34 +21,13 @@ const iconTone: Record<Application['platform'], string> = {
   zip: 'bg-stone-500/[0.08] text-stone-800/80 dark:bg-stone-400/10 dark:text-stone-200/80',
 }
 
-function statusChip(status: ApplicationStatus) {
-  const label = APPLICATION_STATUS_LABEL[status]
-  if (!label) return null
-  const variant =
-    status === 'new'
-      ? 'new'
-      : status === 'beta'
-        ? 'beta'
-        : status === 'deprecated'
-          ? 'deprecated'
-          : 'archived'
-  return (
-    <StatusBadge
-      status={variant}
-      className={cn(
-        'relative z-10 shrink-0',
-        status === 'new' ? 'uppercase' : 'normal-case tracking-normal',
-      )}
-    >
-      {label}
-    </StatusBadge>
-  )
+function statusKey(status: ApplicationStatus): string | null {
+  if (status === 'active') return null
+  return `status.${status}`
 }
 
-/**
- * Primary object card — README screenshot quality.
- */
 export function ApplicationCard({ application, className }: ApplicationCardProps) {
+  const { t, i18n } = useTranslation()
   const PlatformIcon = PLATFORM_ICON[application.platform]
   const initials = application.name
     .split(/\s+/)
@@ -63,6 +43,23 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
     .join('')
     .slice(0, 2)
     .toUpperCase()
+
+  const sKey = statusKey(application.status)
+  const statusVariant =
+    application.status === 'new'
+      ? 'new'
+      : application.status === 'beta'
+        ? 'beta'
+        : application.status === 'deprecated'
+          ? 'deprecated'
+          : application.status === 'archived'
+            ? 'archived'
+            : application.status === 'active'
+              ? 'success'
+              : 'default'
+
+  // force re-format when locale changes
+  void i18n.language
 
   return (
     <article
@@ -97,7 +94,19 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
                 {application.name}
               </Link>
             </h3>
-            {statusChip(application.status)}
+            {sKey ? (
+              <StatusBadge
+                status={statusVariant}
+                className={cn(
+                  'relative z-10 shrink-0',
+                  application.status === 'new'
+                    ? 'uppercase'
+                    : 'normal-case tracking-normal',
+                )}
+              >
+                {t(sKey)}
+              </StatusBadge>
+            ) : null}
           </div>
           <p className="mt-1 line-clamp-2 text-[0.8125rem] leading-relaxed font-normal text-muted-foreground">
             {application.description}
@@ -108,7 +117,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
       <div className="relative z-10 mt-4 flex flex-wrap items-center gap-1.5">
         <span className="inline-flex h-5 items-center gap-1 rounded-md bg-muted/50 px-1.5 text-[11px] text-muted-foreground dark:bg-muted/40">
           <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} aria-hidden />
-          {PLATFORM_LABEL[application.platform]}
+          {t(`platform.${application.platform}`)}
         </span>
         <span className="inline-flex h-5 items-center rounded-md bg-muted/40 px-1.5 font-mono text-[11px] text-muted-foreground dark:bg-muted/30">
           v{application.latestVersion}
@@ -126,7 +135,9 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
           ·
         </span>
         <span className="shrink-0 text-[0.75rem] text-muted-foreground/70">
-          {application.artifactCount} artifacts
+          {t('applications.artifactsCount', {
+            count: application.artifactCount,
+          })}
         </span>
       </div>
 
@@ -148,7 +159,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
           )}
         >
-          View
+          {t('common.view')}
           <ArrowUpRight
             className="size-3.5 opacity-60 transition-transform duration-[var(--duration-hover)] group-hover/card:translate-x-px group-hover/card:-translate-y-px"
             strokeWidth={1.75}
@@ -158,3 +169,6 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
     </article>
   )
 }
+
+// re-export for any leftover imports
+export { APPLICATION_STATUS_LABEL, PLATFORM_LABEL }

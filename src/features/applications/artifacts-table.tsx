@@ -1,4 +1,5 @@
-import { Download } from 'lucide-react'
+import { Download, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import {
   Table,
@@ -8,8 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ArtifactStatusBadge } from '@/features/applications/artifact-status-badge'
-import { PLATFORM_ICON, PLATFORM_LABEL } from '@/features/applications/platform-meta'
+import { ArtifactReleaseBadges } from '@/features/applications/artifact-release-badges'
+import { PLATFORM_ICON } from '@/features/applications/platform-meta'
+import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Artifact } from '@/types/artifact'
@@ -19,16 +21,19 @@ interface ArtifactsTableProps {
   className?: string
 }
 
-/**
- * Modern data table — comfortable density, quiet hover, not ERP grid.
- */
 export function ArtifactsTable({ artifacts, className }: ArtifactsTableProps) {
+  const { t, i18n } = useTranslation()
+  void i18n.language
+  const { download, isBusy } = useDownloadArtifact()
+
   if (artifacts.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/80 px-6 py-16 text-center">
-        <p className="text-[0.9375rem] font-medium text-foreground">No artifacts yet</p>
+        <p className="text-[0.9375rem] font-medium text-foreground">
+          {t('detail.emptyArtifactsTitle')}
+        </p>
         <p className="mt-1.5 text-[0.8125rem] text-muted-foreground">
-          上传构建产物后，版本列表会显示在这里。
+          {t('detail.emptyArtifactsDesc')}
         </p>
       </div>
     )
@@ -45,31 +50,32 @@ export function ArtifactsTable({ artifacts, className }: ArtifactsTableProps) {
         <TableHeader>
           <TableRow className="border-border/60 hover:bg-transparent">
             <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
-              Version
+              {t('detail.colVersion')}
             </TableHead>
             <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
-              Platform
+              {t('detail.colPlatform')}
             </TableHead>
             <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
-              Size
+              {t('detail.colSize')}
             </TableHead>
             <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
-              Upload time
+              {t('detail.colUploadTime')}
             </TableHead>
             <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
-              Uploader
+              {t('detail.colUploader')}
             </TableHead>
             <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
-              Status
+              {t('detail.colStatus')}
             </TableHead>
             <TableHead className="h-11 w-[1%] px-4 text-right text-[0.75rem] font-medium text-muted-foreground">
-              <span className="sr-only">Download</span>
+              <span className="sr-only">{t('common.download')}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {artifacts.map((art) => {
             const PlatformIcon = PLATFORM_ICON[art.platform]
+            const busy = isBusy(art.id)
             return (
               <TableRow
                 key={art.id}
@@ -84,14 +90,14 @@ export function ArtifactsTable({ artifacts, className }: ArtifactsTableProps) {
                       v{art.version}
                     </p>
                     <p className="mt-0.5 text-[0.6875rem] text-muted-foreground/75">
-                      Build {art.buildNumber}
+                      {t('detail.build', { number: art.buildNumber })}
                     </p>
                   </div>
                 </TableCell>
                 <TableCell className="px-4 py-3.5">
                   <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
                     <PlatformIcon className="size-3.5 opacity-70" strokeWidth={1.75} />
-                    {PLATFORM_LABEL[art.platform]}
+                    {t(`platform.${art.platform}`)}
                   </span>
                 </TableCell>
                 <TableCell className="px-4 py-3.5 font-mono text-[0.8125rem] text-muted-foreground">
@@ -106,21 +112,35 @@ export function ArtifactsTable({ artifacts, className }: ArtifactsTableProps) {
                   {art.uploader}
                 </TableCell>
                 <TableCell className="px-4 py-3.5">
-                  <ArtifactStatusBadge status={art.status} />
+                  <ArtifactReleaseBadges artifact={art} />
                 </TableCell>
                 <TableCell className="px-4 py-3.5 text-right">
                   <button
                     type="button"
+                    disabled={busy}
                     className={cn(
                       'inline-flex h-8 items-center gap-1 rounded-md px-2',
                       'text-[0.8125rem] font-medium text-muted-foreground',
                       'transition-colors duration-[var(--duration-hover)]',
                       'hover:bg-muted/60 hover:text-foreground',
+                      'disabled:pointer-events-none disabled:opacity-50',
                     )}
-                    aria-label={`Download ${art.filename}`}
+                    aria-label={`${t('common.download')} ${art.filename}`}
+                    onClick={() =>
+                      void download({
+                        id: art.id,
+                        filename: art.filename,
+                        version: art.version,
+                        sizeBytes: art.sizeBytes,
+                      })
+                    }
                   >
-                    <Download className="size-3.5" strokeWidth={1.75} />
-                    <span className="hidden sm:inline">Download</span>
+                    {busy ? (
+                      <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
+                    ) : (
+                      <Download className="size-3.5" strokeWidth={1.75} />
+                    )}
+                    <span className="hidden sm:inline">{t('common.download')}</span>
                   </button>
                 </TableCell>
               </TableRow>

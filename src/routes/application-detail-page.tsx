@@ -1,5 +1,6 @@
+import { Inbox } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
-import { FileText, Inbox, Settings2 } from 'lucide-react'
 
 import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer } from '@/components/layout'
@@ -7,17 +8,16 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApplicationDetailHeader } from '@/features/applications/application-detail-header'
 import { ApplicationDetailSkeleton } from '@/features/applications/application-detail-skeleton'
+import { ApplicationSettingsPanel } from '@/features/applications/application-settings-panel'
 import { ApplicationSummary } from '@/features/applications/application-summary'
 import { ArtifactsTable } from '@/features/applications/artifacts-table'
 import { OverviewRecentVersions } from '@/features/applications/overview-recent-versions'
+import { ReleaseNotesPanel } from '@/features/applications/release-notes-panel'
 import { useApplicationDetail } from '@/features/applications/use-application-detail'
 import { cn } from '@/lib/utils'
 
-/**
- * Application Detail — object-first (GitHub / Vercel / Linear style).
- * Mock only. No edit/delete/dashboard.
- */
 export function ApplicationDetailPage() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const { loading, application, artifacts, latest, recentVersions, notFound } =
     useApplicationDetail(id)
@@ -25,12 +25,11 @@ export function ApplicationDetailPage() {
   if (loading) {
     return (
       <AppLayout
-        breadcrumbs={[{ label: 'Applications', href: '/' }, { label: '…' }]}
-        showSearch={false}
+        breadcrumbs={[{ label: t('detail.breadcrumbApps'), href: '/' }, { label: '…' }]}
       >
-        <PageContainer className="pb-24 pt-8 sm:pt-10">
+        <PageContainer rhythm="product">
           <div aria-busy="true" aria-live="polite">
-            <p className="sr-only">Loading application</p>
+            <p className="sr-only">{t('detail.loading')}</p>
             <ApplicationDetailSkeleton />
           </div>
         </PageContainer>
@@ -41,17 +40,19 @@ export function ApplicationDetailPage() {
   if (notFound || !application) {
     return (
       <AppLayout
-        breadcrumbs={[{ label: 'Applications', href: '/' }, { label: 'Not found' }]}
-        showSearch={false}
+        breadcrumbs={[
+          { label: t('detail.breadcrumbApps'), href: '/' },
+          { label: t('detail.notFound') },
+        ]}
       >
-        <PageContainer className="pb-24 pt-10">
+        <PageContainer rhythm="product">
           <EmptyState
             icon={Inbox}
-            title="Application not found"
-            description="该应用不存在，或 Mock 数据中没有对应 id。"
+            title={t('detail.notFoundTitle')}
+            description={t('detail.notFoundDescription')}
             action={
               <Button asChild variant="outline" size="sm">
-                <Link to="/">Back to Applications</Link>
+                <Link to="/">{t('detail.backToApps')}</Link>
               </Button>
             }
           />
@@ -60,14 +61,27 @@ export function ApplicationDetailPage() {
     )
   }
 
+  const tabs = [
+    { value: 'overview', label: t('detail.tabOverview') },
+    {
+      value: 'artifacts',
+      label: t('detail.tabArtifacts'),
+      count: artifacts.length,
+    },
+    { value: 'release-notes', label: t('detail.tabReleaseNotes') },
+    { value: 'settings', label: t('detail.tabSettings') },
+  ] as const
+
   return (
     <AppLayout
-      breadcrumbs={[{ label: 'Applications', href: '/' }, { label: application.name }]}
-      showSearch={false}
+      breadcrumbs={[
+        { label: t('detail.breadcrumbApps'), href: '/' },
+        { label: application.name },
+      ]}
     >
-      <PageContainer className="pb-24 pt-8 sm:pt-10">
+      <PageContainer rhythm="product">
         <div className="space-y-8 sm:space-y-10">
-          <ApplicationDetailHeader application={application} />
+          <ApplicationDetailHeader application={application} latest={latest} />
 
           <ApplicationSummary
             application={application}
@@ -79,23 +93,11 @@ export function ApplicationDetailPage() {
             <TabsList
               variant="line"
               className={cn(
-                // Full-width line tabs: no fixed h-8, no overflow scroll (was clipping underline)
                 'h-auto min-h-0 w-full justify-start gap-0 overflow-visible rounded-none',
                 'border-b border-border/70 bg-transparent p-0 dark:border-border',
               )}
             >
-              {(
-                [
-                  { value: 'overview', label: 'Overview' },
-                  {
-                    value: 'artifacts',
-                    label: 'Artifacts',
-                    count: artifacts.length,
-                  },
-                  { value: 'release-notes', label: 'Release Notes' },
-                  { value: 'settings', label: 'Settings' },
-                ] as const
-              ).map((tab) => (
+              {tabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
@@ -116,15 +118,13 @@ export function ApplicationDetailPage() {
             </TabsList>
 
             <TabsContent value="overview" className="mt-0 space-y-4 outline-none">
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
-                    Recent versions
-                  </h2>
-                  <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
-                    最近三个构建，便于快速核对与下载。
-                  </p>
-                </div>
+              <div>
+                <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
+                  {t('detail.recentVersions')}
+                </h2>
+                <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+                  {t('detail.recentVersionsHint')}
+                </p>
               </div>
               <OverviewRecentVersions artifacts={recentVersions} />
             </TabsContent>
@@ -132,31 +132,21 @@ export function ApplicationDetailPage() {
             <TabsContent value="artifacts" className="mt-0 space-y-4 outline-none">
               <div>
                 <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
-                  Artifacts
+                  {t('detail.artifactsTitle')}
                 </h2>
                 <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
-                  全部构建产物。按版本扫描，按需下载。
+                  {t('detail.artifactsHint')}
                 </p>
               </div>
               <ArtifactsTable artifacts={artifacts} />
             </TabsContent>
 
             <TabsContent value="release-notes" className="mt-0 outline-none">
-              <EmptyState
-                icon={FileText}
-                title="Release Notes"
-                description="发布说明能力即将接入。当前请在 Overview 中查看各版本摘要。"
-                className="py-16"
-              />
+              <ReleaseNotesPanel artifacts={artifacts} />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-0 outline-none">
-              <EmptyState
-                icon={Settings2}
-                title="Settings"
-                description="应用设置、权限与保留策略将在后续版本提供。"
-                className="py-16"
-              />
+              <ApplicationSettingsPanel key={application.id} application={application} />
             </TabsContent>
           </Tabs>
         </div>

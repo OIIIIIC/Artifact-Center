@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 import type {
@@ -7,25 +8,13 @@ import type {
   ApplicationSort,
 } from '@/types/application'
 
-import { PLATFORM_LABEL } from './platform-meta'
+const PLATFORMS: (ApplicationPlatform | 'all')[] = ['all', 'android', 'windows', 'zip']
 
-const platforms: { value: ApplicationPlatform | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'android', label: PLATFORM_LABEL.android },
-  { value: 'windows', label: PLATFORM_LABEL.windows },
-  { value: 'zip', label: PLATFORM_LABEL.zip },
-]
-
-const sorts: { value: ApplicationSort; label: string }[] = [
-  { value: 'updated', label: 'Recently updated' },
-  { value: 'name', label: 'Name' },
-  { value: 'created', label: 'Date created' },
-]
+const SORTS: ApplicationSort[] = ['updated', 'name', 'created']
 
 interface ApplicationFiltersBarProps {
   filters: ApplicationFilters
   onChange: (next: ApplicationFilters) => void
-  /** e.g. result count — lives in the filter row, not floating */
   meta?: ReactNode
   trailing?: ReactNode
   className?: string
@@ -38,6 +27,8 @@ export function ApplicationFiltersBar({
   trailing,
   className,
 }: ApplicationFiltersBarProps) {
+  const { t } = useTranslation()
+
   return (
     <div
       className={cn(
@@ -48,16 +39,17 @@ export function ApplicationFiltersBar({
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <div
           role="group"
-          aria-label="Filter by platform"
+          aria-label={t('platform.all')}
           className="inline-flex max-w-full flex-wrap rounded-lg bg-muted/40 p-0.5 dark:bg-muted/25"
         >
-          {platforms.map((p) => {
-            const active = filters.platform === p.value
+          {PLATFORMS.map((p) => {
+            const active = filters.platform === p
+            const label = p === 'all' ? t('platform.all') : t(`platform.${p}`)
             return (
               <button
-                key={p.value}
+                key={p}
                 type="button"
-                onClick={() => onChange({ ...filters, platform: p.value })}
+                onClick={() => onChange({ ...filters, platform: p })}
                 className={cn(
                   'rounded-md px-3 py-1.5 text-[0.8125rem] font-medium',
                   'transition-[color,background-color,box-shadow] duration-[var(--duration-hover)] ease-standard',
@@ -67,7 +59,7 @@ export function ApplicationFiltersBar({
                 )}
                 aria-pressed={active}
               >
-                {p.label}
+                {label}
               </button>
             )
           })}
@@ -79,7 +71,7 @@ export function ApplicationFiltersBar({
 
       <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:justify-end">
         <label className="flex items-center gap-1.5 text-[0.75rem] text-muted-foreground/80">
-          <span className="sr-only">Sort</span>
+          <span className="sr-only">{t('sort.label')}</span>
           <select
             value={filters.sort}
             onChange={(e) =>
@@ -91,9 +83,9 @@ export function ApplicationFiltersBar({
               'transition-colors duration-[var(--duration-hover)] hover:text-foreground',
             )}
           >
-            {sorts.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
+            {SORTS.map((s) => (
+              <option key={s} value={s}>
+                {t(`sort.${s}`)}
               </option>
             ))}
           </select>

@@ -86,6 +86,7 @@ function versionAt(base: string, i: number): string {
  */
 export function getArtifactsForApplication(applicationId: string): Artifact[] {
   const app = MOCK_APPLICATIONS.find((a) => a.id === applicationId)
+  // User-created apps (not in seed) start with empty history
   if (!app) return []
 
   const seed = hash(applicationId)
@@ -112,6 +113,15 @@ export function getArtifactsForApplication(applicationId: string): Artifact[] {
     const note = NOTE_POOL[(seed + i) % NOTE_POOL.length]
     const filename = `${app.packageName.split('.').pop() ?? 'app'}-${version}.${extFor(platform)}`
 
+    const channel =
+      status === 'beta' || /-beta/i.test(version)
+        ? ('beta' as const)
+        : status === 'deprecated' || status === 'archived'
+          ? ('deprecated' as const)
+          : status === 'latest' && i === 1
+            ? ('beta' as const) // variety: some non-latest rows differ
+            : ('stable' as const)
+
     items.push({
       id: `${applicationId}-art-${i}`,
       applicationId,
@@ -122,6 +132,8 @@ export function getArtifactsForApplication(applicationId: string): Artifact[] {
       uploadedAt,
       uploader,
       status,
+      // Latest mock is usually stable channel so dual badges read "最新 + 正式"
+      channel: status === 'latest' ? 'stable' : channel,
       releaseNotes: note,
       filename,
     })

@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { filterApplications } from '@/features/applications/filter-applications'
-import { MOCK_APPLICATIONS } from '@/mocks/applications'
-import type { Application, ApplicationFilters } from '@/types/application'
+import { useApplicationsStore } from '@/store/applications-store'
+import type { ApplicationFilters } from '@/types/application'
 
-const LOAD_MS = 450
+const LOAD_MS = 350
 
 export function useApplications() {
+  const created = useApplicationsStore((s) => s.created)
+  const overrides = useApplicationsStore((s) => s.overrides)
+  const deletedIds = useApplicationsStore((s) => s.deletedIds)
+  const getCatalog = useApplicationsStore((s) => s.getCatalog)
   const [loaded, setLoaded] = useState(false)
   const [filters, setFilters] = useState<ApplicationFilters>({
     query: '',
@@ -19,7 +23,11 @@ export function useApplications() {
     return () => window.clearTimeout(timer)
   }, [])
 
-  const applications: Application[] = loaded ? MOCK_APPLICATIONS : []
+  // Recompute when catalog mutations change
+  const applications = useMemo(
+    () => (loaded ? getCatalog() : []),
+    [loaded, created, overrides, deletedIds, getCatalog],
+  )
   const loading = !loaded
 
   const filtered = useMemo(
