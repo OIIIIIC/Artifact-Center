@@ -1,10 +1,13 @@
+import type { ApplicationPlatform } from '@/types/application'
+import type { Artifact } from '@/types/artifact'
 import type { ShareMode } from '@/types/share'
+import type { UploadChannel } from '@/types/upload'
 
 /**
  * Self-contained share token (no server / no shared storage).
- * Encoded into the URL so any browser can resolve it.
  *
- * Compact payload keys keep the URL shorter.
+ * - latest: app id only — resolve current recommended build on open
+ * - pinned: full artifact snapshot — works even if id not in local store
  */
 export type SharePayloadV1 = {
   v: 1
@@ -12,21 +15,37 @@ export type SharePayloadV1 = {
   a: string
   /** mode: l = latest, p = pinned artifact */
   m: 'l' | 'p'
-  /** artifactId when pinned */
+  /** artifactId when pinned (optional lookup) */
   i?: string
   /** expiresAt as unix ms */
   e?: number
-  /** shared by (display name) — so recipients know who to contact */
+  /** shared by (display name) */
   b?: string
+  /** application display name (for error pages) */
+  n?: string
+  /** --- pinned snapshot (required for reliable pin shares) --- */
+  ver?: string
+  bn?: string
+  pl?: ApplicationPlatform
+  sz?: number
+  f?: string
+  ch?: UploadChannel
+  up?: string
+  at?: string
 }
 
-export function encodeShareToken(input: {
+export type EncodeShareInput = {
   applicationId: string
+  applicationName?: string
   mode: ShareMode
   artifactId?: string
   expiresAt: string | null
   createdBy?: string
-}): string {
+  /** Required when mode === 'artifact' for cross-browser pin */
+  artifactSnapshot?: Artifact
+}
+
+export function encodeShareToken(input: EncodeShareInput): string {
   const payload: SharePayloadV1 = {
     v: 1,
     a: input.applicationId,
@@ -40,6 +59,21 @@ export function encodeShareToken(input: {
   }
   const by = input.createdBy?.trim()
   if (by) payload.b = by.slice(0, 64)
+  const appName = input.applicationName?.trim()
+  if (appName) payload.n = appName.slice(0, 80)
+
+  if (input.mode === 'artifact' && input.artifactSnapshot) {
+    const art = input.artifactSnapshot
+    payload.ver = art.version
+    payload.bn = art.buildNumber
+    payload.pl = art.platform
+    payload.sz = art.sizeBytes
+    payload.f = art.filename
+    payload.ch = art.channel
+    payload.up = art.uploader
+    payload.at = art.uploadedAt
+    payload.i = art.id
+  }
 
   const json = JSON.stringify(payload)
   const b64 = btoa(unescape(encodeURIComponent(json)))
@@ -60,7 +94,14 @@ export function decodeShareToken(token: string): SharePayloadV1 | null {
     ) {
       return null
     }
-    if (data.m === 'p' && !data.i) return null
+    if (data.m === 'p') {
+      // Prefer snapshot; allow legacy id-only tokens
+      const hasSnapshot =
+        typeof data.ver === 'string' &&
+        typeof data.f === 'string' &&
+        typeof data.pl === 'string'
+      if (!hasSnapshot && !data.i) return null
+    }
     return data
   } catch {
     return null
@@ -74,4 +115,29 @@ export function payloadToMode(m: SharePayloadV1['m']): ShareMode {
 export function isPayloadExpired(payload: SharePayloadV1, now = Date.now()): boolean {
   if (payload.e == null) return false
   return payload.e < now
+}
+
+/** Rebuild a display Artifact from a pinned snapshot in the token. */
+export function artifactFromSnapshot(payload: SharePayloadV1): Artifact | null {
+  if (
+    typeof payload.ver !== 'string' ||
+    typeof payload.f !== 'string' ||
+    typeof payload.pl !== 'string'
+  ) {
+    return null
+  }
+  return {
+    id: payload.i || `snap-${payload.a}-${payload.ver}`,
+    applicationId: payload.a,
+    version: payload.ver,
+    buildNumber: payload.bn || '—',
+    platform: payload.pl,
+    sizeBytes: typeof payload.sz === 'number' ? payload.sz : 0,
+    uploadedAt: payload.at || new Date().toISOString(),
+    uploader: payload.up || '—',
+    status: 'stable',
+    channel: payload.ch,
+    releaseNotes: '',
+    filename: payload.f,
+  }
 }

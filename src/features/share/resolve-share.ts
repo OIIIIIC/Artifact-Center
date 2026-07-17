@@ -1,4 +1,5 @@
 import {
+  artifactFromSnapshot,
   decodeShareToken,
   isPayloadExpired,
   payloadToMode,
@@ -21,7 +22,6 @@ export type ShareResolveOk = {
 export type ShareResolveFail = {
   ok: false
   reason: 'not_found' | 'expired' | 'app_missing' | 'artifact_missing'
-  /** From token — still useful when expired / no build */
   sharedBy: string | null
   applicationName: string | null
 }
@@ -49,7 +49,7 @@ function linkFromPayload(token: string, payload: SharePayloadV1): ShareLink {
 
 /**
  * Resolve a self-contained share token.
- * `sharedBy` is always read from the token when present (incl. expired).
+ * Pinned shares carry a full artifact snapshot so they work across browsers.
  */
 export function resolveShareToken(token: string): ShareResolveResult {
   const payload = decodeShareToken(token)
@@ -59,7 +59,7 @@ export function resolveShareToken(token: string): ShareResolveResult {
 
   const sharedBy = sharedByOf(payload)
   const application = useApplicationsStore.getState().getById(payload.a)
-  const applicationName = application?.name ?? null
+  const applicationName = application?.name ?? payload.n?.trim() ?? null
 
   if (isPayloadExpired(payload)) {
     return {
@@ -75,7 +75,7 @@ export function resolveShareToken(token: string): ShareResolveResult {
       ok: false,
       reason: 'app_missing',
       sharedBy,
-      applicationName: null,
+      applicationName: payload.n?.trim() ?? null,
     }
   }
 
@@ -85,8 +85,13 @@ export function resolveShareToken(token: string): ShareResolveResult {
 
   if (mode === 'latest') {
     artifact = artifacts.getLatest(payload.a)
-  } else if (payload.i) {
-    artifact = artifacts.getForApplication(payload.a).find((a) => a.id === payload.i)
+  } else {
+    // 1) Prefer snapshot embedded in token (cross-browser)
+    artifact = artifactFromSnapshot(payload) ?? undefined
+    // 2) Fallback: local catalog by id (legacy tokens)
+    if (!artifact && payload.i) {
+      artifact = artifacts.getForApplication(payload.a).find((a) => a.id === payload.i)
+    }
   }
 
   if (!artifact) {

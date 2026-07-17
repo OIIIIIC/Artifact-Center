@@ -60,8 +60,10 @@ export function ShareDialog({
     try {
       const link = createLink({
         applicationId,
+        applicationName,
         mode,
         artifactId: mode === 'artifact' ? artifact!.id : undefined,
+        artifact: mode === 'artifact' ? artifact : undefined,
         expiresInDays: expiry === 0 ? 0 : expiry,
         /** Prefer full name; falls back in store */
         createdBy: user?.name || user?.email,

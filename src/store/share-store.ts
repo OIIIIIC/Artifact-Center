@@ -30,13 +30,15 @@ export const useShareStore = create<ShareState>()(
 
         const createdBy = input.createdBy?.trim() || 'Demo User'
 
-        /** Token embeds app/version/expiry/sharer — works in any browser without shared DB. */
+        /** Token embeds app + pin snapshot + expiry + sharer — works across browsers. */
         const token = encodeShareToken({
           applicationId: input.applicationId,
+          applicationName: input.applicationName,
           mode: input.mode,
-          artifactId: input.artifactId,
+          artifactId: input.artifactId ?? input.artifact?.id,
           expiresAt,
           createdBy,
+          artifactSnapshot: input.mode === 'artifact' ? input.artifact : undefined,
         })
 
         const link: ShareLink = {

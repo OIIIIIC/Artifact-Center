@@ -1,3 +1,5 @@
+import type { Artifact } from '@/types/artifact'
+
 /**
  * Share download link — capability URL for internal distribution.
  *
@@ -23,9 +25,16 @@ export interface ShareLink {
 
 export type CreateShareInput = {
   applicationId: string
+  /** For error pages / token display */
+  applicationName?: string
   mode: ShareMode
   artifactId?: string
   /** Days until expiry; 0 or omit = no expiry */
   expiresInDays?: number
   createdBy?: string
+  /**
+   * When mode is artifact, pass the full row so the token can embed a snapshot
+   * (required for cross-browser pin shares without a shared artifact DB).
+   */
+  artifact?: Artifact
 }
