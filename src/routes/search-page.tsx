@@ -65,7 +65,7 @@ export function SearchPage() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('search.placeholder')}
               aria-label={t('search.placeholder')}
-              className="h-12 w-full rounded-xl pl-10 text-[0.9375rem]"
+              className="h-10 w-full rounded-xl pl-10 text-[0.875rem]"
               autoFocus
             />
           </div>

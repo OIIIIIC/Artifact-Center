@@ -1,4 +1,3 @@
-import { ArrowUpRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -62,13 +61,15 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
   void i18n.language
 
   return (
-    <article
+    <Link
+      to={`/applications/${application.id}`}
       className={cn(
         'group/card relative flex h-full flex-col rounded-2xl bg-card/80 p-5',
         'ring-1 ring-border/70',
         'transition-[border-color,background-color,transform,box-shadow,ring-color] duration-[var(--duration-page)] ease-standard',
         'hover:-translate-y-0.5 hover:bg-card hover:ring-border-strong/80',
         'dark:bg-card/60 dark:ring-border dark:hover:bg-card dark:hover:ring-border-strong',
+        'outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
         className,
       )}
     >
@@ -87,18 +88,13 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
             <h3 className="min-w-0 text-[0.9375rem] leading-snug font-semibold tracking-tight text-foreground">
-              <Link
-                to={`/applications/${application.id}`}
-                className="transition-colors duration-[var(--duration-hover)] outline-none after:absolute after:inset-0 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/40"
-              >
-                {application.name}
-              </Link>
+              {application.name}
             </h3>
             {sKey ? (
               <StatusBadge
                 status={statusVariant}
                 className={cn(
-                  'relative z-10 shrink-0',
+                  'shrink-0',
                   application.status === 'new'
                     ? 'uppercase'
                     : 'normal-case tracking-normal',
@@ -114,7 +110,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         </div>
       </div>
 
-      <div className="relative z-10 mt-4 flex flex-wrap items-center gap-1.5">
+      <div className="mt-4 flex flex-wrap items-center gap-1.5">
         <span className="inline-flex h-5 items-center gap-1 rounded-md bg-muted/50 px-1.5 text-[11px] text-muted-foreground dark:bg-muted/40">
           <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} aria-hidden />
           {t(`platform.${application.platform}`)}
@@ -124,7 +120,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         </span>
       </div>
 
-      <div className="relative z-10 mt-4 flex items-center gap-2">
+      <div className="mt-4 flex items-center gap-2">
         <Avatar size="sm" className="size-5">
           <AvatarFallback className="text-[9px]">{ownerInitial}</AvatarFallback>
         </Avatar>
@@ -141,7 +137,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         </span>
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-4 pt-5">
+      <div className="mt-auto pt-5">
         <time
           className="text-[0.75rem] text-muted-foreground/70"
           dateTime={application.updatedAt}
@@ -149,24 +145,8 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         >
           {formatRelativeTime(application.updatedAt)}
         </time>
-        <Link
-          to={`/applications/${application.id}`}
-          className={cn(
-            'relative z-10 inline-flex h-8 items-center gap-1 rounded-md px-2',
-            'text-[0.8125rem] font-medium text-muted-foreground',
-            'transition-[color,background-color] duration-[var(--duration-hover)] ease-standard',
-            'hover:bg-muted/60 hover:text-foreground',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
-          )}
-        >
-          {t('common.view')}
-          <ArrowUpRight
-            className="size-3.5 opacity-60 transition-transform duration-[var(--duration-hover)] group-hover/card:translate-x-px group-hover/card:-translate-y-px"
-            strokeWidth={1.75}
-          />
-        </Link>
       </div>
-    </article>
+    </Link>
   )
 }
 

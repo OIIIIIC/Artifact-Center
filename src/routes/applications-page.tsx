@@ -26,24 +26,24 @@ export function ApplicationsPage() {
             description={t('applications.description')}
             action={
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  asChild
-                  variant="outline"
-                  className={cn(
-                    'h-12 gap-2 rounded-xl px-4',
-                    'border-0 bg-muted/40 text-[0.8125rem] font-medium text-muted-foreground',
-                    'ring-1 ring-border/60',
-                    'transition-[color,background-color,ring-color] duration-[var(--duration-hover)]',
-                    'hover:bg-muted/55 hover:text-foreground hover:ring-border',
-                    'dark:bg-muted/25 dark:hover:bg-muted/35',
-                  )}
-                >
+                {/* Page actions — size lg (h-10). Primary = new app. */}
+                <Button asChild size="lg">
                   <Link to="/applications/new">
                     <Plus className="size-3.5" strokeWidth={1.75} />
                     {t('applications.newApplication')}
                   </Link>
                 </Button>
-                <Button asChild className="h-12 gap-2 rounded-xl px-4 text-[0.8125rem]">
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className={cn(
+                    'border-0 bg-muted/40 font-medium text-muted-foreground',
+                    'ring-1 ring-border/60',
+                    'hover:bg-muted/55 hover:text-foreground hover:ring-border',
+                    'dark:bg-muted/25 dark:hover:bg-muted/35',
+                  )}
+                >
                   <Link to="/upload">
                     <Upload className="size-3.5" strokeWidth={1.75} />
                     {t('applications.uploadArtifact')}
@@ -86,7 +86,7 @@ export function ApplicationsPage() {
               title={t('applications.emptyTitle')}
               description={t('applications.emptyDescription')}
               action={
-                <Button asChild size="sm" className="gap-1.5 rounded-lg">
+                <Button asChild size="lg">
                   <Link to="/applications/new">
                     <Plus className="size-3.5" strokeWidth={1.75} />
                     {t('applications.newApplication')}
@@ -105,8 +105,7 @@ export function ApplicationsPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="rounded-lg text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground"
                   onClick={() =>
                     setFilters({
                       query: '',

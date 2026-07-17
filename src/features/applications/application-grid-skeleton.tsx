@@ -6,6 +6,7 @@ interface ApplicationGridSkeletonProps {
   className?: string
 }
 
+/** Mirrors ApplicationCard layout (no fake action control). */
 export function ApplicationGridSkeleton({
   count = 8,
   className,
@@ -25,7 +26,7 @@ export function ApplicationGridSkeleton({
         >
           <div className="flex items-start gap-3.5">
             <Skeleton className="size-12 shrink-0 rounded-[14px]" />
-            <div className="flex-1 space-y-2">
+            <div className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-4 w-3/5" />
               <Skeleton className="h-3 w-full" />
               <Skeleton className="h-3 w-4/5" />
@@ -38,10 +39,10 @@ export function ApplicationGridSkeleton({
           <div className="mt-4 flex items-center gap-2">
             <Skeleton className="size-5 rounded-full" />
             <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3 w-16" />
           </div>
-          <div className="mt-5 flex items-center justify-between pt-1">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-8 w-12 rounded-md" />
+          <div className="mt-auto pt-5">
+            <Skeleton className="h-3 w-24" />
           </div>
         </div>
       ))}

@@ -20,6 +20,51 @@ interface ApplicationFiltersBarProps {
   className?: string
 }
 
+function Segmented({
+  'aria-label': ariaLabel,
+  children,
+}: {
+  'aria-label': string
+  children: ReactNode
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className="inline-flex max-w-full flex-wrap rounded-lg bg-muted/40 p-0.5 dark:bg-muted/25"
+    >
+      {children}
+    </div>
+  )
+}
+
+function SegmentButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-md px-3 py-1.5 text-[0.8125rem] font-medium',
+        'transition-[color,background-color,box-shadow] duration-[var(--duration-hover)] ease-standard',
+        active
+          ? 'bg-background text-foreground shadow-[var(--shadow-xs)] dark:bg-card dark:shadow-none dark:ring-1 dark:ring-border/80'
+          : 'text-muted-foreground hover:text-foreground',
+      )}
+      aria-pressed={active}
+    >
+      {children}
+    </button>
+  )
+}
+
 export function ApplicationFiltersBar({
   filters,
   onChange,
@@ -37,59 +82,34 @@ export function ApplicationFiltersBar({
       )}
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <div
-          role="group"
-          aria-label={t('platform.all')}
-          className="inline-flex max-w-full flex-wrap rounded-lg bg-muted/40 p-0.5 dark:bg-muted/25"
-        >
-          {PLATFORMS.map((p) => {
-            const active = filters.platform === p
-            const label = p === 'all' ? t('platform.all') : t(`platform.${p}`)
-            return (
-              <button
-                key={p}
-                type="button"
-                onClick={() => onChange({ ...filters, platform: p })}
-                className={cn(
-                  'rounded-md px-3 py-1.5 text-[0.8125rem] font-medium',
-                  'transition-[color,background-color,box-shadow] duration-[var(--duration-hover)] ease-standard',
-                  active
-                    ? 'bg-background text-foreground shadow-[var(--shadow-xs)] dark:bg-card dark:shadow-none dark:ring-1 dark:ring-border/80'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-                aria-pressed={active}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
+        <Segmented aria-label={t('platform.all')}>
+          {PLATFORMS.map((p) => (
+            <SegmentButton
+              key={p}
+              active={filters.platform === p}
+              onClick={() => onChange({ ...filters, platform: p })}
+            >
+              {p === 'all' ? t('platform.all') : t(`platform.${p}`)}
+            </SegmentButton>
+          ))}
+        </Segmented>
         {meta ? (
           <span className="text-[0.75rem] text-muted-foreground/75">{meta}</span>
         ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:justify-end">
-        <label className="flex items-center gap-1.5 text-[0.75rem] text-muted-foreground/80">
-          <span className="sr-only">{t('sort.label')}</span>
-          <select
-            value={filters.sort}
-            onChange={(e) =>
-              onChange({ ...filters, sort: e.target.value as ApplicationSort })
-            }
-            className={cn(
-              'h-8 cursor-pointer appearance-none bg-transparent pr-1',
-              'text-[0.75rem] text-muted-foreground outline-none',
-              'transition-colors duration-[var(--duration-hover)] hover:text-foreground',
-            )}
-          >
-            {SORTS.map((s) => (
-              <option key={s} value={s}>
-                {t(`sort.${s}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Segmented aria-label={t('sort.label')}>
+          {SORTS.map((s) => (
+            <SegmentButton
+              key={s}
+              active={filters.sort === s}
+              onClick={() => onChange({ ...filters, sort: s })}
+            >
+              {t(`sort.${s}`)}
+            </SegmentButton>
+          ))}
+        </Segmented>
         {trailing}
       </div>
     </div>
