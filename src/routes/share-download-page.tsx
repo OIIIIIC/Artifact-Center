@@ -164,14 +164,6 @@ export function ShareDownloadPage() {
                 </time>
               </dd>
             </div>
-            {sharedBy ? (
-              <div className="col-span-2">
-                <dt className="text-[0.6875rem] text-muted-foreground/80 uppercase">
-                  {t('share.metaSharedBy')}
-                </dt>
-                <dd className="mt-0.5 text-foreground">{sharedBy}</dd>
-              </div>
-            ) : null}
           </dl>
         </div>
 
