@@ -231,7 +231,7 @@ export function CreateApplicationPage() {
                     {/* Hard conflict only — soft matches live in the rail */}
                     {packageMatch.exact ? (
                       <p
-                        className="text-[0.75rem] leading-relaxed text-muted-foreground"
+                        className="text-[0.75rem] leading-relaxed text-destructive"
                         role="alert"
                       >
                         {t('createApp.packageTakenLead', {
@@ -305,7 +305,7 @@ export function CreateApplicationPage() {
                 </div>
 
                 {error ? (
-                  <p className="text-[0.8125rem] text-muted-foreground" role="alert">
+                  <p className="text-[0.8125rem] text-destructive" role="alert">
                     {error}
                   </p>
                 ) : null}

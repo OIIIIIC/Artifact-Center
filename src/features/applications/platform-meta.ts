@@ -14,3 +14,10 @@ export const PLATFORM_ICON: Record<ApplicationPlatform, LucideIcon> = {
   windows: AppWindow,
   zip: Package,
 }
+
+export const PLATFORM_TONE: Record<ApplicationPlatform, string> = {
+  android:
+    'bg-emerald-500/[0.07] text-emerald-900/80 dark:bg-emerald-400/10 dark:text-emerald-200/80',
+  windows: 'bg-sky-500/[0.07] text-sky-950/80 dark:bg-sky-400/10 dark:text-sky-200/80',
+  zip: 'bg-stone-500/[0.08] text-stone-800/80 dark:bg-stone-400/10 dark:text-stone-200/80',
+}

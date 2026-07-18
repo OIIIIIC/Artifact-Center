@@ -197,16 +197,16 @@ export function ArtifactsTable({
             <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
               {t('detail.colVersion')}
             </TableHead>
-            <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
+            <TableHead className="hidden h-11 px-4 text-[0.75rem] font-medium text-muted-foreground sm:table-cell">
               {t('detail.colPlatform')}
             </TableHead>
-            <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
+            <TableHead className="hidden h-11 px-4 text-[0.75rem] font-medium text-muted-foreground lg:table-cell">
               {t('detail.colSize')}
             </TableHead>
-            <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
+            <TableHead className="hidden h-11 px-4 text-[0.75rem] font-medium text-muted-foreground md:table-cell">
               {t('detail.colUploadTime')}
             </TableHead>
-            <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
+            <TableHead className="hidden h-11 px-4 text-[0.75rem] font-medium text-muted-foreground xl:table-cell">
               {t('detail.colUploader')}
             </TableHead>
             <TableHead className="h-11 px-4 text-[0.75rem] font-medium text-muted-foreground">
@@ -241,23 +241,29 @@ export function ArtifactsTable({
                     <p className="mt-0.5 text-[0.6875rem] text-muted-foreground/75">
                       {t('detail.build', { number: art.buildNumber })}
                     </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground sm:hidden">
+                      <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} />
+                      <span>{t(`platform.${art.platform}`)}</span>
+                      <span aria-hidden>·</span>
+                      <span className="font-mono">{formatFileSize(art.sizeBytes)}</span>
+                    </p>
                   </div>
                 </TableCell>
-                <TableCell className="px-4 py-3.5">
+                <TableCell className="hidden px-4 py-3.5 sm:table-cell">
                   <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
                     <PlatformIcon className="size-3.5 opacity-70" strokeWidth={1.75} />
                     {t(`platform.${art.platform}`)}
                   </span>
                 </TableCell>
-                <TableCell className="px-4 py-3.5 font-mono text-[0.8125rem] text-muted-foreground">
+                <TableCell className="hidden px-4 py-3.5 font-mono text-[0.8125rem] text-muted-foreground lg:table-cell">
                   {formatFileSize(art.sizeBytes)}
                 </TableCell>
-                <TableCell className="px-4 py-3.5 text-[0.8125rem] text-muted-foreground">
+                <TableCell className="hidden px-4 py-3.5 text-[0.8125rem] text-muted-foreground md:table-cell">
                   <time dateTime={art.uploadedAt}>
                     {formatRelativeTime(art.uploadedAt)}
                   </time>
                 </TableCell>
-                <TableCell className="px-4 py-3.5 text-[0.8125rem] text-foreground/90">
+                <TableCell className="hidden px-4 py-3.5 text-[0.8125rem] text-foreground/90 xl:table-cell">
                   {art.uploader}
                 </TableCell>
                 <TableCell className="px-4 py-3.5">

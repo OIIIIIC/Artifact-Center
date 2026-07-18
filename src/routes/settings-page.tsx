@@ -652,7 +652,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                     </div>
 
                     {profileError ? (
-                      <p className="text-[0.8125rem] text-muted-foreground" role="alert">
+                      <p className="text-[0.8125rem] text-destructive" role="alert">
                         {profileError}
                       </p>
                     ) : null}
@@ -1149,10 +1149,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                             ) : null}
                           </div>
                           {addError ? (
-                            <p
-                              className="text-[0.8125rem] text-muted-foreground"
-                              role="alert"
-                            >
+                            <p className="text-[0.8125rem] text-destructive" role="alert">
                               {addError}
                             </p>
                           ) : null}

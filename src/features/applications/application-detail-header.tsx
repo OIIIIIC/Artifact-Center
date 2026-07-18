@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ArtifactReleaseBadges } from '@/features/applications/artifact-release-badges'
-import { PLATFORM_ICON } from '@/features/applications/platform-meta'
+import { PLATFORM_ICON, PLATFORM_TONE } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { ShareDialog } from '@/features/share/share-dialog'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
@@ -21,13 +21,6 @@ import {
   getArtifactRiskStatus,
   type Artifact,
 } from '@/types/artifact'
-
-const iconTone: Record<Application['platform'], string> = {
-  android:
-    'bg-emerald-500/[0.07] text-emerald-900/80 dark:bg-emerald-400/10 dark:text-emerald-200/80',
-  windows: 'bg-sky-500/[0.07] text-sky-950/80 dark:bg-sky-400/10 dark:text-sky-200/80',
-  zip: 'bg-stone-500/[0.08] text-stone-800/80 dark:bg-stone-400/10 dark:text-stone-200/80',
-}
 
 interface ApplicationDetailHeaderProps {
   application: Application
@@ -123,7 +116,7 @@ export function ApplicationDetailHeader({
         <div
           className={cn(
             'flex size-16 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold tracking-tight sm:size-[4.5rem] sm:text-xl',
-            iconTone[application.platform],
+            PLATFORM_TONE[application.platform],
           )}
           aria-hidden
         >

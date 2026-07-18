@@ -133,7 +133,7 @@ export function LoginPage() {
             </div>
 
             {error ? (
-              <p className="text-[0.8125rem] text-muted-foreground" role="alert">
+              <p className="text-[0.8125rem] text-destructive" role="alert">
                 {error}
               </p>
             ) : null}

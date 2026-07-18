@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom'
 
 import { APPLICATION_STATUS_LABEL, StatusBadge } from '@/components/common/status-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { PLATFORM_ICON, PLATFORM_LABEL } from '@/features/applications/platform-meta'
+import {
+  PLATFORM_ICON,
+  PLATFORM_LABEL,
+  PLATFORM_TONE,
+} from '@/features/applications/platform-meta'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Application, ApplicationStatus } from '@/types/application'
@@ -11,13 +15,6 @@ import type { Application, ApplicationStatus } from '@/types/application'
 interface ApplicationCardProps {
   application: Application
   className?: string
-}
-
-const iconTone: Record<Application['platform'], string> = {
-  android:
-    'bg-emerald-500/[0.07] text-emerald-900/80 dark:bg-emerald-400/10 dark:text-emerald-200/80',
-  windows: 'bg-sky-500/[0.07] text-sky-950/80 dark:bg-sky-400/10 dark:text-sky-200/80',
-  zip: 'bg-stone-500/[0.08] text-stone-800/80 dark:bg-stone-400/10 dark:text-stone-200/80',
 }
 
 function statusKey(status: ApplicationStatus): string | null {
@@ -79,7 +76,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
           className={cn(
             'flex size-12 shrink-0 items-center justify-center rounded-[14px]',
             'text-[0.8125rem] font-semibold tracking-tight',
-            iconTone[application.platform],
+            PLATFORM_TONE[application.platform],
           )}
           aria-hidden
         >
