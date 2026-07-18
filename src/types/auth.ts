@@ -23,3 +23,4 @@ export type AuthErrorCode =
   | 'forbidden'
   | 'invalid_image'
   | 'image_too_large'
+  | 'network'

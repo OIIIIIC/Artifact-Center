@@ -2,6 +2,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 import { checkPassword } from '@/lib/password'
+import { apiChangePassword, apiLogin, apiMe, apiUpdateProfile } from '@/services/api'
+import { ApiError, setUnauthorizedHandler } from '@/services/http'
+import { setAccessToken } from '@/services/session'
 import type { AuthErrorCode, AuthUser, LoginCredentials } from '@/types/auth'
 
 const STORAGE_KEY = 'artifact-center-auth'
@@ -13,69 +16,71 @@ export type UpdateProfileInput = {
 
 interface AuthState {
   user: AuthUser | null
-  /**
-   * Mock credential store: email → password (plain for demo only).
-   * Real product would use server-side hashing.
-   */
-  credentials: Record<string, string>
+  token: string | null
+  bootstrapped: boolean
   login: (
     credentials: LoginCredentials,
   ) => Promise<{ ok: true } | { ok: false; code: AuthErrorCode }>
+  /** Validate persisted token with /auth/me */
+  bootstrap: () => Promise<void>
   updateProfile: (
     input: UpdateProfileInput,
-  ) => { ok: true } | { ok: false; code: AuthErrorCode }
+  ) => Promise<{ ok: true } | { ok: false; code: AuthErrorCode }>
   updateAvatar: (
     avatarUrl: string | null,
-  ) => { ok: true } | { ok: false; code: AuthErrorCode }
+  ) => Promise<{ ok: true } | { ok: false; code: AuthErrorCode }>
   changePassword: (input: {
     current: string
     next: string
     confirm: string
-  }) => { ok: true } | { ok: false; code: AuthErrorCode; issues?: string[] }
-  /** Admin-only: set another user's password (by email). */
-  adminResetPassword: (input: {
-    email: string
-    next: string
-    confirm: string
-  }) => { ok: true } | { ok: false; code: AuthErrorCode }
+  }) => Promise<{ ok: true } | { ok: false; code: AuthErrorCode; issues?: string[] }>
   logout: () => void
   isAuthenticated: () => boolean
-}
-
-function displayNameFromEmail(email: string): string {
-  const local = email.split('@')[0] ?? 'User'
-  return local
-    .split(/[._-]/)
-    .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(' ')
 }
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-function emailKey(email: string): string {
-  return email.trim().toLowerCase()
+function applySession(token: string, user: AuthUser) {
+  setAccessToken(token)
+  return { token, user }
 }
 
-/** Seed demo password (must pass policy). */
+/** Seed demo credentials shown on login form only */
 const DEMO_EMAIL = 'demo@enterprise.local'
 const DEMO_PASSWORD = 'Demo@2026'
-
-const DEFAULT_CREDENTIALS: Record<string, string> = {
-  [DEMO_EMAIL]: DEMO_PASSWORD,
-}
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      credentials: { ...DEFAULT_CREDENTIALS },
-      isAuthenticated: () => Boolean(get().user),
-      logout: () => set({ user: null }),
+      token: null,
+      bootstrapped: false,
+      isAuthenticated: () => Boolean(get().user && get().token),
+      logout: () => {
+        setAccessToken(null)
+        set({ user: null, token: null })
+      },
 
-      updateProfile: ({ name, email }) => {
+      bootstrap: async () => {
+        const token = get().token
+        if (!token) {
+          setAccessToken(null)
+          set({ bootstrapped: true, user: null })
+          return
+        }
+        setAccessToken(token)
+        try {
+          const user = await apiMe()
+          set({ user, bootstrapped: true })
+        } catch {
+          setAccessToken(null)
+          set({ user: null, token: null, bootstrapped: true })
+        }
+      },
+
+      updateProfile: async ({ name, email }) => {
         const current = get().user
         if (!current) return { ok: false, code: 'no_user' }
         const nextName = name.trim()
@@ -83,46 +88,40 @@ export const useAuthStore = create<AuthState>()(
         if (!nextName || !nextEmail) return { ok: false, code: 'empty' }
         if (!isValidEmail(nextEmail)) return { ok: false, code: 'invalid_email' }
 
-        const oldKey = emailKey(current.email)
-        const newKey = emailKey(nextEmail)
-        const credentials = { ...get().credentials }
-        if (oldKey !== newKey && credentials[oldKey]) {
-          credentials[newKey] = credentials[oldKey]
-          delete credentials[oldKey]
-        }
-
-        set({
-          credentials,
-          user: {
-            ...current,
+        try {
+          const { user, token } = await apiUpdateProfile({
             name: nextName,
             email: nextEmail,
-          },
-        })
-        return { ok: true }
+          })
+          set(applySession(token, user))
+          return { ok: true }
+        } catch (err) {
+          if (err instanceof ApiError) {
+            if (err.code === 'email_taken') return { ok: false, code: 'invalid_email' }
+            if (err.code === 'invalid_body') return { ok: false, code: 'empty' }
+          }
+          return { ok: false, code: 'empty' }
+        }
       },
 
-      updateAvatar: (avatarUrl) => {
+      updateAvatar: async (avatarUrl) => {
         const current = get().user
         if (!current) return { ok: false, code: 'no_user' }
-        set({
-          user: {
-            ...current,
+        try {
+          const { user, token } = await apiUpdateProfile({
             avatarUrl: avatarUrl || null,
-          },
-        })
-        return { ok: true }
+          })
+          set(applySession(token, user))
+          return { ok: true }
+        } catch {
+          return { ok: false, code: 'invalid_image' }
+        }
       },
 
-      changePassword: ({ current, next, confirm }) => {
+      changePassword: async ({ current, next, confirm }) => {
         const user = get().user
         if (!user) return { ok: false, code: 'no_user' }
-        const key = emailKey(user.email)
-        const stored = get().credentials[key]
-        if (stored && stored !== current) {
-          return { ok: false, code: 'wrong_password' }
-        }
-        if (!stored && !current) {
+        if (!current || !next || !confirm) {
           return { ok: false, code: 'empty' }
         }
 
@@ -137,32 +136,26 @@ export const useAuthStore = create<AuthState>()(
           return { ok: false, code: 'weak_password', issues: check.issues }
         }
 
-        set((s) => ({
-          credentials: { ...s.credentials, [key]: next },
-        }))
-        return { ok: true }
-      },
-
-      adminResetPassword: ({ email, next, confirm }) => {
-        const actor = get().user
-        if (!actor) return { ok: false, code: 'no_user' }
-        if (actor.role !== 'admin') return { ok: false, code: 'forbidden' }
-
-        const key = emailKey(email)
-        if (!key) return { ok: false, code: 'empty' }
-
-        const check = checkPassword(next, { confirm })
-        if (check.issues.includes('mismatch')) {
-          return { ok: false, code: 'mismatch' }
+        try {
+          await apiChangePassword({
+            currentPassword: current,
+            newPassword: next,
+          })
+          return { ok: true }
+        } catch (err) {
+          if (err instanceof ApiError) {
+            if (err.code === 'wrong_password' || err.status === 401) {
+              return { ok: false, code: 'wrong_password' }
+            }
+            if (err.code === 'same_as_current') {
+              return { ok: false, code: 'same_as_current' }
+            }
+            if (err.code === 'weak_password') {
+              return { ok: false, code: 'weak_password' }
+            }
+          }
+          return { ok: false, code: 'empty' }
         }
-        if (!check.ok) {
-          return { ok: false, code: 'weak_password', issues: check.issues }
-        }
-
-        set((s) => ({
-          credentials: { ...s.credentials, [key]: next },
-        }))
-        return { ok: true }
       },
 
       login: async ({ email, password }) => {
@@ -174,65 +167,44 @@ export const useAuthStore = create<AuthState>()(
           return { ok: false, code: 'invalid_email' }
         }
 
-        await new Promise((r) => setTimeout(r, 450))
-
-        const key = emailKey(trimmed)
-        const stored = get().credentials[key]
-
-        if (stored) {
-          if (stored !== password) {
-            return { ok: false, code: 'wrong_password' }
+        try {
+          const { token, user } = await apiLogin({ email: trimmed, password })
+          set(applySession(token, user))
+          return { ok: true }
+        } catch (err) {
+          if (err instanceof ApiError) {
+            if (err.code === 'invalid_credentials' || err.status === 401) {
+              return { ok: false, code: 'wrong_password' }
+            }
           }
-        } else {
-          // First login for new email: require non-weak password, then save
-          const check = checkPassword(password)
-          if (!check.ok) {
-            return { ok: false, code: 'weak_password' }
-          }
-          set((s) => ({
-            credentials: { ...s.credentials, [key]: password },
-          }))
+          return { ok: false, code: 'wrong_password' }
         }
-
-        const prev = get().user
-        const keepAvatar =
-          prev && emailKey(prev.email) === key ? prev.avatarUrl : undefined
-
-        const user: AuthUser = {
-          id: `user-${key}`,
-          email: trimmed,
-          name:
-            key === DEMO_EMAIL
-              ? 'Demo User'
-              : prev && emailKey(prev.email) === key
-                ? prev.name
-                : displayNameFromEmail(trimmed),
-          role: key.includes('admin') || key === DEMO_EMAIL ? 'admin' : 'maintainer',
-          avatarUrl: keepAvatar ?? null,
-        }
-        set({ user })
-        return { ok: true }
       },
     }),
     {
       name: STORAGE_KEY,
       partialize: (s) => ({
         user: s.user,
-        credentials: s.credentials,
+        token: s.token,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<AuthState>
+        const token = p.token ?? null
+        if (token) setAccessToken(token)
         return {
           ...current,
           ...p,
-          credentials: {
-            ...DEFAULT_CREDENTIALS,
-            ...(p.credentials ?? {}),
-          },
+          token,
+          bootstrapped: false,
         }
       },
     },
   ),
 )
+
+// Wire 401 → logout (once)
+setUnauthorizedHandler(() => {
+  useAuthStore.getState().logout()
+})
 
 export { DEMO_EMAIL, DEMO_PASSWORD }

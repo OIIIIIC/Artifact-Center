@@ -13,7 +13,7 @@ import { ShareDownloadPage } from '@/routes/share-download-page'
 import { UploadPage } from '@/routes/upload-page'
 
 /**
- * Product routes behind mock auth.
+ * Product routes behind JWT auth.
  * Login + share download links are public; everything else requires session.
  */
 export function AppRouter() {

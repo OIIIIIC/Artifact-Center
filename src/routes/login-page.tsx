@@ -48,8 +48,10 @@ export function LoginPage() {
         setError(t('auth.errorWeakPassword'))
       } else if (result.code === 'invalid_email') {
         setError(t('auth.errorInvalidEmail'))
-      } else {
+      } else if (result.code === 'empty') {
         setError(t('auth.errorEmpty'))
+      } else {
+        setError(t('auth.errorWrongPassword'))
       }
       return
     }
