@@ -64,7 +64,7 @@ export function Topbar({
                         /
                       </li>
                     ) : null}
-                    <li className="min-w-0">
+                    <li className={cn('min-w-0', isLast ? 'flex-1' : 'shrink-0')}>
                       {item.href && !isLast ? (
                         <Link
                           to={item.href}
@@ -81,6 +81,7 @@ export function Topbar({
                               : 'text-muted-foreground',
                           )}
                           aria-current={isLast ? 'page' : undefined}
+                          title={item.label}
                         >
                           {item.label}
                         </span>

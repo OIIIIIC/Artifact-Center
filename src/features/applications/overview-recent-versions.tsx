@@ -11,12 +11,14 @@ import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { Artifact } from '@/types/artifact'
+import type { ApplicationStatus } from '@/types/application'
+import { getArtifactRiskStatus, type Artifact } from '@/types/artifact'
 
 interface OverviewRecentVersionsProps {
   artifacts: Artifact[]
   applicationId?: string
   applicationName?: string
+  applicationStatus?: ApplicationStatus
   className?: string
 }
 
@@ -28,12 +30,14 @@ export function OverviewRecentVersions({
   artifacts,
   applicationId,
   applicationName,
+  applicationStatus,
   className,
 }: OverviewRecentVersionsProps) {
   const { t, i18n } = useTranslation()
   void i18n.language
-  const { download, isBusy } = useDownloadArtifact()
+  const { download, isBusy, downloadConfirmation } = useDownloadArtifact()
   const [shareArt, setShareArt] = useState<Artifact | null>(null)
+  const applicationArchived = applicationStatus === 'archived'
 
   if (artifacts.length === 0) {
     const uploadTo = applicationId ? `/upload?app=${applicationId}` : '/upload'
@@ -44,12 +48,14 @@ export function OverviewRecentVersions({
         description={t('detail.noVersions')}
         className={cn('py-12', className)}
         action={
-          <Button asChild size="lg">
-            <Link to={uploadTo}>
-              <Upload className="size-3.5" strokeWidth={1.75} />
-              {t('detail.uploadArtifact')}
-            </Link>
-          </Button>
+          applicationArchived ? undefined : (
+            <Button asChild size="lg">
+              <Link to={uploadTo}>
+                <Upload className="size-3.5" strokeWidth={1.75} />
+                {t('detail.uploadArtifact')}
+              </Link>
+            </Button>
+          )
         }
       />
     )
@@ -159,6 +165,9 @@ export function OverviewRecentVersions({
                       filename: art.filename,
                       version: art.version,
                       sizeBytes: art.sizeBytes,
+                      riskStatus: applicationArchived
+                        ? 'applicationArchived'
+                        : getArtifactRiskStatus(art),
                     })
                   }
                 >
@@ -183,8 +192,10 @@ export function OverviewRecentVersions({
           applicationId={applicationId}
           applicationName={applicationName}
           artifact={shareArt}
+          applicationArchived={applicationArchived}
         />
       ) : null}
+      {downloadConfirmation}
     </div>
   )
 }

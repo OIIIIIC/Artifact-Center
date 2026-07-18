@@ -1,6 +1,6 @@
 import { Inbox } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer } from '@/components/layout'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ActivityPanel } from '@/features/applications/activity-panel'
 import { ApplicationDetailHeader } from '@/features/applications/application-detail-header'
+import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
 import { ApplicationDetailSkeleton } from '@/features/applications/application-detail-skeleton'
 import { ApplicationSettingsPanel } from '@/features/applications/application-settings-panel'
 import { ApplicationSummary } from '@/features/applications/application-summary'
@@ -16,17 +17,28 @@ import { OverviewRecentVersions } from '@/features/applications/overview-recent-
 import { ReleaseNotesPanel } from '@/features/applications/release-notes-panel'
 import { useApplicationDetail } from '@/features/applications/use-application-detail'
 import { ShareLinksPanel } from '@/features/share/share-links-panel'
-import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
 export function ApplicationDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams()
-  const role = useAuthStore((s) => s.user?.role)
-  const canWrite = canWriteContent(role)
-  const { loading, application, artifacts, latest, recentVersions, notFound } =
-    useApplicationDetail(id)
+  const [searchParams] = useSearchParams()
+  const user = useAuthStore((s) => s.user)
+  const {
+    loading,
+    application,
+    artifacts,
+    releases,
+    members,
+    latest,
+    recentVersions,
+    notFound,
+  } = useApplicationDetail(id)
+  const canWrite =
+    user?.role === 'admin' ||
+    (user?.role === 'maintainer' &&
+      members.some((member) => member.id === user.id && member.role === 'maintainer'))
 
   if (loading) {
     return (
@@ -93,6 +105,9 @@ export function ApplicationDetailPage() {
     >
       <PageContainer rhythm="product">
         <div className="space-y-8 sm:space-y-10">
+          {application.status === 'archived' ? (
+            <ArtifactRiskNotice risk="applicationArchived" context="application" />
+          ) : null}
           <ApplicationDetailHeader application={application} latest={latest} />
 
           <ApplicationSummary
@@ -101,7 +116,12 @@ export function ApplicationDetailPage() {
             artifactCount={artifacts.length}
           />
 
-          <Tabs defaultValue="overview" className="gap-6">
+          <Tabs
+            defaultValue={
+              searchParams.get('tab') === 'settings' ? 'settings' : 'overview'
+            }
+            className="gap-6"
+          >
             <TabsList
               variant="line"
               className={cn(
@@ -142,6 +162,7 @@ export function ApplicationDetailPage() {
                 artifacts={recentVersions}
                 applicationId={application.id}
                 applicationName={application.name}
+                applicationStatus={application.status}
               />
             </TabsContent>
 
@@ -158,11 +179,16 @@ export function ApplicationDetailPage() {
                 artifacts={artifacts}
                 applicationId={application.id}
                 applicationName={application.name}
+                applicationStatus={application.status}
               />
             </TabsContent>
 
             <TabsContent value="release-notes" className="mt-0 outline-none">
-              <ReleaseNotesPanel artifacts={artifacts} applicationId={application.id} />
+              <ReleaseNotesPanel
+                releases={releases}
+                applicationId={application.id}
+                applicationStatus={application.status}
+              />
             </TabsContent>
 
             <TabsContent value="activity" className="mt-0 space-y-4 outline-none">
@@ -196,6 +222,7 @@ export function ApplicationDetailPage() {
                 <ApplicationSettingsPanel
                   key={application.id}
                   application={application}
+                  autoOpenMembers={searchParams.get('addMember') === '1'}
                 />
               </TabsContent>
             ) : null}

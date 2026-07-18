@@ -5,6 +5,7 @@ import type {
   ApplicationStatus,
 } from '@/types/application'
 import type { Artifact, ArtifactStatus } from '@/types/artifact'
+import type { Release } from '@/types/release'
 import type { AuthUser, LoginCredentials } from '@/types/auth'
 import type { UploadChannel } from '@/types/upload'
 
@@ -293,14 +294,73 @@ export async function apiDeleteApplication(id: string): Promise<void> {
   await request<{ ok: true }>(`/applications/${id}`, { method: 'DELETE' })
 }
 
+export type ApplicationMemberDto = {
+  id: string
+  name: string
+  email: string
+  role: 'maintainer' | 'viewer'
+  platformRole: 'admin' | 'maintainer' | 'viewer'
+  isOwner: boolean
+  joinedAt: string
+}
+
+export type ApplicationMemberCandidateDto = {
+  id: string
+  name: string
+  email: string
+  platformRole: 'maintainer' | 'viewer'
+}
+
+export async function apiListApplicationMembers(
+  applicationId: string,
+): Promise<ApplicationMemberDto[]> {
+  const data = await request<{ items: ApplicationMemberDto[] }>(
+    `/applications/${applicationId}/members`,
+  )
+  return data.items
+}
+
+export async function apiUpsertApplicationMember(
+  applicationId: string,
+  userId: string,
+  role: ApplicationMemberDto['role'],
+): Promise<void> {
+  await request(`/applications/${applicationId}/members/${userId}`, {
+    method: 'PUT',
+    body: { role },
+  })
+}
+
+export async function apiListApplicationMemberCandidates(
+  applicationId: string,
+  q = '',
+): Promise<ApplicationMemberCandidateDto[]> {
+  const params = new URLSearchParams()
+  if (q.trim()) params.set('q', q.trim())
+  const suffix = params.toString()
+  const data = await request<{ items: ApplicationMemberCandidateDto[] }>(
+    `/applications/${applicationId}/member-candidates${suffix ? `?${suffix}` : ''}`,
+  )
+  return data.items
+}
+
+export async function apiRemoveApplicationMember(
+  applicationId: string,
+  userId: string,
+): Promise<void> {
+  await request(`/applications/${applicationId}/members/${userId}`, { method: 'DELETE' })
+}
+
 /* ── Artifacts ────────────────────────────────────────── */
 
 type ApiArtifact = {
   id: string
   applicationId: string
+  releaseId?: string
   version: string
   buildNumber: string
   platform: ApplicationPlatform
+  type?: Artifact['type']
   channel: UploadChannel
   status: ArtifactStatus
   filename: string
@@ -309,15 +369,19 @@ type ApiArtifact = {
   releaseNotes: string
   uploader: string
   uploadedAt: string
+  parsedMeta?: Record<string, unknown> | null
+  buildMeta?: Record<string, unknown> | null
 }
 
 function mapArtifact(a: ApiArtifact): Artifact {
   return {
     id: a.id,
     applicationId: a.applicationId,
+    releaseId: a.releaseId,
     version: a.version,
     buildNumber: a.buildNumber,
     platform: a.platform,
+    type: a.type,
     channel: a.channel,
     status: a.status,
     filename: a.filename,
@@ -326,12 +390,19 @@ function mapArtifact(a: ApiArtifact): Artifact {
     releaseNotes: a.releaseNotes,
     uploader: a.uploader,
     uploadedAt: a.uploadedAt,
+    parsedMeta: a.parsedMeta,
+    buildMeta: a.buildMeta,
   }
 }
 
 export async function apiListArtifacts(appId: string): Promise<Artifact[]> {
   const data = await request<{ items: ApiArtifact[] }>(`/applications/${appId}/artifacts`)
   return data.items.map(mapArtifact)
+}
+
+export async function apiListReleases(appId: string): Promise<Release[]> {
+  const data = await request<{ items: Release[] }>(`/applications/${appId}/releases`)
+  return data.items
 }
 
 export async function apiGetArtifact(id: string): Promise<Artifact> {
@@ -393,12 +464,8 @@ export async function apiUploadArtifact(
 
 export async function apiDownloadArtifact(
   id: string,
-  opts: { public?: boolean } = {},
 ): Promise<{ blob: Blob; filename?: string }> {
-  const path = opts.public
-    ? `/public/artifacts/${id}/download`
-    : `/artifacts/${id}/download`
-  return requestBlob(path, { public: opts.public })
+  return requestBlob(`/artifacts/${id}/download`)
 }
 
 /* ── Retention / settings ─────────────────────────────── */
@@ -406,8 +473,11 @@ export async function apiDownloadArtifact(
 export type RetentionPolicyDto = {
   maxVersions: number
   archiveDeprecatedDays: number
-  storageQuotaBytes: number
-  storageUsedBytes: number
+  artifactStorageBytes: number
+  diskTotalBytes: number | null
+  diskUsedBytes: number | null
+  diskFreeBytes: number | null
+  measuredAt: string
   updatedAt: string
 }
 
@@ -419,7 +489,6 @@ export async function apiGetRetention(): Promise<RetentionPolicyDto> {
 export async function apiUpdateRetention(body: {
   maxVersions?: number
   archiveDeprecatedDays?: number
-  storageQuotaBytes?: number
 }): Promise<RetentionPolicyDto> {
   const data = await request<{ retention: RetentionPolicyDto }>('/settings/retention', {
     method: 'PATCH',
@@ -512,22 +581,4 @@ export async function apiDownloadShare(
   return requestBlob(`/public/shares/${encodeURIComponent(token)}/download`, {
     public: true,
   })
-}
-
-/* ── Public (share landing, no auth) ──────────────────── */
-
-export async function apiPublicGetApplication(id: string): Promise<Application> {
-  const data = await request<{ application: ApiApplication }>(
-    `/public/applications/${id}`,
-    { public: true },
-  )
-  return mapApp(data.application)
-}
-
-export async function apiPublicListArtifacts(appId: string): Promise<Artifact[]> {
-  const data = await request<{ items: ApiArtifact[] }>(
-    `/public/applications/${appId}/artifacts`,
-    { public: true },
-  )
-  return data.items.map(mapArtifact)
 }

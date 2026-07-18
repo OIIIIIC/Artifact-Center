@@ -126,8 +126,16 @@ export async function requestBlob(
   }
 
   const disposition = res.headers.get('content-disposition') ?? ''
-  const match = /filename="([^"]+)"/i.exec(disposition)
-  const filename = match?.[1]
+  const encodedMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
+  const fallbackMatch = /filename="([^"]+)"/i.exec(disposition)
+  let filename = fallbackMatch?.[1]
+  if (encodedMatch?.[1]) {
+    try {
+      filename = decodeURIComponent(encodedMatch[1])
+    } catch {
+      // 编码异常时使用 ASCII 兼容文件名。
+    }
+  }
   const blob = await res.blob()
   return { blob, filename }
 }

@@ -16,7 +16,11 @@ import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 import type { Application } from '@/types/application'
-import { getArtifactChannel, type Artifact } from '@/types/artifact'
+import {
+  getArtifactChannel,
+  getArtifactRiskStatus,
+  type Artifact,
+} from '@/types/artifact'
 
 const iconTone: Record<Application['platform'], string> = {
   android:
@@ -47,7 +51,8 @@ export function ApplicationDetailHeader({
   void i18n.language
   const role = useAuthStore((s) => s.user?.role)
   const canWrite = canWriteContent(role)
-  const { download, isBusy } = useDownloadArtifact()
+  const applicationArchived = application.status === 'archived'
+  const { download, isBusy, downloadConfirmation } = useDownloadArtifact()
   const [shareOpen, setShareOpen] = useState(false)
   const latestKey = `latest:${application.id}`
   const downloading = isBusy(latestKey)
@@ -128,7 +133,10 @@ export function ApplicationDetailHeader({
         <div className="min-w-0 space-y-2.5">
           {/* Title: app name + artifact version / latest / channel only */}
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[1.5rem] leading-tight font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+            <h1
+              className="line-clamp-2 min-w-0 break-words text-[1.5rem] leading-tight font-semibold tracking-tight text-foreground sm:text-[1.75rem]"
+              title={application.name}
+            >
               {application.name}
             </h1>
             {hasVersion ? (
@@ -158,7 +166,10 @@ export function ApplicationDetailHeader({
             ) : null}
           </div>
 
-          <p className="max-w-2xl text-[0.875rem] leading-relaxed text-muted-foreground">
+          <p
+            className="line-clamp-3 max-w-2xl break-words text-[0.875rem] leading-relaxed text-muted-foreground"
+            title={application.description}
+          >
             {application.description}
           </p>
 
@@ -227,6 +238,11 @@ export function ApplicationDetailHeader({
                       filename,
                       version: latestVersion,
                       sizeBytes: latest?.sizeBytes,
+                      riskStatus: applicationArchived
+                        ? 'applicationArchived'
+                        : latest
+                          ? getArtifactRiskStatus(latest)
+                          : null,
                     })
                   }}
                 >
@@ -255,7 +271,7 @@ export function ApplicationDetailHeader({
               {t('share.action')}
             </Button>
           ) : null}
-          {canWrite ? (
+          {canWrite && !applicationArchived ? (
             <Button asChild size="lg">
               <Link to={`/upload?app=${application.id}`}>
                 <Upload className="size-3.5" strokeWidth={1.75} />
@@ -289,7 +305,9 @@ export function ApplicationDetailHeader({
         applicationId={application.id}
         applicationName={application.name}
         artifact={latest}
+        applicationArchived={applicationArchived}
       />
+      {downloadConfirmation}
     </header>
   )
 }

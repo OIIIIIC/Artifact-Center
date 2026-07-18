@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
-  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
   HardDrive,
   KeyRound,
   Languages,
@@ -13,6 +13,7 @@ import {
   Moon,
   Palette,
   Plus,
+  Search,
   Shield,
   Sun,
   Trash2,
@@ -24,6 +25,15 @@ import { AppLayout, FormStack, PageContainer, PageHeader } from '@/components/la
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalDescription,
+  ModalFooter,
+  ModalHeader,
+  ModalTitle,
+} from '@/components/ui/modal'
 import { AvatarUpload } from '@/features/settings/avatar-upload'
 import { MEMBER_ROLES, type MemberRole } from '@/features/settings/mock-members'
 import { PasswordField, PasswordPolicyHints } from '@/features/settings/password-field'
@@ -37,10 +47,12 @@ import {
   apiCreateUser,
   apiDeleteUser,
   apiGetRetention,
+  apiListApplications,
   apiListUsers,
   apiRunRetentionCleanup,
   apiUpdateRetention,
   apiUpdateUser,
+  apiUpsertApplicationMember,
 } from '@/services/api'
 import { useAuthStore } from '@/store/auth-store'
 import { useLocaleStore } from '@/store/locale-store'
@@ -48,15 +60,9 @@ import { useThemeStore } from '@/store/theme-store'
 import { LOCALE_LABEL, type AppLocale } from '@/types/locale'
 import type { ThemeMode } from '@/types/theme'
 
-type SettingsSection = 'general' | 'appearance' | 'members' | 'retention' | 'danger'
+type SettingsSection = 'general' | 'appearance' | 'members' | 'retention'
 
-const SECTIONS: SettingsSection[] = [
-  'general',
-  'appearance',
-  'members',
-  'retention',
-  'danger',
-]
+const SECTIONS: SettingsSection[] = ['general', 'appearance', 'retention']
 
 const THEME_OPTIONS: {
   value: ThemeMode
@@ -69,20 +75,19 @@ const THEME_OPTIONS: {
 ]
 
 const LOCALE_OPTIONS: AppLocale[] = ['zh-CN', 'en-US']
+const MEMBER_PAGE_SIZE = 10
 
 /**
  * Settings — left section nav + right panels.
- * Profile edit / members CRUD / appearance / retention / danger.
+ * Profile edit / members CRUD / appearance / retention.
  */
-export function SettingsPage() {
+export function SettingsPage({ standalone }: { standalone?: 'members' }) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const updateProfile = useAuthStore((s) => s.updateProfile)
   const updateAvatar = useAuthStore((s) => s.updateAvatar)
   const changePassword = useAuthStore((s) => s.changePassword)
-  const logout = useAuthStore((s) => s.logout)
   const isAdmin = user?.role === 'admin'
 
   const theme = useThemeStore((s) => s.theme)
@@ -93,18 +98,22 @@ export function SettingsPage() {
   const membersQuery = useQuery({
     queryKey: queryKeys.users.list,
     queryFn: apiListUsers,
-    enabled: isAdmin,
+    enabled: isAdmin && standalone === 'members',
   })
-  const members = membersQuery.data ?? []
+  const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data])
 
   const retentionQuery = useQuery({
     queryKey: ['settings', 'retention'],
     queryFn: apiGetRetention,
+    enabled: standalone !== 'members',
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   })
   const retention = retentionQuery.data
 
-  const [section, setSection] = useState<SettingsSection>('general')
-  const [confirmLogout, setConfirmLogout] = useState(false)
+  const [section, setSection] = useState<SettingsSection>(
+    standalone === 'members' ? 'members' : 'general',
+  )
   const [retentionSaving, setRetentionSaving] = useState(false)
   const [cleanupRunning, setCleanupRunning] = useState(false)
 
@@ -131,7 +140,20 @@ export function SettingsPage() {
   const [newRole, setNewRole] = useState<MemberRole>('viewer')
   const [addError, setAddError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const [applicationSearch, setApplicationSearch] = useState('')
+  const [newApplicationRoles, setNewApplicationRoles] = useState<
+    Record<string, 'maintainer' | 'viewer'>
+  >({})
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null)
+  const [memberSearch, setMemberSearch] = useState('')
+  const [memberRoleFilter, setMemberRoleFilter] = useState<MemberRole | 'all'>('all')
+  const [memberPage, setMemberPage] = useState(1)
+
+  const applicationsQuery = useQuery({
+    queryKey: queryKeys.applications.list({ sort: 'name' }),
+    queryFn: () => apiListApplications({ sort: 'name' }),
+    enabled: isAdmin && showAddMember,
+  })
 
   // Admin reset password
   const [resetMemberId, setResetMemberId] = useState<string | null>(null)
@@ -162,12 +184,48 @@ export function SettingsPage() {
   }
 
   const storagePct = useMemo(() => {
-    if (!retention || retention.storageQuotaBytes <= 0) return 0
+    if (
+      !retention ||
+      retention.diskTotalBytes == null ||
+      retention.diskUsedBytes == null ||
+      retention.diskTotalBytes <= 0
+    ) {
+      return 0
+    }
     return Math.min(
       100,
-      Math.round((retention.storageUsedBytes / retention.storageQuotaBytes) * 100),
+      Math.round((retention.diskUsedBytes / retention.diskTotalBytes) * 100),
     )
   }, [retention])
+
+  const assignableApplications = useMemo(() => {
+    const query = applicationSearch.trim().toLowerCase()
+    return (applicationsQuery.data ?? []).filter(
+      (application) =>
+        !query ||
+        application.name.toLowerCase().includes(query) ||
+        application.packageName.toLowerCase().includes(query),
+    )
+  }, [applicationSearch, applicationsQuery.data])
+
+  const filteredMembers = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase()
+    return members.filter(
+      (member) =>
+        (!query ||
+          member.name.toLowerCase().includes(query) ||
+          member.email.toLowerCase().includes(query)) &&
+        (memberRoleFilter === 'all' || member.role === memberRoleFilter),
+    )
+  }, [memberRoleFilter, memberSearch, members])
+  const memberTotalPages = Math.max(
+    1,
+    Math.ceil(filteredMembers.length / MEMBER_PAGE_SIZE),
+  )
+  const visibleMembers = filteredMembers.slice(
+    (Math.min(memberPage, memberTotalPages) - 1) * MEMBER_PAGE_SIZE,
+    Math.min(memberPage, memberTotalPages) * MEMBER_PAGE_SIZE,
+  )
 
   const profileDirty =
     profileName.trim() !== (user?.name ?? '') ||
@@ -179,7 +237,6 @@ export function SettingsPage() {
       appearance: { label: t('settings.navAppearance'), icon: Palette },
       members: { label: t('settings.navMembers'), icon: Users },
       retention: { label: t('settings.navRetention'), icon: HardDrive },
-      danger: { label: t('settings.navDanger'), icon: AlertTriangle },
     }
 
   const roleLabel = (role: MemberRole) => t(`settings.role.${role}`)
@@ -391,6 +448,27 @@ export function SettingsPage() {
         password: newMemberPassword,
         role: newRole,
       })
+      const assignments = Object.entries(newApplicationRoles)
+      if (member.role !== 'admin' && assignments.length > 0) {
+        const results = await Promise.allSettled(
+          assignments.map(([applicationId, applicationRole]) =>
+            apiUpsertApplicationMember(
+              applicationId,
+              member.id,
+              member.role === 'viewer' ? 'viewer' : applicationRole,
+            ),
+          ),
+        )
+        const failed = results.filter((result) => result.status === 'rejected').length
+        if (failed > 0) {
+          toast.warning(t('settings.applicationAssignmentPartial'), {
+            description: t('settings.applicationAssignmentPartialDesc', {
+              success: assignments.length - failed,
+              failed,
+            }),
+          })
+        }
+      }
       await invalidateMembers()
       toast.success(t('settings.memberAdded'), {
         description: t('settings.memberAddedDesc', {
@@ -403,6 +481,8 @@ export function SettingsPage() {
       setNewMemberPassword('')
       setNewMemberPasswordConfirm('')
       setNewRole('viewer')
+      setApplicationSearch('')
+      setNewApplicationRoles({})
       setShowAddMember(false)
     } catch (err) {
       setAddError(memberErrorFromApi(err))
@@ -439,11 +519,6 @@ export function SettingsPage() {
     }
   }
 
-  const onLogout = () => {
-    logout()
-    navigate('/login', { replace: true })
-  }
-
   const chipClass = (active: boolean) =>
     cn(
       'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium',
@@ -460,43 +535,59 @@ export function SettingsPage() {
     'focus-visible:bg-card focus-visible:ring-[3px] focus-visible:ring-ring/30',
   )
 
-  return (
-    <AppLayout breadcrumbs={[{ label: t('nav.settings') }]}>
-      <PageContainer rhythm="product">
-        <PageHeader title={t('settings.title')} description={t('settings.description')} />
+  const standaloneMembers = standalone === 'members'
 
-        <div className="mt-8 flex flex-col gap-8 sm:mt-9 lg:flex-row lg:gap-10 xl:gap-12">
-          <nav
-            aria-label={t('settings.sectionNav')}
-            className={cn(
-              'flex shrink-0 gap-1 overflow-x-auto pb-1',
-              'lg:sticky lg:top-6 lg:w-[var(--settings-nav-width)] lg:flex-col lg:overflow-visible lg:pb-0',
-            )}
-          >
-            {SECTIONS.map((id) => {
-              const meta = sectionMeta[id]
-              const Icon = meta.icon
-              const active = section === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setSection(id)}
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-[0.8125rem] font-medium',
-                    'transition-colors duration-[var(--duration-hover)]',
-                    active
-                      ? 'bg-muted/70 text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
-                  )}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  <Icon className="size-3.5 opacity-70" strokeWidth={1.75} />
-                  {meta.label}
-                </button>
-              )
-            })}
-          </nav>
+  return (
+    <AppLayout
+      breadcrumbs={[{ label: standaloneMembers ? t('nav.members') : t('nav.settings') }]}
+    >
+      <PageContainer rhythm="product">
+        <PageHeader
+          title={standaloneMembers ? t('settings.membersTitle') : t('settings.title')}
+          description={
+            standaloneMembers ? t('settings.membersDesc') : t('settings.description')
+          }
+        />
+
+        <div
+          className={cn(
+            'mt-8 flex flex-col gap-8 sm:mt-9',
+            !standaloneMembers && 'lg:flex-row lg:gap-10 xl:gap-12',
+          )}
+        >
+          {!standaloneMembers ? (
+            <nav
+              aria-label={t('settings.sectionNav')}
+              className={cn(
+                'flex shrink-0 gap-1 overflow-x-auto pb-1',
+                'lg:sticky lg:top-6 lg:w-[var(--settings-nav-width)] lg:flex-col lg:overflow-visible lg:pb-0',
+              )}
+            >
+              {SECTIONS.map((id) => {
+                const meta = sectionMeta[id]
+                const Icon = meta.icon
+                const active = section === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSection(id)}
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-[0.8125rem] font-medium',
+                      'transition-colors duration-[var(--duration-hover)]',
+                      active
+                        ? 'bg-muted/70 text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+                    )}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    <Icon className="size-3.5 opacity-70" strokeWidth={1.75} />
+                    {meta.label}
+                  </button>
+                )
+              })}
+            </nav>
+          ) : null}
 
           <div className="min-w-0 flex-1">
             {section === 'general' ? (
@@ -740,6 +831,7 @@ export function SettingsPage() {
                 title={t('settings.membersTitle')}
                 description={t('settings.membersDesc')}
                 wide
+                hideHeader={standaloneMembers}
               >
                 <div
                   className={cn(
@@ -773,16 +865,45 @@ export function SettingsPage() {
                   </p>
                 ) : (
                   <>
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <p className="text-[0.8125rem] text-muted-foreground">
-                        {t('settings.memberCount', { count: members.length })}
-                      </p>
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <div className="relative min-w-0 flex-1">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={memberSearch}
+                          onChange={(event) => {
+                            setMemberSearch(event.target.value)
+                            setMemberPage(1)
+                          }}
+                          placeholder={t('settings.memberSearchPlaceholder')}
+                          className="h-9 rounded-lg pl-9"
+                        />
+                      </div>
+                      <div className="flex rounded-lg bg-muted/40 p-0.5" role="group">
+                        {(['all', ...MEMBER_ROLES] as const).map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            aria-pressed={memberRoleFilter === role}
+                            onClick={() => {
+                              setMemberRoleFilter(role)
+                              setMemberPage(1)
+                            }}
+                            className={cn(
+                              'rounded-md px-2.5 py-1.5 text-[0.6875rem] font-medium transition-colors',
+                              memberRoleFilter === role
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground',
+                            )}
+                          >
+                            {role === 'all' ? t('common.all') : roleLabel(role)}
+                          </button>
+                        ))}
+                      </div>
                       <Button
                         type="button"
-                        variant="outline"
-                        className="border-0 bg-muted/40 ring-1 ring-border/60"
+                        size="sm"
                         onClick={() => {
-                          setShowAddMember((v) => !v)
+                          setShowAddMember(true)
                           setAddError(null)
                         }}
                       >
@@ -791,101 +912,252 @@ export function SettingsPage() {
                       </Button>
                     </div>
 
-                    {showAddMember ? (
-                      <div
-                        className={cn(
-                          'mb-4 space-y-4 rounded-2xl bg-card/60 p-4',
-                          'ring-1 ring-border/70 dark:bg-card/40',
-                        )}
-                      >
-                        <p className="text-[0.8125rem] font-medium text-foreground">
-                          {t('settings.addMemberTitle')}
-                        </p>
-                        <p className="text-[0.75rem] text-muted-foreground">
-                          {t('settings.addMemberHint')}
-                        </p>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <label className="block space-y-1.5">
-                            <span className="text-[0.75rem] font-medium text-foreground">
-                              {t('settings.fieldName')}
-                            </span>
-                            <Input
-                              value={newName}
-                              onChange={(e) => setNewName(e.target.value)}
-                              placeholder={t('settings.memberNamePlaceholder')}
-                              className="h-10 rounded-lg"
-                              disabled={adding}
-                            />
-                          </label>
-                          <label className="block space-y-1.5">
-                            <span className="text-[0.75rem] font-medium text-foreground">
-                              {t('settings.fieldEmail')}
-                            </span>
-                            <Input
-                              type="email"
-                              value={newEmail}
-                              onChange={(e) => setNewEmail(e.target.value)}
-                              placeholder={t('settings.memberEmailPlaceholder')}
-                              className="h-10 rounded-lg"
-                              disabled={adding}
-                            />
-                          </label>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <PasswordField
-                            id="new-member-password"
-                            label={t('settings.fieldInitialPassword')}
-                            value={newMemberPassword}
-                            onChange={setNewMemberPassword}
-                            autoComplete="new-password"
-                            disabled={adding}
-                            showStrength
-                            confirm={newMemberPasswordConfirm}
-                          />
-                          <PasswordField
-                            id="new-member-password-confirm"
-                            label={t('settings.fieldInitialPasswordConfirm')}
-                            value={newMemberPasswordConfirm}
-                            onChange={setNewMemberPasswordConfirm}
-                            autoComplete="new-password"
-                            disabled={adding}
-                            matchAgainst={newMemberPassword}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <span className="text-[0.75rem] font-medium text-foreground">
-                            {t('settings.fieldRole')}
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {MEMBER_ROLES.map((role) => (
-                              <button
-                                key={role}
-                                type="button"
+                    <p className="mb-3 text-[0.75rem] text-muted-foreground">
+                      {t('settings.memberFilteredCount', {
+                        count: filteredMembers.length,
+                        total: members.length,
+                      })}
+                    </p>
+
+                    <Modal open={showAddMember} onOpenChange={setShowAddMember}>
+                      <ModalContent>
+                        <ModalHeader>
+                          <ModalTitle>{t('settings.addMemberTitle')}</ModalTitle>
+                          <ModalDescription>
+                            {t('settings.addMemberHint')}
+                          </ModalDescription>
+                        </ModalHeader>
+                        <ModalBody className="space-y-4">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="block space-y-1.5">
+                              <span className="text-[0.75rem] font-medium text-foreground">
+                                {t('settings.fieldName')}
+                              </span>
+                              <Input
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                placeholder={t('settings.memberNamePlaceholder')}
+                                className="h-10 rounded-lg"
                                 disabled={adding}
-                                onClick={() => setNewRole(role)}
-                                className={cn(
-                                  'rounded-md px-2.5 py-1 text-[0.75rem] font-medium',
-                                  'transition-colors duration-[var(--duration-hover)]',
-                                  newRole === role
-                                    ? 'bg-foreground text-background'
-                                    : 'bg-muted/40 text-muted-foreground hover:text-foreground',
-                                )}
-                                aria-pressed={newRole === role}
-                              >
-                                {roleLabel(role)}
-                              </button>
-                            ))}
+                              />
+                            </label>
+                            <label className="block space-y-1.5">
+                              <span className="text-[0.75rem] font-medium text-foreground">
+                                {t('settings.fieldEmail')}
+                              </span>
+                              <Input
+                                type="email"
+                                value={newEmail}
+                                onChange={(e) => setNewEmail(e.target.value)}
+                                placeholder={t('settings.memberEmailPlaceholder')}
+                                className="h-10 rounded-lg"
+                                disabled={adding}
+                              />
+                            </label>
                           </div>
-                        </div>
-                        {addError ? (
-                          <p
-                            className="text-[0.8125rem] text-muted-foreground"
-                            role="alert"
-                          >
-                            {addError}
-                          </p>
-                        ) : null}
-                        <div className="flex flex-wrap justify-end gap-2">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <PasswordField
+                              id="new-member-password"
+                              label={t('settings.fieldInitialPassword')}
+                              value={newMemberPassword}
+                              onChange={setNewMemberPassword}
+                              autoComplete="new-password"
+                              disabled={adding}
+                              showStrength
+                              confirm={newMemberPasswordConfirm}
+                            />
+                            <PasswordField
+                              id="new-member-password-confirm"
+                              label={t('settings.fieldInitialPasswordConfirm')}
+                              value={newMemberPasswordConfirm}
+                              onChange={setNewMemberPasswordConfirm}
+                              autoComplete="new-password"
+                              disabled={adding}
+                              matchAgainst={newMemberPassword}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <span className="text-[0.75rem] font-medium text-foreground">
+                              {t('settings.fieldRole')}
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {MEMBER_ROLES.map((role) => (
+                                <button
+                                  key={role}
+                                  type="button"
+                                  disabled={adding}
+                                  onClick={() => setNewRole(role)}
+                                  className={cn(
+                                    'rounded-md px-2.5 py-1 text-[0.75rem] font-medium',
+                                    'transition-colors duration-[var(--duration-hover)]',
+                                    newRole === role
+                                      ? 'bg-foreground text-background'
+                                      : 'bg-muted/40 text-muted-foreground hover:text-foreground',
+                                  )}
+                                  aria-pressed={newRole === role}
+                                >
+                                  {roleLabel(role)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-[0.75rem] font-medium text-foreground">
+                                {t('settings.initialApplications')}
+                                <span className="ml-1.5 font-normal text-muted-foreground">
+                                  {t('createApp.optional')}
+                                </span>
+                              </p>
+                              <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
+                                {newRole === 'admin'
+                                  ? t('settings.adminApplicationAccessHint')
+                                  : t('settings.initialApplicationsHint')}
+                              </p>
+                            </div>
+                            {newRole !== 'admin' ? (
+                              applicationsQuery.isLoading ? (
+                                <p className="py-4 text-center text-[0.75rem] text-muted-foreground">
+                                  {t('common.loading')}
+                                </p>
+                              ) : (applicationsQuery.data?.length ?? 0) === 0 ? (
+                                <p className="rounded-lg bg-muted/25 px-3 py-4 text-center text-[0.75rem] text-muted-foreground ring-1 ring-border/60">
+                                  {t('settings.noApplicationsToAssign')}
+                                </p>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="relative">
+                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                      value={applicationSearch}
+                                      onChange={(event) =>
+                                        setApplicationSearch(event.target.value)
+                                      }
+                                      placeholder={t(
+                                        'settings.applicationSearchPlaceholder',
+                                      )}
+                                      className="h-9 rounded-lg pl-9"
+                                    />
+                                  </div>
+                                  <p className="text-[0.6875rem] text-muted-foreground">
+                                    {t('settings.selectedApplications', {
+                                      count: Object.keys(newApplicationRoles).length,
+                                    })}
+                                  </p>
+                                  {assignableApplications.length === 0 ? (
+                                    <p className="rounded-lg bg-muted/25 px-3 py-6 text-center text-[0.75rem] text-muted-foreground ring-1 ring-border/60">
+                                      {t('settings.noApplicationMatches')}
+                                    </p>
+                                  ) : (
+                                    <ul className="max-h-64 divide-y divide-border/60 overflow-y-auto rounded-xl ring-1 ring-border/70">
+                                      {assignableApplications.map((application) => {
+                                        const selectedRole =
+                                          newApplicationRoles[application.id]
+                                        const selected = selectedRole != null
+                                        return (
+                                          <li
+                                            key={application.id}
+                                            className="flex flex-col gap-2 bg-background/40 px-3 py-2.5 sm:flex-row sm:items-center"
+                                          >
+                                            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
+                                              <input
+                                                type="checkbox"
+                                                checked={selected}
+                                                disabled={adding}
+                                                onChange={(event) => {
+                                                  setNewApplicationRoles((current) => {
+                                                    const next = { ...current }
+                                                    if (event.target.checked) {
+                                                      next[application.id] =
+                                                        newRole === 'maintainer'
+                                                          ? 'maintainer'
+                                                          : 'viewer'
+                                                    } else {
+                                                      delete next[application.id]
+                                                    }
+                                                    return next
+                                                  })
+                                                }}
+                                                className="size-4 shrink-0 accent-foreground"
+                                              />
+                                              <span className="min-w-0">
+                                                <span className="block truncate text-[0.8125rem] font-medium text-foreground">
+                                                  {application.name}
+                                                </span>
+                                                <span className="block truncate font-mono text-[0.6875rem] text-muted-foreground">
+                                                  {application.packageName}
+                                                </span>
+                                              </span>
+                                            </label>
+                                            {selected ? (
+                                              <div
+                                                className="flex rounded-lg bg-muted/40 p-0.5"
+                                                role="group"
+                                              >
+                                                {(['maintainer', 'viewer'] as const).map(
+                                                  (applicationRole) => (
+                                                    <button
+                                                      key={applicationRole}
+                                                      type="button"
+                                                      disabled={
+                                                        adding ||
+                                                        (newRole === 'viewer' &&
+                                                          applicationRole ===
+                                                            'maintainer')
+                                                      }
+                                                      onClick={() =>
+                                                        setNewApplicationRoles(
+                                                          (current) => ({
+                                                            ...current,
+                                                            [application.id]:
+                                                              applicationRole,
+                                                          }),
+                                                        )
+                                                      }
+                                                      aria-pressed={
+                                                        (newRole === 'viewer'
+                                                          ? 'viewer'
+                                                          : selectedRole) ===
+                                                        applicationRole
+                                                      }
+                                                      className={cn(
+                                                        'rounded-md px-2 py-1 text-[0.6875rem] font-medium transition-colors',
+                                                        'disabled:cursor-not-allowed disabled:opacity-40',
+                                                        (newRole === 'viewer'
+                                                          ? 'viewer'
+                                                          : selectedRole) ===
+                                                          applicationRole
+                                                          ? 'bg-background text-foreground shadow-sm'
+                                                          : 'text-muted-foreground hover:text-foreground',
+                                                      )}
+                                                    >
+                                                      {t(
+                                                        `appMembers.roleName.${applicationRole}`,
+                                                      )}
+                                                    </button>
+                                                  ),
+                                                )}
+                                              </div>
+                                            ) : null}
+                                          </li>
+                                        )
+                                      })}
+                                    </ul>
+                                  )}
+                                </div>
+                              )
+                            ) : null}
+                          </div>
+                          {addError ? (
+                            <p
+                              className="text-[0.8125rem] text-muted-foreground"
+                              role="alert"
+                            >
+                              {addError}
+                            </p>
+                          ) : null}
+                        </ModalBody>
+                        <ModalFooter>
                           <Button
                             type="button"
                             variant="outline"
@@ -908,9 +1180,9 @@ export function SettingsPage() {
                               ? t('settings.addingMember')
                               : t('settings.confirmAddMember')}
                           </Button>
-                        </div>
-                      </div>
-                    ) : null}
+                        </ModalFooter>
+                      </ModalContent>
+                    </Modal>
 
                     {membersQuery.isLoading ? (
                       <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
@@ -921,9 +1193,13 @@ export function SettingsPage() {
                       <p className="py-6 text-center text-[0.875rem] text-muted-foreground">
                         {t('settings.memberErrorGeneric')}
                       </p>
+                    ) : visibleMembers.length === 0 ? (
+                      <p className="rounded-xl bg-muted/20 py-10 text-center text-[0.8125rem] text-muted-foreground ring-1 ring-border/60">
+                        {t('settings.noMemberMatches')}
+                      </p>
                     ) : (
                       <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl ring-1 ring-border/70">
-                        {members.map((m) => {
+                        {visibleMembers.map((m) => {
                           const isSelf =
                             user?.email.toLowerCase() === m.email.toLowerCase()
                           const showReset = !isSelf
@@ -1120,6 +1396,36 @@ export function SettingsPage() {
                         })}
                       </ul>
                     )}
+                    {memberTotalPages > 1 ? (
+                      <div className="mt-3 flex items-center justify-end gap-2">
+                        <span className="text-[0.75rem] tabular-nums text-muted-foreground">
+                          {t('common.pageOf', {
+                            page: Math.min(memberPage, memberTotalPages),
+                            total: memberTotalPages,
+                          })}
+                        </span>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="outline"
+                          disabled={memberPage <= 1}
+                          onClick={() => setMemberPage((page) => page - 1)}
+                        >
+                          <ChevronLeft />
+                          <span className="sr-only">{t('common.previousPage')}</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="outline"
+                          disabled={memberPage >= memberTotalPages}
+                          onClick={() => setMemberPage((page) => page + 1)}
+                        >
+                          <ChevronRight />
+                          <span className="sr-only">{t('common.nextPage')}</span>
+                        </Button>
+                      </div>
+                    ) : null}
                     <p className="mt-3 text-[0.75rem] text-muted-foreground">
                       {t('settings.membersHint')}
                     </p>
@@ -1146,30 +1452,52 @@ export function SettingsPage() {
                         'dark:bg-card/40',
                       )}
                     >
-                      <div className="flex items-baseline justify-between gap-3">
+                      <div className="flex flex-wrap items-baseline justify-between gap-3">
                         <span className="text-[0.8125rem] font-medium text-foreground">
                           {t('settings.storageUsage')}
                         </span>
                         <span className="text-[0.75rem] tabular-nums text-muted-foreground">
-                          {formatFileSize(retention?.storageUsedBytes ?? 0)}
-                          {' / '}
-                          {formatFileSize(retention?.storageQuotaBytes ?? 0)}
-                          {` (${storagePct}%)`}
+                          {retention?.diskUsedBytes != null &&
+                          retention.diskTotalBytes != null
+                            ? `${formatFileSize(retention.diskUsedBytes)} / ${formatFileSize(retention.diskTotalBytes)} (${storagePct}%)`
+                            : t('settings.diskSpaceUnavailable')}
                         </span>
                       </div>
-                      <div
-                        className="h-2 overflow-hidden rounded-full bg-muted/60"
-                        role="progressbar"
-                        aria-valuenow={storagePct}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-label={t('settings.storageUsage')}
-                      >
+                      {retention?.diskTotalBytes != null ? (
                         <div
-                          className="h-full rounded-full bg-foreground/80 transition-[width] duration-300"
-                          style={{ width: `${storagePct}%` }}
-                        />
-                      </div>
+                          className="h-2 overflow-hidden rounded-full bg-muted/60"
+                          role="progressbar"
+                          aria-valuenow={storagePct}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={t('settings.storageUsage')}
+                        >
+                          <div
+                            className="h-full rounded-full bg-foreground/80 transition-[width] duration-300"
+                            style={{ width: `${storagePct}%` }}
+                          />
+                        </div>
+                      ) : null}
+                      <dl className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg bg-muted/25 px-3 py-2.5">
+                          <dt className="text-[0.6875rem] text-muted-foreground">
+                            {t('settings.diskAvailable')}
+                          </dt>
+                          <dd className="mt-0.5 text-[0.875rem] font-medium tabular-nums text-foreground">
+                            {retention?.diskFreeBytes != null
+                              ? formatFileSize(retention.diskFreeBytes)
+                              : '—'}
+                          </dd>
+                        </div>
+                        <div className="rounded-lg bg-muted/25 px-3 py-2.5">
+                          <dt className="text-[0.6875rem] text-muted-foreground">
+                            {t('settings.artifactStorage')}
+                          </dt>
+                          <dd className="mt-0.5 text-[0.875rem] font-medium tabular-nums text-foreground">
+                            {formatFileSize(retention?.artifactStorageBytes ?? 0)}
+                          </dd>
+                        </div>
+                      </dl>
                       <p className="text-[0.75rem] text-muted-foreground">
                         {t('settings.storageHint')}
                       </p>
@@ -1247,67 +1575,6 @@ export function SettingsPage() {
                 )}
               </Panel>
             ) : null}
-
-            {section === 'danger' ? (
-              <Panel
-                title={t('settings.dangerTitle')}
-                description={t('settings.dangerDesc')}
-                danger
-              >
-                <div
-                  className={cn(
-                    'space-y-4 rounded-2xl p-5',
-                    'bg-destructive/5 ring-1 ring-destructive/20',
-                    'dark:bg-destructive/10 dark:ring-destructive/25',
-                  )}
-                >
-                  <div>
-                    <p className="text-[0.875rem] font-medium text-foreground">
-                      {t('settings.logoutTitle')}
-                    </p>
-                    <p className="mt-1 text-[0.8125rem] text-muted-foreground">
-                      {t('settings.logoutDesc')}
-                    </p>
-                  </div>
-
-                  {!confirmLogout ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        'h-10 rounded-lg border-0 bg-background/80',
-                        'text-destructive ring-1 ring-destructive/30',
-                        'hover:bg-destructive/10 hover:text-destructive',
-                      )}
-                      onClick={() => setConfirmLogout(true)}
-                    >
-                      {t('auth.logout')}
-                    </Button>
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[0.8125rem] text-muted-foreground">
-                        {t('settings.logoutConfirm')}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-0 bg-muted/40 ring-1 ring-border/60"
-                        onClick={() => setConfirmLogout(false)}
-                      >
-                        {t('common.cancel')}
-                      </Button>
-                      <Button
-                        type="button"
-                        className="bg-destructive text-white hover:bg-destructive/90"
-                        onClick={onLogout}
-                      >
-                        {t('settings.logoutConfirmAction')}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </Panel>
-            ) : null}
           </div>
         </div>
       </PageContainer>
@@ -1319,31 +1586,28 @@ function Panel({
   title,
   description,
   children,
-  danger,
   /** Forms stay form-max; lists (members) can use the full settings column. */
   wide = false,
+  hideHeader = false,
 }: {
   title: string
   description: string
   children: ReactNode
-  danger?: boolean
   wide?: boolean
+  hideHeader?: boolean
 }) {
   return (
     <section className="w-full space-y-5">
-      <div className="space-y-1">
-        <h2
-          className={cn(
-            'text-[1.0625rem] font-semibold tracking-tight',
-            danger ? 'text-destructive' : 'text-foreground',
-          )}
-        >
-          {title}
-        </h2>
-        <p className="max-w-2xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-      </div>
+      {!hideHeader ? (
+        <div className="space-y-1">
+          <h2 className="text-[1.0625rem] font-semibold tracking-tight text-foreground">
+            {title}
+          </h2>
+          <p className="max-w-2xl text-[0.8125rem] leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        </div>
+      ) : null}
       {wide ? children : <FormStack>{children}</FormStack>}
     </section>
   )

@@ -13,7 +13,6 @@ interface StepReviewProps {
   parsed: ParsedArtifactFile
   version: VersionDraft
   publishError: PublishError
-  draftSaved: boolean
 }
 
 function Row({
@@ -47,7 +46,6 @@ export function StepReview({
   parsed,
   version,
   publishError,
-  draftSaved,
 }: StepReviewProps) {
   const { t } = useTranslation()
 
@@ -60,7 +58,7 @@ export function StepReview({
           })}
         </p>
       ) : null}
-      {publishError === 'duplicate_version' ? (
+      {publishError === 'duplicate_artifact' ? (
         <div
           className={cn(
             'flex gap-3 rounded-xl bg-muted/40 px-4 py-3 ring-1 ring-border/70',
@@ -79,12 +77,6 @@ export function StepReview({
             </p>
           </div>
         </div>
-      ) : null}
-
-      {draftSaved ? (
-        <p className="rounded-xl bg-muted/30 px-4 py-3 text-[0.8125rem] text-muted-foreground ring-1 ring-border/50">
-          {t('upload.draftSaved')}
-        </p>
       ) : null}
 
       <dl

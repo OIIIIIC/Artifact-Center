@@ -5,12 +5,13 @@ import { Link, useParams } from 'react-router-dom'
 
 import { BlankLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
+import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { resolveShareToken } from '@/features/share/resolve-share'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { getArtifactChannel } from '@/types/artifact'
+import { getArtifactChannel, getArtifactRiskStatus } from '@/types/artifact'
 
 /**
  * Public share landing — `/d/:token`
@@ -20,7 +21,7 @@ export function ShareDownloadPage() {
   const { token = '' } = useParams()
   const { t, i18n } = useTranslation()
   void i18n.language
-  const { download, isBusy } = useDownloadArtifact()
+  const { download, isBusy, downloadConfirmation } = useDownloadArtifact()
 
   const resolveQuery = useQuery({
     queryKey: ['share-resolve', token],
@@ -102,6 +103,10 @@ export function ShareDownloadPage() {
   const { application, artifact, link, sharedBy } = result
   const PlatformIcon = PLATFORM_ICON[artifact.platform]
   const channel = getArtifactChannel(artifact)
+  const riskStatus =
+    application.status === 'archived'
+      ? ('applicationArchived' as const)
+      : getArtifactRiskStatus(artifact)
 
   return (
     <BlankLayout>
@@ -201,6 +206,10 @@ export function ShareDownloadPage() {
           </div>
         ) : null}
 
+        {riskStatus ? (
+          <ArtifactRiskNotice risk={riskStatus} context="download" className="mt-4" />
+        ) : null}
+
         <p className="mt-5 text-center text-[0.8125rem] text-muted-foreground">
           {t('share.confirmHint')}
         </p>
@@ -217,8 +226,8 @@ export function ShareDownloadPage() {
               filename: artifact.filename,
               version: artifact.version,
               sizeBytes: artifact.sizeBytes,
-              public: !result.serverToken,
               shareToken: result.serverToken,
+              riskStatus,
             })
           }
         >
@@ -229,12 +238,15 @@ export function ShareDownloadPage() {
           )}
           {busy
             ? t('share.downloading')
-            : t('share.downloadCta', { version: artifact.version })}
+            : riskStatus
+              ? t(`artifactRisk.${riskStatus}Continue`)
+              : t('share.downloadCta', { version: artifact.version })}
         </Button>
 
         <p className="mt-6 text-center text-[0.6875rem] text-muted-foreground/80">
           {t('brand.name')} · {t('share.landingFooter')}
         </p>
+        {downloadConfirmation}
       </div>
     </BlankLayout>
   )

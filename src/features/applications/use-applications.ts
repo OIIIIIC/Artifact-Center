@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 
-import { filterApplications } from '@/features/applications/filter-applications'
 import { queryKeys } from '@/lib/query-keys'
 import { apiListApplications } from '@/services/api'
 import type { ApplicationFilters } from '@/types/application'
@@ -15,20 +14,17 @@ export function useApplications() {
 
   const query = useQuery({
     queryKey: queryKeys.applications.list({
-      // Server supports q/platform/sort; we still filter client-side for snappy UX
-      // when typing, but fetch full catalog once.
-      sort: 'updated',
+      q: filters.query,
+      platform: filters.platform,
+      sort: filters.sort,
     }),
-    queryFn: () => apiListApplications({ sort: 'updated' }),
+    queryFn: () => apiListApplications(filters),
   })
 
   const applications = useMemo(() => query.data ?? [], [query.data])
   const loading = query.isLoading
 
-  const filtered = useMemo(
-    () => filterApplications(applications, filters),
-    [applications, filters],
-  )
+  const filtered = applications
 
   return {
     loading,

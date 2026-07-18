@@ -2,9 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
 import { queryKeys } from '@/lib/query-keys'
-import { apiGetApplication, apiListArtifacts } from '@/services/api'
+import {
+  apiGetApplication,
+  apiListApplicationMembers,
+  apiListArtifacts,
+  apiListReleases,
+} from '@/services/api'
 import type { Application } from '@/types/application'
 import type { Artifact } from '@/types/artifact'
+import type { Release } from '@/types/release'
 
 export function useApplicationDetail(id: string | undefined) {
   const appQuery = useQuery({
@@ -26,8 +32,23 @@ export function useApplicationDetail(id: string | undefined) {
     enabled: Boolean(id) && appQuery.isSuccess,
   })
 
+  const releasesQuery = useQuery({
+    queryKey: queryKeys.releases.byApp(id ?? ''),
+    queryFn: () => apiListReleases(id!),
+    enabled: Boolean(id) && appQuery.isSuccess,
+  })
+
+  const membersQuery = useQuery({
+    queryKey: queryKeys.applicationMembers.byApp(id ?? ''),
+    queryFn: () => apiListApplicationMembers(id!),
+    enabled: Boolean(id) && appQuery.isSuccess,
+  })
+
   const loading =
-    Boolean(id) && (appQuery.isLoading || (appQuery.isSuccess && artsQuery.isLoading))
+    Boolean(id) &&
+    (appQuery.isLoading ||
+      (appQuery.isSuccess &&
+        (artsQuery.isLoading || releasesQuery.isLoading || membersQuery.isLoading)))
 
   const application = useMemo<Application | undefined>(
     () => appQuery.data,
@@ -35,6 +56,11 @@ export function useApplicationDetail(id: string | undefined) {
   )
 
   const artifacts = useMemo<Artifact[]>(() => artsQuery.data ?? [], [artsQuery.data])
+  const releases = useMemo<Release[]>(
+    () => releasesQuery.data ?? [],
+    [releasesQuery.data],
+  )
+  const members = membersQuery.data ?? []
 
   const latest = useMemo(
     () => artifacts.find((a) => a.status === 'latest') ?? artifacts[0],
@@ -50,11 +76,18 @@ export function useApplicationDetail(id: string | undefined) {
     loading,
     application,
     artifacts,
+    releases,
+    members,
     latest,
     recentVersions,
     notFound,
     refetch: async () => {
-      await Promise.all([appQuery.refetch(), artsQuery.refetch()])
+      await Promise.all([
+        appQuery.refetch(),
+        artsQuery.refetch(),
+        releasesQuery.refetch(),
+        membersQuery.refetch(),
+      ])
     },
   }
 }

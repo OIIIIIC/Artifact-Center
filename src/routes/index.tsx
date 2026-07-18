@@ -57,6 +57,14 @@ export function AppRouter() {
         }
       />
       <Route
+        path="/members"
+        element={
+          <RequireAuth>
+            <SettingsPage standalone="members" />
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/settings"
         element={
           <RequireAuth>

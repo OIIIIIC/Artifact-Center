@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { GlobalSearchDialog } from '@/features/search/global-search-dialog'
 import { cn } from '@/lib/utils'
 import { useLocaleStore } from '@/store/locale-store'
+import { useAuthStore } from '@/store/auth-store'
 
 import { ContentArea } from './content-area'
 import { getProductNavGroups } from './product-nav'
@@ -42,12 +43,13 @@ export function AppLayout({
   const { t } = useTranslation()
   // Re-render nav labels when locale changes
   useLocaleStore((s) => s.locale)
+  const isAdmin = useAuthStore((s) => s.user?.role === 'admin')
 
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchSession, setSearchSession] = useState(0)
   const { pathname } = useLocation()
-  const resolvedGroups = navGroups ?? getProductNavGroups(pathname)
+  const resolvedGroups = navGroups ?? getProductNavGroups(pathname, { isAdmin })
 
   useEffect(() => {
     if (!showSearch) return

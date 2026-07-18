@@ -10,7 +10,7 @@ import {
 } from '@/features/upload/mock-parse'
 import { queryKeys } from '@/lib/query-keys'
 import { ApiError } from '@/services/http'
-import { apiListArtifacts, apiUploadArtifact } from '@/services/api'
+import { apiUploadArtifact } from '@/services/api'
 import type { Application, ApplicationPlatform } from '@/types/application'
 import type {
   ParsedArtifactFile,
@@ -51,7 +51,6 @@ export function useUploadFlow() {
   const [publishError, setPublishError] = useState<PublishError>(null)
   const [publishing, setPublishing] = useState(false)
   const [done, setDone] = useState(false)
-  const [draftSaved, setDraftSaved] = useState(false)
   const timers = useRef<number[]>([])
   /** Keep real File for multipart upload */
   const fileRef = useRef<File | null>(null)
@@ -85,7 +84,6 @@ export function useUploadFlow() {
     setFileError(null)
     setParsed(null)
     setPublishError(null)
-    setDraftSaved(false)
     fileRef.current = file
 
     if (!file || file.size === 0) {
@@ -141,6 +139,21 @@ export function useUploadFlow() {
         markLatest: true,
       })
       setPhase('ready')
+
+      // 服务端仍会再次计算并作为最终权威值返回；这里用于让发布前预览展示真实 SHA-256。
+      if (globalThis.crypto?.subtle) {
+        void file.arrayBuffer().then(async (buffer) => {
+          const digest = await globalThis.crypto.subtle.digest('SHA-256', buffer)
+          const hash = Array.from(new Uint8Array(digest), (byte) =>
+            byte.toString(16).padStart(2, '0'),
+          ).join('')
+          setParsed((current) =>
+            current?.name === file.name && current.sizeBytes === file.size
+              ? { ...current, hash }
+              : current,
+          )
+        })
+      }
     }, 1200)
 
     timers.current = [t1, t2, t3]
@@ -161,28 +174,17 @@ export function useUploadFlow() {
 
   const goNext = useCallback(async () => {
     if (!canNext) return
-    if (step === 3 && application) {
-      try {
-        const existing = await apiListArtifacts(application.id)
-        const dup = existing.some((a) => a.version === version.version.trim())
-        setPublishError(dup ? 'duplicate_version' : null)
-      } catch {
-        setPublishError(null)
-      }
-    }
     if (step < 4) setStep((s) => (s + 1) as UploadStep)
-  }, [canNext, step, application, version.version])
+  }, [canNext, step])
 
   const goBack = useCallback(() => {
     setPublishError(null)
-    setDraftSaved(false)
     if (step > 1) setStep((s) => (s - 1) as UploadStep)
   }, [step])
 
   const updateVersion = useCallback((patch: Partial<VersionDraft>) => {
     setVersion((v) => ({ ...v, ...patch }))
     setPublishError(null)
-    setDraftSaved(false)
   }, [])
 
   const setChannel = useCallback((channel: UploadChannel) => {
@@ -220,8 +222,8 @@ export function useUploadFlow() {
 
       setDone(true)
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'duplicate_version') {
-        setPublishError('duplicate_version')
+      if (err instanceof ApiError && err.code === 'duplicate_artifact') {
+        setPublishError('duplicate_artifact')
       } else {
         setPublishError('upload_failed')
       }
@@ -229,13 +231,6 @@ export function useUploadFlow() {
       setPublishing(false)
     }
   }, [application, parsed, version, queryClient])
-
-  const saveDraft = useCallback(async () => {
-    setPublishing(true)
-    await new Promise((r) => setTimeout(r, 300))
-    setPublishing(false)
-    setDraftSaved(true)
-  }, [])
 
   const resetAll = useCallback(() => {
     clearTimers()
@@ -248,7 +243,6 @@ export function useUploadFlow() {
     setPublishError(null)
     setPublishing(false)
     setDone(false)
-    setDraftSaved(false)
     fileRef.current = null
   }, [])
 
@@ -270,11 +264,9 @@ export function useUploadFlow() {
     goNext,
     goBack,
     publish,
-    saveDraft,
     publishing,
     publishError,
     done,
-    draftSaved,
     resetAll,
     catalogLoading,
   }

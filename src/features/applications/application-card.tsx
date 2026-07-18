@@ -88,7 +88,10 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
-            <h3 className="min-w-0 text-[0.9375rem] leading-snug font-semibold tracking-tight text-foreground">
+            <h3
+              className="line-clamp-2 min-w-0 break-words text-[0.9375rem] leading-snug font-semibold tracking-tight text-foreground"
+              title={application.name}
+            >
               {application.name}
             </h3>
             {sKey ? (

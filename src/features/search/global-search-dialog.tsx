@@ -137,31 +137,40 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
             'ring-1 ring-border/70',
           )}
         >
-          <div className="flex items-center gap-2 border-b border-border/60 px-3.5 py-3">
-            <Search
-              className="size-4 shrink-0 text-muted-foreground"
-              strokeWidth={1.75}
-            />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value)
-                setActiveIndex(0)
-              }}
-              onKeyDown={onKeyDown}
-              placeholder={t('search.placeholder')}
-              aria-label={t('search.placeholder')}
+          <div className="border-b border-border/60 px-3 py-3">
+            <div
               className={cn(
-                'min-w-0 flex-1 bg-transparent text-[0.9375rem] outline-none',
-                'placeholder:text-muted-foreground/60',
+                'flex h-10 min-w-0 items-center gap-2.5 rounded-lg bg-muted/45 px-3',
+                'ring-1 ring-border/70 transition-[background-color,box-shadow] duration-[var(--duration-hover)]',
+                'focus-within:bg-background focus-within:ring-2 focus-within:ring-foreground/15',
+                'dark:bg-muted/25 dark:focus-within:bg-background/50',
               )}
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <kbd className="hidden shrink-0 rounded-md bg-muted/60 px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground sm:inline">
-              Esc
-            </kbd>
+            >
+              <Search
+                className="size-4 shrink-0 text-muted-foreground"
+                strokeWidth={1.75}
+              />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setActiveIndex(0)
+                }}
+                onKeyDown={onKeyDown}
+                placeholder={t('search.placeholder')}
+                aria-label={t('search.placeholder')}
+                className={cn(
+                  'h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-[0.9375rem] text-foreground shadow-none outline-none',
+                  'placeholder:text-muted-foreground/65 focus-visible:ring-0 focus-visible:ring-offset-0',
+                )}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <kbd className="hidden shrink-0 rounded-md bg-background/70 px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground ring-1 ring-border/60 sm:inline">
+                Esc
+              </kbd>
+            </div>
           </div>
 
           <div

@@ -1,19 +1,24 @@
+import { useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { AlertTriangle, Info, Loader2, Pencil, Trash2, Users, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { AlertTriangle, Loader2, Pencil, Trash2, X } from 'lucide-react'
 
 import { StatusBadge } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ApplicationMembersPanel } from '@/features/applications/application-members-panel'
 import { APPLICATION_STATUS_CHIP } from '@/features/applications/application-status-meta'
+import {
+  APPLICATION_FIELD_LIMITS,
+  type ApplicationEditableField,
+} from '@/lib/application-fields'
 import { queryKeys } from '@/lib/query-keys'
 import { canDeleteApplication } from '@/lib/roles'
 import { cn } from '@/lib/utils'
-import { ApiError } from '@/services/http'
 import { apiDeleteApplication, apiUpdateApplication } from '@/services/api'
+import { ApiError } from '@/services/http'
 import { useAuthStore } from '@/store/auth-store'
 import type {
   Application,
@@ -21,122 +26,115 @@ import type {
   ApplicationStatus,
 } from '@/types/application'
 
+type SettingsView = 'basic' | 'members' | 'danger'
+type EditableField = Exclude<ApplicationEditableField, 'owner'>
+
 const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
-
 const STATUSES: ApplicationStatus[] = ['active', 'new', 'beta', 'deprecated', 'archived']
-
-/** Light container — aligned with detail summary / release-note cards. */
-const sectionCardClass = cn(
-  'rounded-2xl bg-muted/25 p-5 ring-1 ring-border/60 sm:p-6',
-  'dark:bg-muted/15 dark:ring-border/80',
-)
 
 interface ApplicationSettingsPanelProps {
   application: Application
+  autoOpenMembers?: boolean
 }
 
-/**
- * Application Detail → Settings tab.
- * Three first-level cards: identity (read-first), lifecycle, delete danger zone.
- */
-export function ApplicationSettingsPanel({ application }: ApplicationSettingsPanelProps) {
+export function ApplicationSettingsPanel({
+  application,
+  autoOpenMembers = false,
+}: ApplicationSettingsPanelProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const role = useAuthStore((s) => s.user?.role)
-  const canDelete = canDeleteApplication(role)
+  const platformRole = useAuthStore((state) => state.user?.role)
+  const canDelete = canDeleteApplication(platformRole)
 
+  const [view, setView] = useState<SettingsView>(autoOpenMembers ? 'members' : 'basic')
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(application.name)
   const [description, setDescription] = useState(application.description)
   const [packageName, setPackageName] = useState(application.packageName)
   const [platform, setPlatform] = useState(application.platform)
   const [repository, setRepository] = useState(application.repository)
-  const [owner, setOwner] = useState(application.owner)
   const [status, setStatus] = useState<ApplicationStatus>(application.status)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<EditableField, string>>>(
+    {},
+  )
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteConfirmName, setDeleteConfirmName] = useState('')
   const [deleting, setDeleting] = useState(false)
-  const deleteConfirmRef = useRef<HTMLDivElement>(null)
-  const deleteInputRef = useRef<HTMLInputElement>(null)
-
-  // Form state is initialized from application props; remount via key={application.id} on parent when app changes.
-
-  useEffect(() => {
-    if (!confirmDelete) return
-    const el = deleteConfirmRef.current
-    if (!el) return
-
-    const scrollTimer = window.setTimeout(() => {
-      el.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest',
-      })
-      window.setTimeout(() => {
-        deleteInputRef.current?.focus({ preventScroll: true })
-      }, 180)
-    }, 30)
-
-    return () => window.clearTimeout(scrollTimer)
-  }, [confirmDelete])
-
-  const deleteNameMatches = deleteConfirmName.trim() === application.name.trim()
 
   const infoDirty =
     name.trim() !== application.name ||
     description.trim() !== application.description ||
     packageName.trim() !== application.packageName ||
     platform !== application.platform ||
-    repository.trim() !== application.repository ||
-    owner.trim() !== application.owner
-
+    repository.trim() !== application.repository
   const statusDirty = status !== application.status
   const dirty = infoDirty || statusDirty
+  const deleteNameMatches = deleteConfirmName.trim() === application.name.trim()
 
-  const fieldClass = cn(
-    'h-10 w-full rounded-lg bg-muted/30 px-3 text-[0.875rem] outline-none',
-    'ring-1 ring-border/60 transition-[box-shadow,background-color] duration-[var(--duration-hover)]',
-    'placeholder:text-muted-foreground/60',
-    'focus-visible:bg-card focus-visible:ring-[3px] focus-visible:ring-ring/30',
-  )
-
-  const platformChipClass = (active: boolean) =>
-    cn(
-      'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium',
-      'transition-colors duration-[var(--duration-hover)]',
-      active
-        ? 'bg-foreground text-background'
-        : 'bg-muted/40 text-muted-foreground hover:text-foreground',
-    )
-
-  const resetInfoFromApp = () => {
+  const resetDraft = () => {
     setName(application.name)
     setDescription(application.description)
     setPackageName(application.packageName)
     setPlatform(application.platform)
     setRepository(application.repository)
-    setOwner(application.owner)
+    setStatus(application.status)
     setError(null)
+    setFieldErrors({})
   }
 
-  const startEditing = () => {
-    resetInfoFromApp()
-    setEditing(true)
-  }
-
-  const cancelEditing = () => {
-    resetInfoFromApp()
-    setEditing(false)
-  }
-
-  const onSave = async () => {
+  const updateField = (
+    field: EditableField,
+    value: string,
+    setter: (value: string) => void,
+  ) => {
+    setter(value)
     setError(null)
-    if (!name.trim() || !description.trim() || !packageName.trim()) {
-      setError(t('appSettings.errorRequired'))
-      if (!editing) setEditing(true)
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
+  const validate = () => {
+    const errors: Partial<Record<EditableField, string>> = {}
+    const required = [
+      ['name', name, t('createApp.fieldName')],
+      ['description', description, t('createApp.fieldDescription')],
+      ['packageName', packageName, t('createApp.fieldPackage')],
+    ] as const
+    for (const [field, value, label] of required) {
+      if (!value.trim()) errors[field] = t('appSettings.fieldRequired', { field: label })
+    }
+    const values: Record<EditableField, string> = {
+      name,
+      description,
+      packageName,
+      repository,
+    }
+    for (const field of Object.keys(values) as EditableField[]) {
+      if (values[field].length > APPLICATION_FIELD_LIMITS[field]) {
+        errors[field] = t('appSettings.fieldTooLong', {
+          max: APPLICATION_FIELD_LIMITS[field],
+        })
+      }
+    }
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      setError(t('appSettings.errorInvalid'))
+      return false
+    }
+    return true
+  }
+
+  const save = async () => {
+    setError(null)
+    if (!validate()) {
+      setEditing(true)
       return
     }
     setSaving(true)
@@ -147,448 +145,531 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
         packageName: packageName.trim(),
         platform,
         repository: repository.trim(),
-        ownerName: owner.trim(),
         status,
       })
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.applications.all }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.applications.detail(application.id),
-        }),
-      ])
+      queryClient.setQueryData(queryKeys.applications.detail(application.id), updated)
+      await queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
       setEditing(false)
-      setStatus(updated.status)
-      setName(updated.name)
-      setDescription(updated.description)
-      setPackageName(updated.packageName)
-      setPlatform(updated.platform)
-      setRepository(updated.repository)
-      setOwner(updated.owner)
-      toast.success(t('appSettings.saved'), {
-        description: updated.name,
-      })
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'package_taken') {
-        setError(t('appSettings.errorRequired'))
+      toast.success(t('appSettings.saved'))
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.code === 'package_taken') {
+        const message = t('appSettings.packageTaken')
+        setFieldErrors((current) => ({ ...current, packageName: message }))
+        setError(message)
       } else {
-        setError(t('appSettings.errorRequired'))
+        setError(
+          caught instanceof ApiError ? caught.message : t('appSettings.errorGeneric'),
+        )
       }
     } finally {
       setSaving(false)
     }
   }
 
-  const onDelete = async () => {
-    if (!deleteNameMatches) {
-      toast.error(t('appSettings.deleteNameMismatch'))
-      return
-    }
+  const deleteApplication = async () => {
+    if (!deleteNameMatches) return
     setDeleting(true)
     try {
       await apiDeleteApplication(application.id)
       await queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
-      toast.success(t('appSettings.deleted'), {
-        description: application.name,
-      })
+      toast.success(t('appSettings.deleted'), { description: application.name })
       navigate('/', { replace: true })
     } catch {
       toast.error(t('appSettings.errorGeneric'))
-      setConfirmDelete(false)
-      setDeleteConfirmName('')
-    } finally {
       setDeleting(false)
     }
   }
 
-  const cancelDeleteConfirm = () => {
-    setConfirmDelete(false)
-    setDeleteConfirmName('')
-  }
+  const views: Array<{
+    id: SettingsView
+    label: string
+    icon: typeof Info
+    visible: boolean
+  }> = [
+    { id: 'basic', label: t('appSettings.navBasic'), icon: Info, visible: true },
+    { id: 'members', label: t('appSettings.navMembers'), icon: Users, visible: true },
+    {
+      id: 'danger',
+      label: t('appSettings.navDanger'),
+      icon: AlertTriangle,
+      visible: canDelete,
+    },
+  ]
 
   return (
-    <div className="w-full space-y-4">
-      {/* ── 1. 应用信息 ── */}
-      <section className={cn(sectionCardClass, 'space-y-5')}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
-              {t('appSettings.sectionInfo')}
-            </h2>
-            <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
-              {t('appSettings.sectionInfoHint')}
-            </p>
-          </div>
-          {!editing ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={cn(
-                'border-0 bg-background/80 text-foreground ring-1 ring-border/60',
-                'hover:bg-muted/50',
-                'dark:bg-background/40 dark:hover:bg-muted/30',
-              )}
-              onClick={startEditing}
-            >
-              <Pencil className="size-3.5 opacity-70" strokeWidth={1.75} />
-              {t('appSettings.edit')}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground"
-              disabled={saving}
-              onClick={cancelEditing}
-            >
-              <X className="size-3.5 opacity-70" strokeWidth={1.75} />
-              {t('appSettings.cancelEdit')}
-            </Button>
-          )}
-        </div>
-
-        {!editing ? (
-          <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
-            <InfoCell label={t('createApp.fieldName')}>{application.name}</InfoCell>
-            <InfoCell label={t('createApp.fieldPackage')} mono>
-              {application.packageName}
-            </InfoCell>
-            <InfoCell label={t('createApp.fieldDescription')} className="sm:col-span-2">
-              <span className="leading-relaxed text-muted-foreground">
-                {application.description}
-              </span>
-            </InfoCell>
-            <InfoCell label={t('createApp.fieldPlatform')}>
-              {t(`platform.${application.platform}`)}
-            </InfoCell>
-            <InfoCell label={t('appSettings.fieldOwner')}>{application.owner}</InfoCell>
-            <InfoCell
-              label={t('createApp.fieldRepository')}
-              mono
-              className="sm:col-span-2"
-            >
-              {application.repository || t('appSettings.emptyValue')}
-            </InfoCell>
-          </dl>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-5">
-            <label className="block space-y-1.5">
-              <span className="text-[0.8125rem] font-medium text-foreground">
-                {t('createApp.fieldName')}
-              </span>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-10 rounded-lg"
-                disabled={saving}
-                autoFocus
-              />
-            </label>
-
-            <label className="block space-y-1.5">
-              <span className="text-[0.8125rem] font-medium text-foreground">
-                {t('createApp.fieldPackage')}
-              </span>
-              <Input
-                value={packageName}
-                onChange={(e) => setPackageName(e.target.value)}
-                className="h-10 rounded-lg font-mono text-[0.8125rem]"
-                disabled={saving}
-              />
-            </label>
-
-            <label className="block space-y-1.5 sm:col-span-2">
-              <span className="text-[0.8125rem] font-medium text-foreground">
-                {t('createApp.fieldDescription')}
-              </span>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                disabled={saving}
-                className={cn(
-                  fieldClass,
-                  'h-auto min-h-[5rem] resize-y py-2.5 leading-relaxed',
-                )}
-              />
-            </label>
-
-            <div className="space-y-1.5 sm:col-span-2">
-              <span className="text-[0.8125rem] font-medium text-foreground">
-                {t('createApp.fieldPlatform')}
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {PLATFORMS.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    disabled={saving}
-                    onClick={() => setPlatform(p)}
-                    className={platformChipClass(platform === p)}
-                    aria-pressed={platform === p}
-                  >
-                    {t(`platform.${p}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <label className="block space-y-1.5">
-              <span className="text-[0.8125rem] font-medium text-foreground">
-                {t('createApp.fieldRepository')}
-              </span>
-              <Input
-                value={repository}
-                onChange={(e) => setRepository(e.target.value)}
-                className="h-10 rounded-lg font-mono text-[0.8125rem]"
-                disabled={saving}
-              />
-            </label>
-
-            <label className="block space-y-1.5">
-              <span className="text-[0.8125rem] font-medium text-foreground">
-                {t('appSettings.fieldOwner')}
-              </span>
-              <Input
-                value={owner}
-                onChange={(e) => setOwner(e.target.value)}
-                className="h-10 rounded-lg"
-                disabled={saving}
-              />
-            </label>
-          </div>
-        )}
-      </section>
-
-      {/* ── 2. 生命周期状态 ── */}
-      <section className={cn(sectionCardClass, 'space-y-4')}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
-              {t('appSettings.sectionStatus')}
-            </h2>
-            <p className="mt-0.5 max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-              {t('appSettings.statusHint')}
-            </p>
-          </div>
-          <StatusBadge
-            status={APPLICATION_STATUS_CHIP[status].badge}
-            className={cn(
-              'h-6 px-2 text-[11px]',
-              status === 'new' ? 'uppercase tracking-wider' : 'normal-case',
-            )}
-          >
-            {t(`appSettings.status.${status}`)}
-          </StatusBadge>
-        </div>
-
-        <div
-          className="flex flex-wrap gap-2"
-          role="group"
-          aria-label={t('appSettings.sectionStatus')}
-        >
-          {STATUSES.map((s) => {
-            const meta = APPLICATION_STATUS_CHIP[s]
-            const selected = status === s
+    <div className="grid min-h-[28rem] gap-6 lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-8">
+      <nav
+        className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible"
+        aria-label={t('appSettings.sectionNav')}
+      >
+        {views
+          .filter((item) => item.visible)
+          .map((item) => {
+            const Icon = item.icon
             return (
               <button
-                key={s}
+                key={item.id}
                 type="button"
-                disabled={saving}
-                onClick={() => setStatus(s)}
-                aria-pressed={selected}
+                aria-current={view === item.id ? 'page' : undefined}
+                onClick={() => setView(item.id)}
                 className={cn(
-                  'inline-flex items-center rounded-lg px-3 py-2 text-[0.8125rem] font-medium',
-                  'transition-[background-color,box-shadow,color,opacity] duration-[var(--duration-hover)]',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
-                  'disabled:pointer-events-none disabled:opacity-50',
-                  selected ? meta.selected : meta.idle,
+                  'inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-[0.8125rem] font-medium transition-colors',
+                  view === item.id
+                    ? 'bg-muted/70 text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+                  item.id === 'danger' && view === item.id && 'text-destructive',
                 )}
               >
-                {t(`appSettings.status.${s}`)}
+                <Icon className="size-3.5 opacity-75" />
+                {item.label}
               </button>
             )
           })}
+      </nav>
+
+      <div className="min-w-0">
+        {view === 'basic' ? (
+          <BasicSettings
+            application={application}
+            editing={editing}
+            saving={saving}
+            dirty={dirty}
+            error={error}
+            fieldErrors={fieldErrors}
+            values={{ name, description, packageName, platform, repository, status }}
+            onEdit={() => setEditing(true)}
+            onCancel={() => {
+              resetDraft()
+              setEditing(false)
+            }}
+            onFieldChange={(field, value) => {
+              const setters: Record<EditableField, (next: string) => void> = {
+                name: setName,
+                description: setDescription,
+                packageName: setPackageName,
+                repository: setRepository,
+              }
+              updateField(field, value, setters[field])
+            }}
+            onPlatformChange={setPlatform}
+            onStatusChange={setStatus}
+            onSave={() => void save()}
+          />
+        ) : null}
+
+        {view === 'members' ? (
+          <ApplicationMembersPanel
+            applicationId={application.id}
+            autoOpen={autoOpenMembers}
+          />
+        ) : null}
+
+        {view === 'danger' && canDelete ? (
+          <DangerSettings
+            application={application}
+            confirmDelete={confirmDelete}
+            deleteConfirmName={deleteConfirmName}
+            deleting={deleting}
+            nameMatches={deleteNameMatches}
+            onStart={() => setConfirmDelete(true)}
+            onCancel={() => {
+              setConfirmDelete(false)
+              setDeleteConfirmName('')
+            }}
+            onNameChange={setDeleteConfirmName}
+            onDelete={() => void deleteApplication()}
+          />
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function BasicSettings({
+  application,
+  editing,
+  saving,
+  dirty,
+  error,
+  fieldErrors,
+  values,
+  onEdit,
+  onCancel,
+  onFieldChange,
+  onPlatformChange,
+  onStatusChange,
+  onSave,
+}: {
+  application: Application
+  editing: boolean
+  saving: boolean
+  dirty: boolean
+  error: string | null
+  fieldErrors: Partial<Record<EditableField, string>>
+  values: {
+    name: string
+    description: string
+    packageName: string
+    platform: ApplicationPlatform
+    repository: string
+    status: ApplicationStatus
+  }
+  onEdit: () => void
+  onCancel: () => void
+  onFieldChange: (field: EditableField, value: string) => void
+  onPlatformChange: (platform: ApplicationPlatform) => void
+  onStatusChange: (status: ApplicationStatus) => void
+  onSave: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-[0.9375rem] font-semibold text-foreground">
+            {t('appSettings.navBasic')}
+          </h2>
+          <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+            {t('appSettings.basicDescription')}
+          </p>
         </div>
-      </section>
+        {!editing ? (
+          <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+            <Pencil />
+            {t('appSettings.edit')}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={saving}
+            onClick={onCancel}
+          >
+            <X />
+            {t('appSettings.cancelEdit')}
+          </Button>
+        )}
+      </div>
+
+      {!editing ? (
+        <div className="grid gap-x-8 gap-y-5 rounded-xl bg-muted/20 p-5 ring-1 ring-border/60 sm:grid-cols-2">
+          <InfoCell label={t('createApp.fieldName')}>{application.name}</InfoCell>
+          <InfoCell label={t('createApp.fieldPackage')} mono>
+            {application.packageName}
+          </InfoCell>
+          <InfoCell label={t('createApp.fieldDescription')} className="sm:col-span-2">
+            {application.description}
+          </InfoCell>
+          <InfoCell label={t('createApp.fieldPlatform')}>
+            {t(`platform.${application.platform}`)}
+          </InfoCell>
+          <InfoCell label={t('createApp.fieldRepository')} mono>
+            {application.repository || t('appSettings.emptyValue')}
+          </InfoCell>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField
+            field="name"
+            label={t('createApp.fieldName')}
+            value={values.name}
+            error={fieldErrors.name}
+            onChange={(value) => onFieldChange('name', value)}
+          />
+          <TextField
+            field="packageName"
+            label={t('createApp.fieldPackage')}
+            value={values.packageName}
+            error={fieldErrors.packageName}
+            mono
+            onChange={(value) => onFieldChange('packageName', value)}
+          />
+          <label className="space-y-1.5 sm:col-span-2">
+            <FieldLabel
+              label={t('createApp.fieldDescription')}
+              value={values.description}
+              max={APPLICATION_FIELD_LIMITS.description}
+            />
+            <textarea
+              value={values.description}
+              rows={4}
+              maxLength={APPLICATION_FIELD_LIMITS.description}
+              onChange={(event) => onFieldChange('description', event.target.value)}
+              className={cn(
+                'min-h-24 w-full resize-y rounded-lg bg-muted/30 px-3 py-2.5 text-[0.875rem] outline-none ring-1 ring-border/60 focus-visible:ring-[3px] focus-visible:ring-ring/30',
+                fieldErrors.description && 'ring-destructive/50',
+              )}
+            />
+            <FieldError message={fieldErrors.description} />
+          </label>
+          <div className="space-y-1.5">
+            <span className="text-[0.8125rem] font-medium text-foreground">
+              {t('createApp.fieldPlatform')}
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {PLATFORMS.map((item) => (
+                <Choice
+                  key={item}
+                  active={values.platform === item}
+                  onClick={() => onPlatformChange(item)}
+                >
+                  {t(`platform.${item}`)}
+                </Choice>
+              ))}
+            </div>
+          </div>
+          <TextField
+            field="repository"
+            label={t('createApp.fieldRepository')}
+            value={values.repository}
+            error={fieldErrors.repository}
+            mono
+            optional
+            onChange={(value) => onFieldChange('repository', value)}
+          />
+        </div>
+      )}
+
+      <div className="border-t border-border/60 pt-5">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[0.8125rem] font-medium text-foreground">
+              {t('appSettings.sectionStatus')}
+            </h3>
+            <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
+              {t('appSettings.statusHint')}
+            </p>
+          </div>
+          <StatusBadge status={APPLICATION_STATUS_CHIP[values.status].badge}>
+            {t(`appSettings.status.${values.status}`)}
+          </StatusBadge>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {STATUSES.map((item) => (
+            <button
+              key={item}
+              type="button"
+              disabled={saving}
+              aria-pressed={values.status === item}
+              onClick={() => onStatusChange(item)}
+              className={cn(
+                'rounded-lg px-3 py-2 text-[0.8125rem] font-medium transition-colors',
+                values.status === item
+                  ? APPLICATION_STATUS_CHIP[item].selected
+                  : APPLICATION_STATUS_CHIP[item].idle,
+              )}
+            >
+              {t(`appSettings.status.${item}`)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {error ? (
-        <p className="px-0.5 text-[0.8125rem] text-muted-foreground" role="alert">
+        <p className="text-[0.8125rem] text-destructive" role="alert">
           {error}
         </p>
       ) : null}
-
-      {/* Single primary — only after changes */}
       {dirty ? (
         <div className="flex justify-end">
-          <Button
-            type="button"
-            size="lg"
-            className="min-w-[6.5rem]"
-            disabled={saving}
-            onClick={() => void onSave()}
-          >
+          <Button type="button" size="lg" disabled={saving} onClick={onSave}>
+            {saving ? <Loader2 className="animate-spin" /> : null}
             {saving ? t('appSettings.saving') : t('appSettings.save')}
           </Button>
         </div>
       ) : null}
+    </section>
+  )
+}
 
-      {/*
-        ── 3. 危险操作（仅管理员可删除应用）──
-      */}
-      {canDelete ? (
-        <section
-          className={cn(
-            'overflow-hidden rounded-2xl',
-            'border border-destructive/40 bg-destructive/[0.02]',
-            'dark:border-destructive/45 dark:bg-destructive/[0.03]',
-          )}
-        >
-          <header className="flex items-start gap-3 border-b border-destructive/25 px-5 py-4 sm:px-6 dark:border-destructive/30">
-            <span
-              className={cn(
-                'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
-                'bg-destructive/10 text-destructive',
-                'dark:bg-destructive/15',
-              )}
-              aria-hidden
-            >
-              <AlertTriangle className="size-4" strokeWidth={1.75} />
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
-                {t('appSettings.dangerTitle')}
-              </h2>
-              <p className="mt-0.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-                {t('appSettings.dangerDesc')}
+function DangerSettings({
+  application,
+  confirmDelete,
+  deleteConfirmName,
+  deleting,
+  nameMatches,
+  onStart,
+  onCancel,
+  onNameChange,
+  onDelete,
+}: {
+  application: Application
+  confirmDelete: boolean
+  deleteConfirmName: string
+  deleting: boolean
+  nameMatches: boolean
+  onStart: () => void
+  onCancel: () => void
+  onNameChange: (value: string) => void
+  onDelete: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <section className="space-y-5">
+      <div>
+        <h2 className="text-[0.9375rem] font-semibold text-destructive">
+          {t('appSettings.dangerTitle')}
+        </h2>
+        <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+          {t('appSettings.dangerDesc')}
+        </p>
+      </div>
+      <div className="rounded-xl border border-destructive/35 bg-destructive/[0.025] p-5">
+        {!confirmDelete ? (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[0.875rem] font-medium text-foreground">
+                {t('appSettings.deleteTitle')}
+              </p>
+              <p className="mt-1 text-[0.8125rem] text-muted-foreground">
+                {t('appSettings.deleteDesc')}
               </p>
             </div>
-          </header>
-
-          <div className="px-5 py-5 sm:px-6">
-            {!confirmDelete ? (
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
-                <div className="min-w-0 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[0.875rem] font-medium text-foreground">
-                      {t('appSettings.deleteTitle')}
-                    </p>
-                    <span className="text-[0.6875rem] text-muted-foreground">
-                      · {t('appSettings.severityIrreversible')}
-                    </span>
-                  </div>
-                  <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-                    {t('appSettings.deleteDesc')}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="w-full shrink-0 sm:w-auto"
-                  disabled={deleting}
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  <Trash2 className="size-3.5" strokeWidth={1.75} />
-                  {t('appSettings.deleteAction')}
-                </Button>
-              </div>
-            ) : (
-              <div
-                ref={deleteConfirmRef}
-                className="space-y-4"
-                role="region"
-                aria-label={t('appSettings.deleteConfirmRegion')}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[0.875rem] font-medium text-foreground">
-                        {t('appSettings.deleteTitle')}
-                      </p>
-                      <span className="text-[0.6875rem] text-muted-foreground">
-                        · {t('appSettings.severityIrreversible')}
-                      </span>
-                    </div>
-                    <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-                      {t('appSettings.deleteConfirmLead', {
-                        name: application.name,
-                      })}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 text-muted-foreground hover:text-foreground"
-                    disabled={deleting}
-                    onClick={cancelDeleteConfirm}
-                  >
-                    {t('common.cancel')}
-                  </Button>
-                </div>
-
-                <div className="border-t border-border/50 pt-4">
-                  <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
-                    <label className="min-w-0 flex-1 space-y-1.5">
-                      <span className="text-[0.75rem] font-medium text-foreground">
-                        {t('appSettings.deleteConfirmLabel')}
-                        <span className="ml-1.5 font-normal text-muted-foreground">
-                          ({application.name})
-                        </span>
-                      </span>
-                      <Input
-                        ref={deleteInputRef}
-                        value={deleteConfirmName}
-                        onChange={(e) => setDeleteConfirmName(e.target.value)}
-                        placeholder={t('appSettings.deleteConfirmPlaceholder')}
-                        disabled={deleting}
-                        autoComplete="off"
-                        className={cn(
-                          'h-10 rounded-lg',
-                          /* Calm focus: thin ring instead of default ring-3 */
-                          'focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/35',
-                        )}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') {
-                            e.preventDefault()
-                            cancelDeleteConfirm()
-                          }
-                          if (e.key === 'Enter' && deleteNameMatches && !deleting) {
-                            e.preventDefault()
-                            void onDelete()
-                          }
-                        }}
-                      />
-                    </label>
-                    <Button
-                      type="button"
-                      size="lg"
-                      variant="destructive"
-                      className={cn(
-                        'w-full shrink-0 sm:w-auto sm:min-w-[7.5rem]',
-                        'disabled:opacity-40',
-                      )}
-                      disabled={deleting || !deleteNameMatches}
-                      onClick={() => void onDelete()}
-                    >
-                      {deleting ? (
-                        <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
-                      ) : (
-                        <Trash2 className="size-3.5" strokeWidth={1.75} />
-                      )}
-                      {deleting
-                        ? t('appSettings.deleting')
-                        : t('appSettings.confirmDelete')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <Button type="button" variant="destructive" onClick={onStart}>
+              <Trash2 />
+              {t('appSettings.deleteAction')}
+            </Button>
           </div>
-        </section>
-      ) : null}
-    </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-[0.8125rem] text-muted-foreground">
+                {t('appSettings.deleteConfirmLead', { name: application.name })}
+              </p>
+              <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+                {t('common.cancel')}
+              </Button>
+            </div>
+            <label className="block space-y-1.5">
+              <span className="text-[0.75rem] font-medium">
+                {t('appSettings.deleteConfirmLabel')}
+              </span>
+              <Input
+                value={deleteConfirmName}
+                onChange={(event) => onNameChange(event.target.value)}
+                placeholder={t('appSettings.deleteConfirmPlaceholder')}
+                autoFocus
+              />
+            </label>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deleting || !nameMatches}
+                onClick={onDelete}
+              >
+                {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                {deleting ? t('appSettings.deleting') : t('appSettings.confirmDelete')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function TextField({
+  field,
+  label,
+  value,
+  error,
+  mono,
+  optional,
+  onChange,
+}: {
+  field: EditableField
+  label: string
+  value: string
+  error?: string
+  mono?: boolean
+  optional?: boolean
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="space-y-1.5">
+      <FieldLabel
+        label={label}
+        value={value}
+        max={APPLICATION_FIELD_LIMITS[field]}
+        optional={optional ? 'optional' : undefined}
+      />
+      <Input
+        value={value}
+        maxLength={APPLICATION_FIELD_LIMITS[field]}
+        onChange={(event) => onChange(event.target.value)}
+        className={cn(
+          mono && 'font-mono text-[0.8125rem]',
+          error && 'border-destructive',
+        )}
+        aria-invalid={Boolean(error) || undefined}
+      />
+      <FieldError message={error} />
+    </label>
+  )
+}
+
+function FieldLabel({
+  label,
+  value,
+  max,
+  optional,
+}: {
+  label: string
+  value: string
+  max: number
+  optional?: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <span className="flex items-baseline justify-between gap-3">
+      <span className="text-[0.8125rem] font-medium text-foreground">
+        {label}
+        {optional ? (
+          <span className="ml-1.5 font-normal text-muted-foreground">
+            {t('createApp.optional')}
+          </span>
+        ) : null}
+      </span>
+      <span className="text-[0.6875rem] tabular-nums text-muted-foreground">
+        {value.length} / {max}
+      </span>
+    </span>
+  )
+}
+
+function FieldError({ message }: { message?: string }) {
+  return message ? (
+    <span className="block text-[0.75rem] text-destructive" role="alert">
+      {message}
+    </span>
+  ) : null
+}
+
+function Choice({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium',
+        active
+          ? 'bg-foreground text-background'
+          : 'bg-muted/40 text-muted-foreground hover:text-foreground',
+      )}
+    >
+      {children}
+    </button>
   )
 }
 
@@ -605,12 +686,12 @@ function InfoCell({
 }) {
   return (
     <div className={cn('min-w-0 space-y-1', className)}>
-      <dt className="text-[0.6875rem] font-medium tracking-wide text-muted-foreground/70 uppercase">
+      <dt className="text-[0.6875rem] font-medium text-muted-foreground/75 uppercase">
         {label}
       </dt>
       <dd
         className={cn(
-          'min-w-0 text-[0.875rem] text-foreground',
+          'min-w-0 break-words text-[0.875rem] text-foreground',
           mono && 'font-mono text-[0.8125rem] text-muted-foreground',
         )}
       >

@@ -14,6 +14,7 @@ import {
 import { CreateAppReferenceRail } from '@/features/applications/create-app-reference-rail'
 import { useApplicationCatalog } from '@/features/applications/use-applications'
 import { queryKeys } from '@/lib/query-keys'
+import { APPLICATION_FIELD_LIMITS } from '@/lib/application-fields'
 import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { ApiError } from '@/services/http'
@@ -83,6 +84,8 @@ export function CreateApplicationPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
+    const continueToMembers = submitter?.value === 'members'
     setError(null)
 
     if (!name.trim() || !description.trim() || !packageName.trim()) {
@@ -110,7 +113,12 @@ export function CreateApplicationPage() {
       })
       await queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
       toast.success(t('createApp.success'), { description: app.name })
-      navigate(`/applications/${app.id}`, { replace: true })
+      navigate(
+        continueToMembers
+          ? `/applications/${app.id}?tab=settings&addMember=1`
+          : `/applications/${app.id}`,
+        { replace: true },
+      )
     } catch (err) {
       if (err instanceof ApiError && err.code === 'package_taken') {
         setError(
@@ -189,6 +197,7 @@ export function CreateApplicationPage() {
                       placeholder={t('createApp.namePlaceholder')}
                       className="h-10 rounded-lg"
                       disabled={submitting}
+                      maxLength={APPLICATION_FIELD_LIMITS.name}
                       required
                       autoFocus
                       autoComplete="off"
@@ -213,6 +222,7 @@ export function CreateApplicationPage() {
                             'ring-1 ring-border-strong focus-visible:ring-ring/30',
                         )}
                         disabled={submitting}
+                        maxLength={APPLICATION_FIELD_LIMITS.packageName}
                         required
                         autoComplete="off"
                         aria-invalid={packageTaken || undefined}
@@ -241,6 +251,7 @@ export function CreateApplicationPage() {
                       placeholder={t('createApp.descriptionPlaceholder')}
                       rows={3}
                       disabled={submitting}
+                      maxLength={APPLICATION_FIELD_LIMITS.description}
                       required
                       className={cn(
                         fieldClass,
@@ -288,6 +299,7 @@ export function CreateApplicationPage() {
                       placeholder={t('createApp.repositoryPlaceholder')}
                       className="h-10 rounded-lg font-mono text-[0.8125rem]"
                       disabled={submitting}
+                      maxLength={APPLICATION_FIELD_LIMITS.repository}
                     />
                   </label>
                 </div>
@@ -317,8 +329,23 @@ export function CreateApplicationPage() {
                 <Button
                   type="submit"
                   size="lg"
+                  variant="outline"
+                  className="border-0 bg-background/80 ring-1 ring-border/60 dark:bg-background/40"
+                  disabled={!canSubmit}
+                  name="next"
+                  value="members"
+                >
+                  {submitting
+                    ? t('createApp.creating')
+                    : t('createApp.submitAndAddMembers')}
+                </Button>
+                <Button
+                  type="submit"
+                  size="lg"
                   className="min-w-[6.5rem]"
                   disabled={!canSubmit}
+                  name="next"
+                  value="detail"
                 >
                   {submitting ? t('createApp.creating') : t('createApp.submit')}
                 </Button>

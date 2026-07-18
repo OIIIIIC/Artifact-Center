@@ -11,6 +11,7 @@ const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
 
 interface StepVersionProps {
   version: VersionDraft
+  applicationPlatform: ApplicationPlatform
   onChange: (patch: Partial<VersionDraft>) => void
   onChannel: (c: UploadChannel) => void
 }
@@ -72,7 +73,12 @@ const inputClass = cn(
   'disabled:cursor-not-allowed disabled:opacity-60',
 )
 
-export function StepVersion({ version, onChange, onChannel }: StepVersionProps) {
+export function StepVersion({
+  version,
+  applicationPlatform,
+  onChange,
+  onChannel,
+}: StepVersionProps) {
   const { t } = useTranslation()
   const channel = version.channel || 'stable'
 
@@ -120,14 +126,15 @@ export function StepVersion({ version, onChange, onChannel }: StepVersionProps) 
                 type="button"
                 role="radio"
                 aria-checked={active}
-                onClick={() => onChange({ platform: p })}
+                disabled={p !== applicationPlatform}
+                onClick={() => onChange({ platform: applicationPlatform })}
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium',
                   'transition-colors duration-[var(--duration-hover)]',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
                   active
                     ? 'bg-foreground text-background'
-                    : 'bg-muted/40 text-muted-foreground hover:text-foreground',
+                    : 'bg-muted/40 text-muted-foreground opacity-50',
                 )}
               >
                 {t(`platform.${p}`)}

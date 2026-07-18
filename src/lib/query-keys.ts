@@ -11,6 +11,14 @@ export const queryKeys = {
     byApp: (appId: string) => ['artifacts', 'byApp', appId] as const,
     detail: (id: string) => ['artifacts', 'detail', id] as const,
   },
+  releases: {
+    byApp: (appId: string) => ['releases', 'byApp', appId] as const,
+  },
+  applicationMembers: {
+    byApp: (appId: string) => ['application-members', appId] as const,
+    candidates: (appId: string, q: string) =>
+      ['application-members', appId, 'candidates', q] as const,
+  },
   users: {
     all: ['users'] as const,
     list: ['users', 'list'] as const,

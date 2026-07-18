@@ -1,10 +1,13 @@
-import { LayoutGrid, LayoutTemplate, Palette, Settings } from 'lucide-react'
+import { LayoutGrid, Settings, Users } from 'lucide-react'
 
 import i18n from '@/i18n'
 import type { SidebarNavGroup } from './types'
 
-/** Product + foundation navigation. Labels via i18n (default zh-CN). */
-export function getProductNavGroups(pathname: string): SidebarNavGroup[] {
+/** 日常产品导航仅呈现用户完成制品管理所需的对象入口。 */
+export function getProductNavGroups(
+  pathname: string,
+  options: { isAdmin?: boolean } = {},
+): SidebarNavGroup[] {
   const t = i18n.t.bind(i18n)
   const isApps = pathname === '/' || pathname.startsWith('/applications')
 
@@ -21,6 +24,14 @@ export function getProductNavGroups(pathname: string): SidebarNavGroup[] {
           active: isApps,
         },
         {
+          id: 'members',
+          label: t('nav.members'),
+          href: '/members',
+          icon: Users,
+          active: pathname.startsWith('/members'),
+          disabled: !options.isAdmin,
+        },
+        {
           id: 'settings',
           label: t('nav.settings'),
           href: '/settings',
@@ -31,29 +42,7 @@ export function getProductNavGroups(pathname: string): SidebarNavGroup[] {
     },
   ]
 
-  // Foundation playgrounds — only in dev, not product nav
-  if (import.meta.env.DEV) {
-    groups.push({
-      id: 'foundation',
-      label: t('nav.foundation'),
-      items: [
-        {
-          id: 'design-system',
-          label: t('nav.designSystem'),
-          href: '/design-system',
-          icon: Palette,
-          active: pathname.startsWith('/design-system'),
-        },
-        {
-          id: 'layout',
-          label: t('nav.layout'),
-          href: '/layout',
-          icon: LayoutTemplate,
-          active: pathname.startsWith('/layout'),
-        },
-      ],
-    })
-  }
+  groups[0].items = groups[0].items.filter((item) => !item.disabled)
 
   return groups
 }

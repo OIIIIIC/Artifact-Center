@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
 import { cn } from '@/lib/utils'
 import { ApiError } from '@/services/http'
 import { apiCreateShare } from '@/services/api'
 import { shareUrlForToken } from '@/store/share-store'
-import type { Artifact } from '@/types/artifact'
+import { getArtifactRiskStatus, type Artifact } from '@/types/artifact'
 import type { ShareMode } from '@/types/share'
 
 type ExpiryOption = 0 | 1 | 7 | 30
@@ -20,6 +21,7 @@ interface ShareDialogProps {
   applicationName: string
   /** When set, default mode can be this pinned artifact */
   artifact?: Artifact
+  applicationArchived?: boolean
   className?: string
 }
 
@@ -32,32 +34,41 @@ export function ShareDialog({
   applicationId,
   applicationName,
   artifact,
+  applicationArchived = false,
   className,
 }: ShareDialogProps) {
   const { t } = useTranslation()
+  const artifactRisk = artifact ? getArtifactRiskStatus(artifact) : null
 
-  const [mode, setMode] = useState<ShareMode>(artifact ? 'artifact' : 'latest')
+  const [mode, setMode] = useState<ShareMode>(
+    artifact && artifactRisk !== 'archived' ? 'artifact' : 'latest',
+  )
   const [expiry, setExpiry] = useState<ExpiryOption>(7)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const canPin = Boolean(artifact)
+  const pinBlocked = artifactRisk === 'archived'
+  const createBlocked = applicationArchived
+  const selectedMode = pinBlocked ? 'latest' : mode
 
   const modeHint = useMemo(() => {
-    if (mode === 'latest') return t('share.modeLatestHint')
+    if (selectedMode === 'latest') return t('share.modeLatestHint')
     return t('share.modeArtifactHint', { version: artifact?.version ?? '—' })
-  }, [mode, artifact?.version, t])
+  }, [selectedMode, artifact?.version, t])
 
   if (!open) return null
 
   const onCreate = async () => {
-    if (mode === 'artifact' && !artifact) return
+    if (createBlocked || (selectedMode === 'artifact' && (!artifact || pinBlocked))) {
+      return
+    }
     setBusy(true)
 
     try {
       const share = await apiCreateShare(applicationId, {
-        mode,
-        artifactId: mode === 'artifact' ? artifact!.id : undefined,
+        mode: selectedMode,
+        artifactId: selectedMode === 'artifact' ? artifact!.id : undefined,
         expiresInDays: expiry === 0 ? 0 : expiry,
       })
       const url = shareUrlForToken(share.token)
@@ -136,21 +147,26 @@ export function ShareDialog({
               aria-label={t('share.modeLabel')}
             >
               <ModeOption
-                active={mode === 'latest'}
+                active={selectedMode === 'latest'}
                 onClick={() => setMode('latest')}
                 title={t('share.modeLatest')}
                 desc={t('share.modeLatestHint')}
               />
               {canPin ? (
                 <ModeOption
-                  active={mode === 'artifact'}
+                  active={selectedMode === 'artifact'}
                   onClick={() => setMode('artifact')}
+                  disabled={pinBlocked}
                   title={t('share.modeArtifact', {
                     version: artifact!.version,
                   })}
-                  desc={t('share.modeArtifactHint', {
-                    version: artifact!.version,
-                  })}
+                  desc={
+                    artifactRisk === 'archived'
+                      ? t('share.archivedPinDisabled')
+                      : t('share.modeArtifactHint', {
+                          version: artifact!.version,
+                        })
+                  }
                 />
               ) : null}
             </div>
@@ -158,6 +174,13 @@ export function ShareDialog({
               {modeHint}
             </p>
           </div>
+
+          {createBlocked ? (
+            <ArtifactRiskNotice risk="applicationArchived" context="share" />
+          ) : artifactRisk === 'archived' ||
+            (artifactRisk === 'deprecated' && selectedMode === 'artifact') ? (
+            <ArtifactRiskNotice risk={artifactRisk} context="share" />
+          ) : null}
 
           <div className="space-y-1.5">
             <p className="text-[0.75rem] font-medium text-foreground">
@@ -226,7 +249,11 @@ export function ShareDialog({
           <Button
             type="button"
             size="lg"
-            disabled={busy || (mode === 'artifact' && !artifact)}
+            disabled={
+              busy ||
+              createBlocked ||
+              (selectedMode === 'artifact' && (!artifact || pinBlocked))
+            }
             onClick={() => void onCreate()}
           >
             {busy ? (
@@ -251,11 +278,13 @@ export function ShareDialog({
 function ModeOption({
   active,
   onClick,
+  disabled = false,
   title,
   desc,
 }: {
   active: boolean
   onClick: () => void
+  disabled?: boolean
   title: string
   desc: string
 }) {
@@ -264,12 +293,14 @@ function ModeOption({
       type="button"
       role="radio"
       aria-checked={active}
+      disabled={disabled}
       onClick={onClick}
       className={cn(
         'rounded-xl px-3 py-2.5 text-left transition-colors duration-[var(--duration-hover)]',
         active
           ? 'bg-muted/50 ring-1 ring-border-strong/70'
           : 'hover:bg-muted/35 ring-1 ring-transparent',
+        'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent',
       )}
     >
       <span className="block text-[0.8125rem] font-medium text-foreground">{title}</span>

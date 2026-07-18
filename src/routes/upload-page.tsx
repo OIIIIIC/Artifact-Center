@@ -132,6 +132,7 @@ export function UploadPage() {
               {flow.step === 3 ? (
                 <StepVersion
                   version={flow.version}
+                  applicationPlatform={flow.application?.platform ?? 'zip'}
                   onChange={flow.updateVersion}
                   onChannel={flow.setChannel}
                 />
@@ -143,7 +144,6 @@ export function UploadPage() {
                   parsed={flow.parsed}
                   version={flow.version}
                   publishError={flow.publishError}
-                  draftSaved={flow.draftSaved}
                 />
               ) : null}
             </div>
@@ -187,27 +187,15 @@ export function UploadPage() {
 
               <div className="flex flex-wrap items-center justify-end gap-2.5">
                 {flow.step === 4 ? (
-                  <>
-                    <Button
-                      type="button"
-                      size="lg"
-                      variant="outline"
-                      className="min-w-[6.5rem] border-0 bg-muted/40 ring-1 ring-border/60"
-                      disabled={flow.publishing}
-                      onClick={() => void flow.saveDraft()}
-                    >
-                      {t('upload.saveDraft')}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="min-w-[6.5rem]"
-                      disabled={flow.publishing}
-                      onClick={() => void flow.publish()}
-                    >
-                      {flow.publishing ? t('upload.publishing') : t('upload.publish')}
-                    </Button>
-                  </>
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="min-w-[6.5rem]"
+                    disabled={flow.publishing}
+                    onClick={() => void flow.publish()}
+                  >
+                    {flow.publishing ? t('upload.publishing') : t('upload.publish')}
+                  </Button>
                 ) : (
                   <Button
                     type="button"

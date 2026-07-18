@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react'
+import { createElement, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { apiDownloadArtifact, apiDownloadShare } from '@/services/api'
+import { ArtifactDownloadConfirmDialog } from '@/features/applications/artifact-risk-warning'
+import type { ArtifactOperationRiskStatus } from '@/types/artifact'
 
 export type DownloadTarget = {
   /** Unique key for loading state (artifact id or "latest:appId") */
@@ -12,10 +14,10 @@ export type DownloadTarget = {
   filename: string
   version?: string
   sizeBytes?: number
-  /** Use public download route by artifact id (legacy) */
-  public?: boolean
   /** Server share token — preferred for /d/:token landing */
   shareToken?: string
+  /** 弃用或归档制品需要用户再次确认。 */
+  riskStatus?: ArtifactOperationRiskStatus | null
   /** Force failure for demo */
   forceError?: boolean
 }
@@ -27,8 +29,9 @@ export type DownloadTarget = {
 export function useDownloadArtifact() {
   const { t } = useTranslation()
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [pendingTarget, setPendingTarget] = useState<DownloadTarget | null>(null)
 
-  const download = useCallback(
+  const startDownload = useCallback(
     async (target: DownloadTarget) => {
       if (busyId) return
 
@@ -54,7 +57,7 @@ export function useDownloadArtifact() {
 
         const { blob, filename: serverName } = target.shareToken
           ? await apiDownloadShare(target.shareToken)
-          : await apiDownloadArtifact(artifactId, { public: target.public })
+          : await apiDownloadArtifact(artifactId)
 
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -84,9 +87,34 @@ export function useDownloadArtifact() {
     [busyId, t],
   )
 
+  const download = useCallback(
+    async (target: DownloadTarget) => {
+      if (target.riskStatus) {
+        setPendingTarget(target)
+        return
+      }
+      await startDownload(target)
+    },
+    [startDownload],
+  )
+
+  const downloadConfirmation = pendingTarget?.riskStatus
+    ? createElement(ArtifactDownloadConfirmDialog, {
+        risk: pendingTarget.riskStatus,
+        version: pendingTarget.version,
+        onCancel: () => setPendingTarget(null),
+        onConfirm: () => {
+          const target = pendingTarget
+          setPendingTarget(null)
+          void startDownload({ ...target, riskStatus: null })
+        },
+      })
+    : null
+
   return {
     download,
     busyId,
     isBusy: (id: string) => busyId === id,
+    downloadConfirmation,
   }
 }

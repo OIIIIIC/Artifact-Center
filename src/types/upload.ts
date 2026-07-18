@@ -9,7 +9,7 @@ export type UploadPhase =
 
 export type UploadFileError = 'too_large' | 'wrong_platform' | 'unsupported' | 'empty'
 
-export type PublishError = 'duplicate_version' | 'upload_failed' | null
+export type PublishError = 'duplicate_artifact' | 'upload_failed' | null
 
 export type FileKind =
   'apk' | 'aab' | 'exe' | 'zip' | 'ipa' | 'firmware' | 'docker' | 'unknown'
