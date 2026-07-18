@@ -1,3 +1,4 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -7,6 +8,7 @@ import {
   HardDrive,
   KeyRound,
   Languages,
+  Loader2,
   Monitor,
   Moon,
   Palette,
@@ -26,10 +28,22 @@ import { AvatarUpload } from '@/features/settings/avatar-upload'
 import { MEMBER_ROLES, type MemberRole } from '@/features/settings/mock-members'
 import { PasswordField, PasswordPolicyHints } from '@/features/settings/password-field'
 import { formatFileSize } from '@/lib/format'
+import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
+import { checkPassword } from '@/lib/password'
+import { ApiError } from '@/services/http'
+import {
+  apiAdminResetPassword,
+  apiCreateUser,
+  apiDeleteUser,
+  apiGetRetention,
+  apiListUsers,
+  apiRunRetentionCleanup,
+  apiUpdateRetention,
+  apiUpdateUser,
+} from '@/services/api'
 import { useAuthStore } from '@/store/auth-store'
 import { useLocaleStore } from '@/store/locale-store'
-import { type MemberActionError, useSettingsStore } from '@/store/settings-store'
 import { useThemeStore } from '@/store/theme-store'
 import { LOCALE_LABEL, type AppLocale } from '@/types/locale'
 import type { ThemeMode } from '@/types/theme'
@@ -63,11 +77,11 @@ const LOCALE_OPTIONS: AppLocale[] = ['zh-CN', 'en-US']
 export function SettingsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const updateProfile = useAuthStore((s) => s.updateProfile)
   const updateAvatar = useAuthStore((s) => s.updateAvatar)
   const changePassword = useAuthStore((s) => s.changePassword)
-  const adminResetPassword = useAuthStore((s) => s.adminResetPassword)
   const logout = useAuthStore((s) => s.logout)
   const isAdmin = user?.role === 'admin'
 
@@ -76,16 +90,23 @@ export function SettingsPage() {
   const locale = useLocaleStore((s) => s.locale)
   const setLocale = useLocaleStore((s) => s.setLocale)
 
-  const members = useSettingsStore((s) => s.members)
-  const setMemberRole = useSettingsStore((s) => s.setMemberRole)
-  const addMember = useSettingsStore((s) => s.addMember)
-  const removeMember = useSettingsStore((s) => s.removeMember)
-  const retention = useSettingsStore((s) => s.retention)
-  const setRetention = useSettingsStore((s) => s.setRetention)
+  const membersQuery = useQuery({
+    queryKey: queryKeys.users.list,
+    queryFn: apiListUsers,
+    enabled: isAdmin,
+  })
+  const members = membersQuery.data ?? []
+
+  const retentionQuery = useQuery({
+    queryKey: ['settings', 'retention'],
+    queryFn: apiGetRetention,
+  })
+  const retention = retentionQuery.data
 
   const [section, setSection] = useState<SettingsSection>('general')
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [retentionSaving, setRetentionSaving] = useState(false)
+  const [cleanupRunning, setCleanupRunning] = useState(false)
 
   // Profile — seed from user on first paint
   const [profileName, setProfileName] = useState(() => user?.name ?? '')
@@ -101,10 +122,12 @@ export function SettingsPage() {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
-  // Add member
+  // Add member (admin creates user with initial password)
   const [showAddMember, setShowAddMember] = useState(false)
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
+  const [newMemberPassword, setNewMemberPassword] = useState('')
+  const [newMemberPasswordConfirm, setNewMemberPasswordConfirm] = useState('')
   const [newRole, setNewRole] = useState<MemberRole>('viewer')
   const [addError, setAddError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
@@ -117,14 +140,10 @@ export function SettingsPage() {
   const [resetError, setResetError] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
 
-  // Retention fields
-  const [maxVersions, setMaxVersions] = useState(() => String(retention.maxVersions))
-  const [archiveDays, setArchiveDays] = useState(() =>
-    String(retention.archiveDeprecatedDays),
-  )
-  const [retentionSeed, setRetentionSeed] = useState(
-    () => `${retention.maxVersions}:${retention.archiveDeprecatedDays}`,
-  )
+  // Retention fields (local draft)
+  const [maxVersions, setMaxVersions] = useState('20')
+  const [archiveDays, setArchiveDays] = useState('90')
+  const [retentionHydrated, setRetentionHydrated] = useState(false)
 
   // Sync when user identity changes (login switch) — adjust during render
   if (user?.id && user.id !== profileSeedId) {
@@ -133,20 +152,22 @@ export function SettingsPage() {
     setProfileEmail(user.email)
   }
 
-  const retentionKey = `${retention.maxVersions}:${retention.archiveDeprecatedDays}`
-  if (retentionKey !== retentionSeed) {
-    setRetentionSeed(retentionKey)
+  if (retention && !retentionHydrated) {
     setMaxVersions(String(retention.maxVersions))
     setArchiveDays(String(retention.archiveDeprecatedDays))
+    setRetentionHydrated(true)
+  }
+  if (!retention && retentionHydrated) {
+    setRetentionHydrated(false)
   }
 
   const storagePct = useMemo(() => {
-    if (retention.storageQuotaBytes <= 0) return 0
+    if (!retention || retention.storageQuotaBytes <= 0) return 0
     return Math.min(
       100,
       Math.round((retention.storageUsedBytes / retention.storageQuotaBytes) * 100),
     )
-  }, [retention.storageQuotaBytes, retention.storageUsedBytes])
+  }, [retention])
 
   const profileDirty =
     profileName.trim() !== (user?.name ?? '') ||
@@ -163,28 +184,37 @@ export function SettingsPage() {
 
   const roleLabel = (role: MemberRole) => t(`settings.role.${role}`)
 
-  const memberErrorMessage = (code: MemberActionError) => {
-    switch (code) {
-      case 'empty':
-        return t('settings.memberErrorEmpty')
-      case 'invalid_email':
-        return t('settings.memberErrorEmail')
-      case 'duplicate':
-        return t('settings.memberErrorDuplicate')
-      case 'last_admin':
-        return t('settings.memberErrorLastAdmin')
-      case 'not_found':
-        return t('settings.memberErrorNotFound')
-      default:
-        return t('settings.memberErrorGeneric')
+  const memberErrorFromApi = (err: unknown) => {
+    if (err instanceof ApiError) {
+      switch (err.code) {
+        case 'email_taken':
+          return t('settings.memberErrorDuplicate')
+        case 'last_admin':
+          return t('settings.memberErrorLastAdmin')
+        case 'cannot_delete_self':
+          return t('settings.memberErrorSelfDelete')
+        case 'weak_password':
+          return t('settings.passwordErrorWeak')
+        case 'not_found':
+          return t('settings.memberErrorNotFound')
+        case 'forbidden':
+          return t('settings.resetForbidden')
+        case 'invalid_body':
+          return t('settings.memberErrorEmpty')
+        default:
+          return err.message || t('settings.memberErrorGeneric')
+      }
     }
+    return t('settings.memberErrorGeneric')
   }
+
+  const invalidateMembers = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
 
   const saveProfile = async () => {
     setProfileError(null)
     setProfileSaving(true)
-    await new Promise((r) => setTimeout(r, 300))
-    const result = updateProfile({
+    const result = await updateProfile({
       name: profileName,
       email: profileEmail,
     })
@@ -200,8 +230,8 @@ export function SettingsPage() {
     toast.success(t('settings.profileSaved'))
   }
 
-  const onAvatarChange = (dataUrl: string | null) => {
-    const result = updateAvatar(dataUrl)
+  const onAvatarChange = async (dataUrl: string | null) => {
+    const result = await updateAvatar(dataUrl)
     if (!result.ok) {
       toast.error(t('settings.memberErrorGeneric'))
       return
@@ -216,8 +246,7 @@ export function SettingsPage() {
       return
     }
     setPasswordSaving(true)
-    await new Promise((r) => setTimeout(r, 350))
-    const result = changePassword({
+    const result = await changePassword({
       current: currentPassword,
       next: newPassword,
       confirm: confirmPassword,
@@ -243,41 +272,42 @@ export function SettingsPage() {
     toast.success(t('settings.passwordChanged'))
   }
 
-  const onAdminReset = async (memberName: string, memberEmail: string) => {
+  const onAdminReset = async (memberId: string, memberName: string) => {
     setResetError(null)
     if (!resetPassword || !resetConfirm) {
       setResetError(t('settings.passwordErrorEmpty'))
       return
     }
-    setResetting(true)
-    await new Promise((r) => setTimeout(r, 350))
-    const result = adminResetPassword({
-      email: memberEmail,
-      next: resetPassword,
-      confirm: resetConfirm,
-    })
-    setResetting(false)
-    if (!result.ok) {
-      if (result.code === 'forbidden') {
-        setResetError(t('settings.resetForbidden'))
-      } else if (result.code === 'mismatch') {
-        setResetError(t('settings.passwordErrorMismatch'))
-      } else if (result.code === 'weak_password') {
-        setResetError(t('settings.passwordErrorWeak'))
-      } else {
-        setResetError(t('settings.passwordErrorEmpty'))
-      }
+    if (resetPassword !== resetConfirm) {
+      setResetError(t('settings.passwordErrorMismatch'))
       return
     }
-    setResetMemberId(null)
-    setResetPassword('')
-    setResetConfirm('')
-    toast.success(t('settings.passwordReset'), {
-      description: t('settings.passwordResetDesc', { name: memberName }),
-    })
+    const check = checkPassword(resetPassword, { confirm: resetConfirm })
+    if (!check.ok) {
+      setResetError(t('settings.passwordErrorWeak'))
+      return
+    }
+    setResetting(true)
+    try {
+      await apiAdminResetPassword(memberId, resetPassword)
+      setResetMemberId(null)
+      setResetPassword('')
+      setResetConfirm('')
+      toast.success(t('settings.passwordReset'), {
+        description: t('settings.passwordResetDesc', { name: memberName }),
+      })
+    } catch (err) {
+      setResetError(memberErrorFromApi(err))
+    } finally {
+      setResetting(false)
+    }
   }
 
   const saveRetention = async () => {
+    if (!isAdmin) {
+      toast.error(t('settings.retentionAdminOnly'))
+      return
+    }
     const max = Number.parseInt(maxVersions, 10)
     const days = Number.parseInt(archiveDays, 10)
     if (
@@ -292,62 +322,121 @@ export function SettingsPage() {
       return
     }
     setRetentionSaving(true)
-    await new Promise((r) => setTimeout(r, 350))
-    setRetention({ maxVersions: max, archiveDeprecatedDays: days })
-    setRetentionSaving(false)
-    toast.success(t('settings.retentionSaved'))
+    try {
+      await apiUpdateRetention({
+        maxVersions: max,
+        archiveDeprecatedDays: days,
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['settings', 'retention'],
+      })
+      setRetentionHydrated(false)
+      toast.success(t('settings.retentionSaved'))
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : t('settings.retentionSaveFailed'),
+      )
+    } finally {
+      setRetentionSaving(false)
+    }
+  }
+
+  const runCleanup = async () => {
+    if (!isAdmin) return
+    setCleanupRunning(true)
+    try {
+      const { report } = await apiRunRetentionCleanup()
+      await queryClient.invalidateQueries({
+        queryKey: ['settings', 'retention'],
+      })
+      setRetentionHydrated(false)
+      toast.success(t('settings.cleanupDone'), {
+        description: t('settings.cleanupDoneDesc', {
+          deleted: report.deletedVersions,
+          archived: report.archivedDeprecated,
+        }),
+      })
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t('settings.cleanupFailed'))
+    } finally {
+      setCleanupRunning(false)
+    }
   }
 
   const onAddMember = async () => {
     setAddError(null)
+    const name = newName.trim()
+    const email = newEmail.trim()
+    if (!name || !email || !newMemberPassword) {
+      setAddError(t('settings.memberErrorEmptyFields'))
+      return
+    }
+    if (newMemberPassword !== newMemberPasswordConfirm) {
+      setAddError(t('settings.passwordErrorMismatch'))
+      return
+    }
+    const check = checkPassword(newMemberPassword, {
+      confirm: newMemberPasswordConfirm,
+    })
+    if (!check.ok) {
+      setAddError(t('settings.passwordErrorWeak'))
+      return
+    }
+
     setAdding(true)
-    await new Promise((r) => setTimeout(r, 250))
-    const result = addMember({
-      name: newName,
-      email: newEmail,
-      role: newRole,
-    })
-    setAdding(false)
-    if (!result.ok) {
-      setAddError(memberErrorMessage(result.code))
-      return
-    }
-    toast.success(t('settings.memberAdded'), {
-      description: t('settings.memberAddedDesc', {
-        name: result.member.name,
-        role: roleLabel(result.member.role),
-      }),
-    })
-    setNewName('')
-    setNewEmail('')
-    setNewRole('viewer')
-    setShowAddMember(false)
-  }
-
-  const onChangeRole = (id: string, role: MemberRole, name: string) => {
-    const result = setMemberRole(id, role)
-    if (!result.ok) {
-      toast.error(memberErrorMessage(result.code))
-      return
-    }
-    toast.success(t('settings.roleUpdated'), {
-      description: t('settings.roleUpdatedDesc', {
+    try {
+      const member = await apiCreateUser({
         name,
-        role: roleLabel(role),
-      }),
-    })
+        email,
+        password: newMemberPassword,
+        role: newRole,
+      })
+      await invalidateMembers()
+      toast.success(t('settings.memberAdded'), {
+        description: t('settings.memberAddedDesc', {
+          name: member.name,
+          role: roleLabel(member.role),
+        }),
+      })
+      setNewName('')
+      setNewEmail('')
+      setNewMemberPassword('')
+      setNewMemberPasswordConfirm('')
+      setNewRole('viewer')
+      setShowAddMember(false)
+    } catch (err) {
+      setAddError(memberErrorFromApi(err))
+    } finally {
+      setAdding(false)
+    }
   }
 
-  const onRemoveMember = (id: string, name: string) => {
-    const result = removeMember(id)
-    setRemoveConfirmId(null)
-    if (!result.ok) {
-      toast.error(memberErrorMessage(result.code))
-      return
+  const onChangeRole = async (id: string, role: MemberRole, name: string) => {
+    try {
+      await apiUpdateUser(id, { role })
+      await invalidateMembers()
+      toast.success(t('settings.roleUpdated'), {
+        description: t('settings.roleUpdatedDesc', {
+          name,
+          role: roleLabel(role),
+        }),
+      })
+    } catch (err) {
+      toast.error(memberErrorFromApi(err))
     }
-    toast.success(t('settings.memberRemoved'), {
-      description: name,
-    })
+  }
+
+  const onRemoveMember = async (id: string, name: string) => {
+    setRemoveConfirmId(null)
+    try {
+      await apiDeleteUser(id)
+      await invalidateMembers()
+      toast.success(t('settings.memberRemoved'), {
+        description: name,
+      })
+    } catch (err) {
+      toast.error(memberErrorFromApi(err))
+    }
   }
 
   const onLogout = () => {
@@ -678,312 +767,364 @@ export function SettingsPage() {
                   </ul>
                 </div>
 
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-[0.8125rem] text-muted-foreground">
-                    {t('settings.memberCount', { count: members.length })}
+                {!isAdmin ? (
+                  <p className="rounded-2xl bg-muted/25 px-4 py-6 text-center text-[0.875rem] text-muted-foreground ring-1 ring-border/60">
+                    {t('settings.membersAdminOnly')}
                   </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-0 bg-muted/40 ring-1 ring-border/60"
-                    onClick={() => {
-                      setShowAddMember((v) => !v)
-                      setAddError(null)
-                    }}
-                  >
-                    <Plus className="size-3.5" strokeWidth={1.75} />
-                    {t('settings.addMember')}
-                  </Button>
-                </div>
-
-                {showAddMember ? (
-                  <div
-                    className={cn(
-                      'mb-4 space-y-4 rounded-2xl bg-card/60 p-4',
-                      'ring-1 ring-border/70 dark:bg-card/40',
-                    )}
-                  >
-                    <p className="text-[0.8125rem] font-medium text-foreground">
-                      {t('settings.addMemberTitle')}
-                    </p>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <label className="block space-y-1.5">
-                        <span className="text-[0.75rem] font-medium text-foreground">
-                          {t('settings.fieldName')}
-                        </span>
-                        <Input
-                          value={newName}
-                          onChange={(e) => setNewName(e.target.value)}
-                          placeholder={t('settings.memberNamePlaceholder')}
-                          className="h-10 rounded-lg"
-                          disabled={adding}
-                        />
-                      </label>
-                      <label className="block space-y-1.5">
-                        <span className="text-[0.75rem] font-medium text-foreground">
-                          {t('settings.fieldEmail')}
-                        </span>
-                        <Input
-                          type="email"
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
-                          placeholder={t('settings.memberEmailPlaceholder')}
-                          className="h-10 rounded-lg"
-                          disabled={adding}
-                        />
-                      </label>
-                    </div>
-                    <div className="space-y-1.5">
-                      <span className="text-[0.75rem] font-medium text-foreground">
-                        {t('settings.fieldRole')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {MEMBER_ROLES.map((role) => (
-                          <button
-                            key={role}
-                            type="button"
-                            disabled={adding}
-                            onClick={() => setNewRole(role)}
-                            className={cn(
-                              'rounded-md px-2.5 py-1 text-[0.75rem] font-medium',
-                              'transition-colors duration-[var(--duration-hover)]',
-                              newRole === role
-                                ? 'bg-foreground text-background'
-                                : 'bg-muted/40 text-muted-foreground hover:text-foreground',
-                            )}
-                            aria-pressed={newRole === role}
-                          >
-                            {roleLabel(role)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {addError ? (
-                      <p className="text-[0.8125rem] text-muted-foreground" role="alert">
-                        {addError}
+                ) : (
+                  <>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="text-[0.8125rem] text-muted-foreground">
+                        {t('settings.memberCount', { count: members.length })}
                       </p>
-                    ) : null}
-                    <div className="flex flex-wrap justify-end gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         className="border-0 bg-muted/40 ring-1 ring-border/60"
-                        disabled={adding}
                         onClick={() => {
-                          setShowAddMember(false)
+                          setShowAddMember((v) => !v)
                           setAddError(null)
                         }}
                       >
-                        {t('common.cancel')}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="lg"
-                        disabled={adding}
-                        onClick={() => void onAddMember()}
-                      >
-                        {adding
-                          ? t('settings.addingMember')
-                          : t('settings.confirmAddMember')}
+                        <Plus className="size-3.5" strokeWidth={1.75} />
+                        {t('settings.addMember')}
                       </Button>
                     </div>
-                  </div>
-                ) : null}
 
-                <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl ring-1 ring-border/70">
-                  {members.map((m) => {
-                    const isSelf = user?.email.toLowerCase() === m.email.toLowerCase()
-                    const showReset = isAdmin && !isSelf
-                    return (
-                      <li
-                        key={m.id}
-                        className="flex flex-col gap-3 bg-card/40 px-4 py-3.5 dark:bg-card/25"
+                    {showAddMember ? (
+                      <div
+                        className={cn(
+                          'mb-4 space-y-4 rounded-2xl bg-card/60 p-4',
+                          'ring-1 ring-border/70 dark:bg-card/40',
+                        )}
                       >
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0">
-                            <p className="truncate text-[0.875rem] font-medium text-foreground">
-                              {m.name}
-                              {isSelf ? (
-                                <span className="ml-2 text-[0.75rem] font-normal text-muted-foreground">
-                                  {t('settings.you')}
-                                </span>
-                              ) : null}
-                            </p>
-                            <p className="truncate text-[0.75rem] text-muted-foreground">
-                              {m.email}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <div
-                              className="flex flex-wrap gap-1"
-                              role="group"
-                              aria-label={t('settings.changeRole', {
-                                name: m.name,
-                              })}
-                            >
-                              {MEMBER_ROLES.map((role) => {
-                                const active = m.role === role
-                                return (
-                                  <button
-                                    key={role}
-                                    type="button"
-                                    title={t(`settings.roleDesc.${role}`)}
-                                    onClick={() => {
-                                      if (m.role === role) return
-                                      onChangeRole(m.id, role, m.name)
-                                    }}
-                                    className={cn(
-                                      'rounded-md px-2.5 py-1 text-[0.75rem] font-medium',
-                                      'transition-colors duration-[var(--duration-hover)]',
-                                      active
-                                        ? 'bg-foreground text-background'
-                                        : 'bg-muted/40 text-muted-foreground hover:text-foreground',
-                                    )}
-                                    aria-pressed={active}
-                                  >
-                                    {roleLabel(role)}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                            {showReset ? (
-                              <Button
+                        <p className="text-[0.8125rem] font-medium text-foreground">
+                          {t('settings.addMemberTitle')}
+                        </p>
+                        <p className="text-[0.75rem] text-muted-foreground">
+                          {t('settings.addMemberHint')}
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="block space-y-1.5">
+                            <span className="text-[0.75rem] font-medium text-foreground">
+                              {t('settings.fieldName')}
+                            </span>
+                            <Input
+                              value={newName}
+                              onChange={(e) => setNewName(e.target.value)}
+                              placeholder={t('settings.memberNamePlaceholder')}
+                              className="h-10 rounded-lg"
+                              disabled={adding}
+                            />
+                          </label>
+                          <label className="block space-y-1.5">
+                            <span className="text-[0.75rem] font-medium text-foreground">
+                              {t('settings.fieldEmail')}
+                            </span>
+                            <Input
+                              type="email"
+                              value={newEmail}
+                              onChange={(e) => setNewEmail(e.target.value)}
+                              placeholder={t('settings.memberEmailPlaceholder')}
+                              className="h-10 rounded-lg"
+                              disabled={adding}
+                            />
+                          </label>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <PasswordField
+                            id="new-member-password"
+                            label={t('settings.fieldInitialPassword')}
+                            value={newMemberPassword}
+                            onChange={setNewMemberPassword}
+                            autoComplete="new-password"
+                            disabled={adding}
+                            showStrength
+                            confirm={newMemberPasswordConfirm}
+                          />
+                          <PasswordField
+                            id="new-member-password-confirm"
+                            label={t('settings.fieldInitialPasswordConfirm')}
+                            value={newMemberPasswordConfirm}
+                            onChange={setNewMemberPasswordConfirm}
+                            autoComplete="new-password"
+                            disabled={adding}
+                            matchAgainst={newMemberPassword}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <span className="text-[0.75rem] font-medium text-foreground">
+                            {t('settings.fieldRole')}
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {MEMBER_ROLES.map((role) => (
+                              <button
+                                key={role}
                                 type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 text-muted-foreground hover:text-foreground"
-                                aria-label={t('settings.resetPassword')}
-                                title={t('settings.resetPassword')}
-                                onClick={() => {
-                                  setResetMemberId((id) => (id === m.id ? null : m.id))
-                                  setResetPassword('')
-                                  setResetConfirm('')
-                                  setResetError(null)
-                                }}
+                                disabled={adding}
+                                onClick={() => setNewRole(role)}
+                                className={cn(
+                                  'rounded-md px-2.5 py-1 text-[0.75rem] font-medium',
+                                  'transition-colors duration-[var(--duration-hover)]',
+                                  newRole === role
+                                    ? 'bg-foreground text-background'
+                                    : 'bg-muted/40 text-muted-foreground hover:text-foreground',
+                                )}
+                                aria-pressed={newRole === role}
                               >
-                                <KeyRound className="size-3.5" strokeWidth={1.75} />
-                              </Button>
-                            ) : null}
-                            {removeConfirmId === m.id ? (
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-[0.75rem] text-muted-foreground">
-                                  {t('settings.removeConfirm')}
-                                </span>
-                                {/* Cancel on the right: same side as trash icon — avoids double-click delete */}
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  className="bg-destructive px-2.5 text-[0.75rem] text-white hover:bg-destructive/90"
-                                  onClick={() => onRemoveMember(m.id, m.name)}
-                                >
-                                  {t('settings.confirmRemove')}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-0 bg-muted/40 px-2.5 text-[0.75rem] ring-1 ring-border/60"
-                                  onClick={() => setRemoveConfirmId(null)}
-                                >
-                                  {t('common.cancel')}
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 text-muted-foreground hover:text-destructive"
-                                aria-label={t('settings.removeMember', {
-                                  name: m.name,
-                                })}
-                                onClick={() => setRemoveConfirmId(m.id)}
-                              >
-                                <Trash2 className="size-3.5" strokeWidth={1.75} />
-                              </Button>
-                            )}
+                                {roleLabel(role)}
+                              </button>
+                            ))}
                           </div>
                         </div>
-
-                        {showReset && resetMemberId === m.id ? (
-                          <div
-                            className={cn(
-                              'space-y-3 rounded-xl p-4',
-                              'bg-muted/25 ring-1 ring-border/60',
-                              'dark:bg-muted/15',
-                            )}
+                        {addError ? (
+                          <p
+                            className="text-[0.8125rem] text-muted-foreground"
+                            role="alert"
                           >
-                            <div>
-                              <p className="text-[0.8125rem] font-medium text-foreground">
-                                {t('settings.resetPasswordTitle', {
-                                  name: m.name,
-                                })}
-                              </p>
-                              <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
-                                {t('settings.resetPasswordDesc')}
-                              </p>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <PasswordField
-                                id={`reset-pw-${m.id}`}
-                                label={t('settings.fieldTempPassword')}
-                                value={resetPassword}
-                                onChange={setResetPassword}
-                                autoComplete="new-password"
-                                disabled={resetting}
-                                showStrength
-                                confirm={resetConfirm}
-                              />
-                              <PasswordField
-                                id={`reset-pw-confirm-${m.id}`}
-                                label={t('settings.fieldTempConfirm')}
-                                value={resetConfirm}
-                                onChange={setResetConfirm}
-                                autoComplete="new-password"
-                                disabled={resetting}
-                              />
-                            </div>
-                            {resetError ? (
-                              <p
-                                className="text-[0.8125rem] text-destructive"
-                                role="alert"
-                              >
-                                {resetError}
-                              </p>
-                            ) : null}
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="border-0 bg-muted/40 ring-1 ring-border/60"
-                                disabled={resetting}
-                                onClick={() => {
-                                  setResetMemberId(null)
-                                  setResetError(null)
-                                }}
-                              >
-                                {t('common.cancel')}
-                              </Button>
-                              <Button
-                                type="button"
-                                size="lg"
-                                disabled={resetting || !resetPassword || !resetConfirm}
-                                onClick={() => void onAdminReset(m.name, m.email)}
-                              >
-                                {resetting
-                                  ? t('settings.resettingPassword')
-                                  : t('settings.confirmResetPassword')}
-                              </Button>
-                            </div>
-                          </div>
+                            {addError}
+                          </p>
                         ) : null}
-                      </li>
-                    )
-                  })}
-                </ul>
-                <p className="mt-3 text-[0.75rem] text-muted-foreground">
-                  {t('settings.membersHint')}
-                </p>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="border-0 bg-muted/40 ring-1 ring-border/60"
+                            disabled={adding}
+                            onClick={() => {
+                              setShowAddMember(false)
+                              setAddError(null)
+                            }}
+                          >
+                            {t('common.cancel')}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="lg"
+                            disabled={adding}
+                            onClick={() => void onAddMember()}
+                          >
+                            {adding
+                              ? t('settings.addingMember')
+                              : t('settings.confirmAddMember')}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {membersQuery.isLoading ? (
+                      <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                        <span className="text-[0.8125rem]">{t('common.loading')}</span>
+                      </div>
+                    ) : membersQuery.isError ? (
+                      <p className="py-6 text-center text-[0.875rem] text-muted-foreground">
+                        {t('settings.memberErrorGeneric')}
+                      </p>
+                    ) : (
+                      <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl ring-1 ring-border/70">
+                        {members.map((m) => {
+                          const isSelf =
+                            user?.email.toLowerCase() === m.email.toLowerCase()
+                          const showReset = !isSelf
+                          return (
+                            <li
+                              key={m.id}
+                              className="flex flex-col gap-3 bg-card/40 px-4 py-3.5 dark:bg-card/25"
+                            >
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
+                                  <p className="truncate text-[0.875rem] font-medium text-foreground">
+                                    {m.name}
+                                    {isSelf ? (
+                                      <span className="ml-2 text-[0.75rem] font-normal text-muted-foreground">
+                                        {t('settings.you')}
+                                      </span>
+                                    ) : null}
+                                  </p>
+                                  <p className="truncate text-[0.75rem] text-muted-foreground">
+                                    {m.email}
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <div
+                                    className="flex flex-wrap gap-1"
+                                    role="group"
+                                    aria-label={t('settings.changeRole', {
+                                      name: m.name,
+                                    })}
+                                  >
+                                    {MEMBER_ROLES.map((role) => {
+                                      const active = m.role === role
+                                      return (
+                                        <button
+                                          key={role}
+                                          type="button"
+                                          title={t(`settings.roleDesc.${role}`)}
+                                          onClick={() => {
+                                            if (m.role === role) return
+                                            void onChangeRole(m.id, role, m.name)
+                                          }}
+                                          className={cn(
+                                            'rounded-md px-2.5 py-1 text-[0.75rem] font-medium',
+                                            'transition-colors duration-[var(--duration-hover)]',
+                                            active
+                                              ? 'bg-foreground text-background'
+                                              : 'bg-muted/40 text-muted-foreground hover:text-foreground',
+                                          )}
+                                          aria-pressed={active}
+                                        >
+                                          {roleLabel(role)}
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                  {showReset ? (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-8 text-muted-foreground hover:text-foreground"
+                                      aria-label={t('settings.resetPassword')}
+                                      title={t('settings.resetPassword')}
+                                      onClick={() => {
+                                        setResetMemberId((id) =>
+                                          id === m.id ? null : m.id,
+                                        )
+                                        setResetPassword('')
+                                        setResetConfirm('')
+                                        setResetError(null)
+                                      }}
+                                    >
+                                      <KeyRound className="size-3.5" strokeWidth={1.75} />
+                                    </Button>
+                                  ) : null}
+                                  {removeConfirmId === m.id ? (
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="text-[0.75rem] text-muted-foreground">
+                                        {t('settings.removeConfirm')}
+                                      </span>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        className="bg-destructive px-2.5 text-[0.75rem] text-white hover:bg-destructive/90"
+                                        onClick={() => void onRemoveMember(m.id, m.name)}
+                                      >
+                                        {t('settings.confirmRemove')}
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-0 bg-muted/40 px-2.5 text-[0.75rem] ring-1 ring-border/60"
+                                        onClick={() => setRemoveConfirmId(null)}
+                                      >
+                                        {t('common.cancel')}
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-8 text-muted-foreground hover:text-destructive"
+                                      disabled={isSelf}
+                                      aria-label={t('settings.removeMember', {
+                                        name: m.name,
+                                      })}
+                                      onClick={() => setRemoveConfirmId(m.id)}
+                                    >
+                                      <Trash2 className="size-3.5" strokeWidth={1.75} />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {showReset && resetMemberId === m.id ? (
+                                <div
+                                  className={cn(
+                                    'space-y-3 rounded-xl p-4',
+                                    'bg-muted/25 ring-1 ring-border/60',
+                                    'dark:bg-muted/15',
+                                  )}
+                                >
+                                  <div>
+                                    <p className="text-[0.8125rem] font-medium text-foreground">
+                                      {t('settings.resetPasswordTitle', {
+                                        name: m.name,
+                                      })}
+                                    </p>
+                                    <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
+                                      {t('settings.resetPasswordDesc')}
+                                    </p>
+                                  </div>
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <PasswordField
+                                      id={`reset-pw-${m.id}`}
+                                      label={t('settings.fieldTempPassword')}
+                                      value={resetPassword}
+                                      onChange={setResetPassword}
+                                      autoComplete="new-password"
+                                      disabled={resetting}
+                                      showStrength
+                                      confirm={resetConfirm}
+                                    />
+                                    <PasswordField
+                                      id={`reset-pw-confirm-${m.id}`}
+                                      label={t('settings.fieldTempConfirm')}
+                                      value={resetConfirm}
+                                      onChange={setResetConfirm}
+                                      autoComplete="new-password"
+                                      disabled={resetting}
+                                      matchAgainst={resetPassword}
+                                    />
+                                  </div>
+                                  {resetError ? (
+                                    <p
+                                      className="text-[0.8125rem] text-destructive"
+                                      role="alert"
+                                    >
+                                      {resetError}
+                                    </p>
+                                  ) : null}
+                                  <div className="flex flex-wrap justify-end gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className="border-0 bg-muted/40 ring-1 ring-border/60"
+                                      disabled={resetting}
+                                      onClick={() => {
+                                        setResetMemberId(null)
+                                        setResetError(null)
+                                      }}
+                                    >
+                                      {t('common.cancel')}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="lg"
+                                      disabled={
+                                        resetting || !resetPassword || !resetConfirm
+                                      }
+                                      onClick={() => void onAdminReset(m.id, m.name)}
+                                    >
+                                      {resetting
+                                        ? t('settings.resettingPassword')
+                                        : t('settings.confirmResetPassword')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                    <p className="mt-3 text-[0.75rem] text-muted-foreground">
+                      {t('settings.membersHint')}
+                    </p>
+                  </>
+                )}
               </Panel>
             ) : null}
 
@@ -992,91 +1133,118 @@ export function SettingsPage() {
                 title={t('settings.retentionTitle')}
                 description={t('settings.retentionDesc')}
               >
-                <div className="space-y-6">
-                  <div
-                    className={cn(
-                      'space-y-3 rounded-2xl bg-card/60 p-5 ring-1 ring-border/70',
-                      'dark:bg-card/40',
-                    )}
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-[0.8125rem] font-medium text-foreground">
-                        {t('settings.storageUsage')}
-                      </span>
-                      <span className="text-[0.75rem] tabular-nums text-muted-foreground">
-                        {formatFileSize(retention.storageUsedBytes)}
-                        {' / '}
-                        {formatFileSize(retention.storageQuotaBytes)}
-                        {` (${storagePct}%)`}
-                      </span>
-                    </div>
+                {retentionQuery.isLoading ? (
+                  <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                    <span className="text-[0.8125rem]">{t('common.loading')}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
                     <div
-                      className="h-2 overflow-hidden rounded-full bg-muted/60"
-                      role="progressbar"
-                      aria-valuenow={storagePct}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label={t('settings.storageUsage')}
+                      className={cn(
+                        'space-y-3 rounded-2xl bg-card/60 p-5 ring-1 ring-border/70',
+                        'dark:bg-card/40',
+                      )}
                     >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-[0.8125rem] font-medium text-foreground">
+                          {t('settings.storageUsage')}
+                        </span>
+                        <span className="text-[0.75rem] tabular-nums text-muted-foreground">
+                          {formatFileSize(retention?.storageUsedBytes ?? 0)}
+                          {' / '}
+                          {formatFileSize(retention?.storageQuotaBytes ?? 0)}
+                          {` (${storagePct}%)`}
+                        </span>
+                      </div>
                       <div
-                        className="h-full rounded-full bg-foreground/80 transition-[width] duration-300"
-                        style={{ width: `${storagePct}%` }}
-                      />
+                        className="h-2 overflow-hidden rounded-full bg-muted/60"
+                        role="progressbar"
+                        aria-valuenow={storagePct}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={t('settings.storageUsage')}
+                      >
+                        <div
+                          className="h-full rounded-full bg-foreground/80 transition-[width] duration-300"
+                          style={{ width: `${storagePct}%` }}
+                        />
+                      </div>
+                      <p className="text-[0.75rem] text-muted-foreground">
+                        {t('settings.storageHint')}
+                      </p>
                     </div>
-                    <p className="text-[0.75rem] text-muted-foreground">
-                      {t('settings.storageHint')}
-                    </p>
-                  </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="block space-y-1.5">
-                      <span className="text-[0.8125rem] font-medium text-foreground">
-                        {t('settings.maxVersions')}
-                      </span>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={999}
-                        value={maxVersions}
-                        onChange={(e) => setMaxVersions(e.target.value)}
-                        className={cn(fieldClass, 'h-10')}
-                      />
-                      <span className="block text-[0.75rem] text-muted-foreground">
-                        {t('settings.maxVersionsHint')}
-                      </span>
-                    </label>
-                    <label className="block space-y-1.5">
-                      <span className="text-[0.8125rem] font-medium text-foreground">
-                        {t('settings.archiveDays')}
-                      </span>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={3650}
-                        value={archiveDays}
-                        onChange={(e) => setArchiveDays(e.target.value)}
-                        className={cn(fieldClass, 'h-10')}
-                      />
-                      <span className="block text-[0.75rem] text-muted-foreground">
-                        {t('settings.archiveDaysHint')}
-                      </span>
-                    </label>
-                  </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block space-y-1.5">
+                        <span className="text-[0.8125rem] font-medium text-foreground">
+                          {t('settings.maxVersions')}
+                        </span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={999}
+                          value={maxVersions}
+                          onChange={(e) => setMaxVersions(e.target.value)}
+                          disabled={!isAdmin || retentionSaving}
+                          className={cn(fieldClass, 'h-10')}
+                        />
+                        <span className="block text-[0.75rem] text-muted-foreground">
+                          {t('settings.maxVersionsHint')}
+                        </span>
+                      </label>
+                      <label className="block space-y-1.5">
+                        <span className="text-[0.8125rem] font-medium text-foreground">
+                          {t('settings.archiveDays')}
+                        </span>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={3650}
+                          value={archiveDays}
+                          onChange={(e) => setArchiveDays(e.target.value)}
+                          disabled={!isAdmin || retentionSaving}
+                          className={cn(fieldClass, 'h-10')}
+                        />
+                        <span className="block text-[0.75rem] text-muted-foreground">
+                          {t('settings.archiveDaysHint')}
+                        </span>
+                      </label>
+                    </div>
 
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="min-w-[6.5rem]"
-                      disabled={retentionSaving}
-                      onClick={() => void saveRetention()}
-                    >
-                      {retentionSaving
-                        ? t('settings.saving')
-                        : t('settings.saveRetention')}
-                    </Button>
+                    {!isAdmin ? (
+                      <p className="text-[0.8125rem] text-muted-foreground">
+                        {t('settings.retentionAdminOnly')}
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <Button
+                          type="button"
+                          size="lg"
+                          variant="outline"
+                          className="border-0 bg-muted/40 ring-1 ring-border/60"
+                          disabled={cleanupRunning || retentionSaving}
+                          onClick={() => void runCleanup()}
+                        >
+                          {cleanupRunning
+                            ? t('settings.cleanupRunning')
+                            : t('settings.runCleanup')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="lg"
+                          className="min-w-[6.5rem]"
+                          disabled={retentionSaving || cleanupRunning}
+                          onClick={() => void saveRetention()}
+                        >
+                          {retentionSaving
+                            ? t('settings.saving')
+                            : t('settings.saveRetention')}
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </Panel>
             ) : null}
 

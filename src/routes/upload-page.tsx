@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 
 import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,9 @@ import { StepReview } from '@/features/upload/step-review'
 import { StepSuccess } from '@/features/upload/step-success'
 import { StepVersion } from '@/features/upload/step-version'
 import { useUploadFlow } from '@/features/upload/use-upload-flow'
+import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth-store'
 import type { UploadStep } from '@/types/upload'
 
 const STEP_LABEL_KEYS: Record<UploadStep, string> = {
@@ -23,7 +25,12 @@ const STEP_LABEL_KEYS: Record<UploadStep, string> = {
 
 export function UploadPage() {
   const { t } = useTranslation()
+  const role = useAuthStore((s) => s.user?.role)
   const flow = useUploadFlow()
+
+  if (!canWriteContent(role)) {
+    return <Navigate to="/" replace />
+  }
 
   if (flow.done && flow.application) {
     return (
@@ -207,7 +214,7 @@ export function UploadPage() {
                     size="lg"
                     className="min-w-[6.5rem]"
                     disabled={!flow.canNext}
-                    onClick={flow.goNext}
+                    onClick={() => void flow.goNext()}
                   >
                     {t('upload.next')}
                     <ArrowRight className="size-3.5" />

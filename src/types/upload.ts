@@ -9,7 +9,7 @@ export type UploadPhase =
 
 export type UploadFileError = 'too_large' | 'wrong_platform' | 'unsupported' | 'empty'
 
-export type PublishError = 'duplicate_version' | null
+export type PublishError = 'duplicate_version' | 'upload_failed' | null
 
 export type FileKind =
   'apk' | 'aab' | 'exe' | 'zip' | 'ipa' | 'firmware' | 'docker' | 'unknown'
@@ -35,7 +35,8 @@ export interface VersionDraft {
   markLatest: boolean
 }
 
-export const UPLOAD_MAX_BYTES = 200 * 1024 * 1024 // 200 MB mock limit
+/** Max artifact size (frontend gate; keep in sync with API MAX_UPLOAD_BYTES) */
+export const UPLOAD_MAX_BYTES = 512 * 1024 * 1024 // 512 MB
 
 export const CHANNEL_LABEL: Record<UploadChannel, string> = {
   stable: 'Stable',

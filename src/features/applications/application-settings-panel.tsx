@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -8,8 +9,12 @@ import { StatusBadge } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { APPLICATION_STATUS_CHIP } from '@/features/applications/application-status-meta'
+import { queryKeys } from '@/lib/query-keys'
+import { canDeleteApplication } from '@/lib/roles'
 import { cn } from '@/lib/utils'
-import { useApplicationsStore } from '@/store/applications-store'
+import { ApiError } from '@/services/http'
+import { apiDeleteApplication, apiUpdateApplication } from '@/services/api'
+import { useAuthStore } from '@/store/auth-store'
 import type {
   Application,
   ApplicationPlatform,
@@ -37,8 +42,9 @@ interface ApplicationSettingsPanelProps {
 export function ApplicationSettingsPanel({ application }: ApplicationSettingsPanelProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const updateApplication = useApplicationsStore((s) => s.updateApplication)
-  const deleteApplication = useApplicationsStore((s) => s.deleteApplication)
+  const queryClient = useQueryClient()
+  const role = useAuthStore((s) => s.user?.role)
+  const canDelete = canDeleteApplication(role)
 
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(application.name)
@@ -134,26 +140,42 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
       return
     }
     setSaving(true)
-    await new Promise((r) => setTimeout(r, 320))
-    const result = updateApplication(application.id, {
-      name,
-      description,
-      packageName,
-      platform,
-      repository,
-      owner,
-      status,
-    })
-    setSaving(false)
-    if (!result.ok) {
-      setError(t('appSettings.errorRequired'))
-      return
+    try {
+      const updated = await apiUpdateApplication(application.id, {
+        name: name.trim(),
+        description: description.trim(),
+        packageName: packageName.trim(),
+        platform,
+        repository: repository.trim(),
+        ownerName: owner.trim(),
+        status,
+      })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.applications.all }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.applications.detail(application.id),
+        }),
+      ])
+      setEditing(false)
+      setStatus(updated.status)
+      setName(updated.name)
+      setDescription(updated.description)
+      setPackageName(updated.packageName)
+      setPlatform(updated.platform)
+      setRepository(updated.repository)
+      setOwner(updated.owner)
+      toast.success(t('appSettings.saved'), {
+        description: updated.name,
+      })
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'package_taken') {
+        setError(t('appSettings.errorRequired'))
+      } else {
+        setError(t('appSettings.errorRequired'))
+      }
+    } finally {
+      setSaving(false)
     }
-    setEditing(false)
-    setStatus(result.application.status)
-    toast.success(t('appSettings.saved'), {
-      description: result.application.name,
-    })
   }
 
   const onDelete = async () => {
@@ -162,19 +184,20 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
       return
     }
     setDeleting(true)
-    await new Promise((r) => setTimeout(r, 350))
-    const result = deleteApplication(application.id)
-    setDeleting(false)
-    if (!result.ok) {
+    try {
+      await apiDeleteApplication(application.id)
+      await queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
+      toast.success(t('appSettings.deleted'), {
+        description: application.name,
+      })
+      navigate('/', { replace: true })
+    } catch {
       toast.error(t('appSettings.errorGeneric'))
       setConfirmDelete(false)
       setDeleteConfirmName('')
-      return
+    } finally {
+      setDeleting(false)
     }
-    toast.success(t('appSettings.deleted'), {
-      description: application.name,
-    })
-    navigate('/', { replace: true })
   }
 
   const cancelDeleteConfirm = () => {
@@ -412,73 +435,40 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
       ) : null}
 
       {/*
-        ── 3. 危险操作 ──
-        Outer card carries all danger chrome. Confirm expands in-place
-        with flat layout only — no nested red panel.
+        ── 3. 危险操作（仅管理员可删除应用）──
       */}
-      <section
-        className={cn(
-          'overflow-hidden rounded-2xl',
-          'border border-destructive/40 bg-destructive/[0.02]',
-          'dark:border-destructive/45 dark:bg-destructive/[0.03]',
-        )}
-      >
-        <header className="flex items-start gap-3 border-b border-destructive/25 px-5 py-4 sm:px-6 dark:border-destructive/30">
-          <span
-            className={cn(
-              'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
-              'bg-destructive/10 text-destructive',
-              'dark:bg-destructive/15',
-            )}
-            aria-hidden
-          >
-            <AlertTriangle className="size-4" strokeWidth={1.75} />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
-              {t('appSettings.dangerTitle')}
-            </h2>
-            <p className="mt-0.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              {t('appSettings.dangerDesc')}
-            </p>
-          </div>
-        </header>
-
-        <div className="px-5 py-5 sm:px-6">
-          {!confirmDelete ? (
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
-              <div className="min-w-0 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-[0.875rem] font-medium text-foreground">
-                    {t('appSettings.deleteTitle')}
-                  </p>
-                  <span className="text-[0.6875rem] text-muted-foreground">
-                    · {t('appSettings.severityIrreversible')}
-                  </span>
-                </div>
-                <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-                  {t('appSettings.deleteDesc')}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-full shrink-0 sm:w-auto"
-                disabled={deleting}
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 className="size-3.5" strokeWidth={1.75} />
-                {t('appSettings.deleteAction')}
-              </Button>
-            </div>
-          ) : (
-            <div
-              ref={deleteConfirmRef}
-              className="space-y-4"
-              role="region"
-              aria-label={t('appSettings.deleteConfirmRegion')}
+      {canDelete ? (
+        <section
+          className={cn(
+            'overflow-hidden rounded-2xl',
+            'border border-destructive/40 bg-destructive/[0.02]',
+            'dark:border-destructive/45 dark:bg-destructive/[0.03]',
+          )}
+        >
+          <header className="flex items-start gap-3 border-b border-destructive/25 px-5 py-4 sm:px-6 dark:border-destructive/30">
+            <span
+              className={cn(
+                'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
+                'bg-destructive/10 text-destructive',
+                'dark:bg-destructive/15',
+              )}
+              aria-hidden
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <AlertTriangle className="size-4" strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
+                {t('appSettings.dangerTitle')}
+              </h2>
+              <p className="mt-0.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
+                {t('appSettings.dangerDesc')}
+              </p>
+            </div>
+          </header>
+
+          <div className="px-5 py-5 sm:px-6">
+            {!confirmDelete ? (
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-[0.875rem] font-medium text-foreground">
@@ -489,82 +479,115 @@ export function ApplicationSettingsPanel({ application }: ApplicationSettingsPan
                     </span>
                   </div>
                   <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-                    {t('appSettings.deleteConfirmLead', {
-                      name: application.name,
-                    })}
+                    {t('appSettings.deleteDesc')}
                   </p>
                 </div>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                  variant="destructive"
+                  className="w-full shrink-0 sm:w-auto"
                   disabled={deleting}
-                  onClick={cancelDeleteConfirm}
+                  onClick={() => setConfirmDelete(true)}
                 >
-                  {t('common.cancel')}
+                  <Trash2 className="size-3.5" strokeWidth={1.75} />
+                  {t('appSettings.deleteAction')}
                 </Button>
               </div>
-
-              <div className="border-t border-border/50 pt-4">
-                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
-                  <label className="min-w-0 flex-1 space-y-1.5">
-                    <span className="text-[0.75rem] font-medium text-foreground">
-                      {t('appSettings.deleteConfirmLabel')}
-                      <span className="ml-1.5 font-normal text-muted-foreground">
-                        ({application.name})
+            ) : (
+              <div
+                ref={deleteConfirmRef}
+                className="space-y-4"
+                role="region"
+                aria-label={t('appSettings.deleteConfirmRegion')}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[0.875rem] font-medium text-foreground">
+                        {t('appSettings.deleteTitle')}
+                      </p>
+                      <span className="text-[0.6875rem] text-muted-foreground">
+                        · {t('appSettings.severityIrreversible')}
                       </span>
-                    </span>
-                    <Input
-                      ref={deleteInputRef}
-                      value={deleteConfirmName}
-                      onChange={(e) => setDeleteConfirmName(e.target.value)}
-                      placeholder={t('appSettings.deleteConfirmPlaceholder')}
-                      disabled={deleting}
-                      autoComplete="off"
-                      className={cn(
-                        'h-10 rounded-lg',
-                        /* Calm focus: thin ring instead of default ring-3 */
-                        'focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/35',
-                      )}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          e.preventDefault()
-                          cancelDeleteConfirm()
-                        }
-                        if (e.key === 'Enter' && deleteNameMatches && !deleting) {
-                          e.preventDefault()
-                          void onDelete()
-                        }
-                      }}
-                    />
-                  </label>
+                    </div>
+                    <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted-foreground">
+                      {t('appSettings.deleteConfirmLead', {
+                        name: application.name,
+                      })}
+                    </p>
+                  </div>
                   <Button
                     type="button"
-                    size="lg"
-                    variant="destructive"
-                    className={cn(
-                      'w-full shrink-0 sm:w-auto sm:min-w-[7.5rem]',
-                      'disabled:opacity-40',
-                    )}
-                    disabled={deleting || !deleteNameMatches}
-                    onClick={() => void onDelete()}
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                    disabled={deleting}
+                    onClick={cancelDeleteConfirm}
                   >
-                    {deleting ? (
-                      <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
-                    ) : (
-                      <Trash2 className="size-3.5" strokeWidth={1.75} />
-                    )}
-                    {deleting
-                      ? t('appSettings.deleting')
-                      : t('appSettings.confirmDelete')}
+                    {t('common.cancel')}
                   </Button>
                 </div>
+
+                <div className="border-t border-border/50 pt-4">
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
+                    <label className="min-w-0 flex-1 space-y-1.5">
+                      <span className="text-[0.75rem] font-medium text-foreground">
+                        {t('appSettings.deleteConfirmLabel')}
+                        <span className="ml-1.5 font-normal text-muted-foreground">
+                          ({application.name})
+                        </span>
+                      </span>
+                      <Input
+                        ref={deleteInputRef}
+                        value={deleteConfirmName}
+                        onChange={(e) => setDeleteConfirmName(e.target.value)}
+                        placeholder={t('appSettings.deleteConfirmPlaceholder')}
+                        disabled={deleting}
+                        autoComplete="off"
+                        className={cn(
+                          'h-10 rounded-lg',
+                          /* Calm focus: thin ring instead of default ring-3 */
+                          'focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/35',
+                        )}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            e.preventDefault()
+                            cancelDeleteConfirm()
+                          }
+                          if (e.key === 'Enter' && deleteNameMatches && !deleting) {
+                            e.preventDefault()
+                            void onDelete()
+                          }
+                        }}
+                      />
+                    </label>
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="destructive"
+                      className={cn(
+                        'w-full shrink-0 sm:w-auto sm:min-w-[7.5rem]',
+                        'disabled:opacity-40',
+                      )}
+                      disabled={deleting || !deleteNameMatches}
+                      onClick={() => void onDelete()}
+                    >
+                      {deleting ? (
+                        <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
+                      ) : (
+                        <Trash2 className="size-3.5" strokeWidth={1.75} />
+                      )}
+                      {deleting
+                        ? t('appSettings.deleting')
+                        : t('appSettings.confirmDelete')}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </section>
+            )}
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }

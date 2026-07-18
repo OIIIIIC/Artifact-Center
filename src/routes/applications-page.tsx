@@ -10,10 +10,14 @@ import { ApplicationGrid } from '@/features/applications/application-grid'
 import { ApplicationGridSkeleton } from '@/features/applications/application-grid-skeleton'
 import { ApplicationSearch } from '@/features/applications/application-search'
 import { useApplications } from '@/features/applications/use-applications'
+import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth-store'
 
 export function ApplicationsPage() {
   const { t } = useTranslation()
+  const role = useAuthStore((s) => s.user?.role)
+  const canWrite = canWriteContent(role)
   const { loading, filtered, filters, setFilters, isEmptyCatalog, isSearchEmpty } =
     useApplications()
 
@@ -25,31 +29,32 @@ export function ApplicationsPage() {
             title={t('applications.title')}
             description={t('applications.description')}
             action={
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Page actions — size lg (h-10). Primary = new app. */}
-                <Button asChild size="lg">
-                  <Link to="/applications/new">
-                    <Plus className="size-3.5" strokeWidth={1.75} />
-                    {t('applications.newApplication')}
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className={cn(
-                    'border-0 bg-muted/40 font-medium text-muted-foreground',
-                    'ring-1 ring-border/60',
-                    'hover:bg-muted/55 hover:text-foreground hover:ring-border',
-                    'dark:bg-muted/25 dark:hover:bg-muted/35',
-                  )}
-                >
-                  <Link to="/upload">
-                    <Upload className="size-3.5" strokeWidth={1.75} />
-                    {t('applications.uploadArtifact')}
-                  </Link>
-                </Button>
-              </div>
+              canWrite ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button asChild size="lg">
+                    <Link to="/applications/new">
+                      <Plus className="size-3.5" strokeWidth={1.75} />
+                      {t('applications.newApplication')}
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className={cn(
+                      'border-0 bg-muted/40 font-medium text-muted-foreground',
+                      'ring-1 ring-border/60',
+                      'hover:bg-muted/55 hover:text-foreground hover:ring-border',
+                      'dark:bg-muted/25 dark:hover:bg-muted/35',
+                    )}
+                  >
+                    <Link to="/upload">
+                      <Upload className="size-3.5" strokeWidth={1.75} />
+                      {t('applications.uploadArtifact')}
+                    </Link>
+                  </Button>
+                </div>
+              ) : undefined
             }
           />
 
@@ -86,12 +91,14 @@ export function ApplicationsPage() {
               title={t('applications.emptyTitle')}
               description={t('applications.emptyDescription')}
               action={
-                <Button asChild size="lg">
-                  <Link to="/applications/new">
-                    <Plus className="size-3.5" strokeWidth={1.75} />
-                    {t('applications.newApplication')}
-                  </Link>
-                </Button>
+                canWrite ? (
+                  <Button asChild size="lg">
+                    <Link to="/applications/new">
+                      <Plus className="size-3.5" strokeWidth={1.75} />
+                      {t('applications.newApplication')}
+                    </Link>
+                  </Button>
+                ) : undefined
               }
             />
           ) : null}

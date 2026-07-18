@@ -12,13 +12,13 @@ const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif'
 interface AvatarUploadProps {
   name: string
   avatarUrl?: string | null
-  onChange: (dataUrl: string | null) => void
+  onChange: (dataUrl: string | null) => void | Promise<void>
   disabled?: boolean
   className?: string
 }
 
 /**
- * Local avatar picker — stores as data URL (mock / offline-friendly).
+ * Avatar picker — uploads as data URL via profile API.
  */
 export function AvatarUpload({
   name,

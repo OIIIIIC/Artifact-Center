@@ -12,7 +12,9 @@ import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { ShareDialog } from '@/features/share/share-dialog'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
+import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth-store'
 import type { Application } from '@/types/application'
 import { getArtifactChannel, type Artifact } from '@/types/artifact'
 
@@ -43,6 +45,8 @@ export function ApplicationDetailHeader({
 }: ApplicationDetailHeaderProps) {
   const { t, i18n } = useTranslation()
   void i18n.language
+  const role = useAuthStore((s) => s.user?.role)
+  const canWrite = canWriteContent(role)
   const { download, isBusy } = useDownloadArtifact()
   const [shareOpen, setShareOpen] = useState(false)
   const latestKey = `latest:${application.id}`
@@ -219,6 +223,7 @@ export function ApplicationDetailHeader({
                       `${application.packageName.split('.').pop() ?? 'app'}-${latestVersion}.${extFor(application.platform)}`
                     void download({
                       id: latestKey,
+                      artifactId: latest?.id,
                       filename,
                       version: latestVersion,
                       sizeBytes: latest?.sizeBytes,
@@ -250,12 +255,14 @@ export function ApplicationDetailHeader({
               {t('share.action')}
             </Button>
           ) : null}
-          <Button asChild size="lg">
-            <Link to={`/upload?app=${application.id}`}>
-              <Upload className="size-3.5" strokeWidth={1.75} />
-              {t('detail.uploadArtifact')}
-            </Link>
-          </Button>
+          {canWrite ? (
+            <Button asChild size="lg">
+              <Link to={`/upload?app=${application.id}`}>
+                <Upload className="size-3.5" strokeWidth={1.75} />
+                {t('detail.uploadArtifact')}
+              </Link>
+            </Button>
+          ) : null}
           <Button
             asChild
             size="lg"

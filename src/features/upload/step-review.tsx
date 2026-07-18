@@ -53,6 +53,13 @@ export function StepReview({
 
   return (
     <div className="w-full space-y-4">
+      {publishError === 'upload_failed' ? (
+        <p className="text-[0.8125rem] text-muted-foreground" role="alert">
+          {t('upload.publishFailed', {
+            defaultValue: 'Upload failed. Please try again.',
+          })}
+        </p>
+      ) : null}
       {publishError === 'duplicate_version' ? (
         <div
           className={cn(

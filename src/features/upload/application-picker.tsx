@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
+import { useApplicationCatalog } from '@/features/applications/use-applications'
 import { PINNED_APP_IDS, RECENT_APP_IDS } from '@/features/upload/upload-meta'
 import { cn } from '@/lib/utils'
-import { useApplicationsStore } from '@/store/applications-store'
 import type { Application } from '@/types/application'
 
 interface ApplicationPickerProps {
@@ -156,14 +156,7 @@ export function ApplicationPicker({
   const shellRef = useRef<HTMLDivElement>(null)
   const shellHeight = usePickerShellHeight(shellRef)
   const [query, setQuery] = useState('')
-  const created = useApplicationsStore((s) => s.created)
-  const overrides = useApplicationsStore((s) => s.overrides)
-  const deletedIds = useApplicationsStore((s) => s.deletedIds)
-  const getCatalog = useApplicationsStore((s) => s.getCatalog)
-  void created
-  void overrides
-  void deletedIds
-  const catalog = getCatalog()
+  const { catalog } = useApplicationCatalog()
 
   const filtered = (() => {
     const q = query.trim().toLowerCase()

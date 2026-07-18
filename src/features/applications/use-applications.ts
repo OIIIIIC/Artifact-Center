@@ -1,34 +1,29 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 
 import { filterApplications } from '@/features/applications/filter-applications'
-import { useApplicationsStore } from '@/store/applications-store'
+import { queryKeys } from '@/lib/query-keys'
+import { apiListApplications } from '@/services/api'
 import type { ApplicationFilters } from '@/types/application'
 
-const LOAD_MS = 350
-
 export function useApplications() {
-  const created = useApplicationsStore((s) => s.created)
-  const overrides = useApplicationsStore((s) => s.overrides)
-  const deletedIds = useApplicationsStore((s) => s.deletedIds)
-  const getCatalog = useApplicationsStore((s) => s.getCatalog)
-  const [loaded, setLoaded] = useState(false)
   const [filters, setFilters] = useState<ApplicationFilters>({
     query: '',
     platform: 'all',
     sort: 'updated',
   })
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setLoaded(true), LOAD_MS)
-    return () => window.clearTimeout(timer)
-  }, [])
+  const query = useQuery({
+    queryKey: queryKeys.applications.list({
+      // Server supports q/platform/sort; we still filter client-side for snappy UX
+      // when typing, but fetch full catalog once.
+      sort: 'updated',
+    }),
+    queryFn: () => apiListApplications({ sort: 'updated' }),
+  })
 
-  // Recompute when catalog mutations change
-  const applications = useMemo(
-    () => (loaded ? getCatalog() : []),
-    [loaded, created, overrides, deletedIds, getCatalog],
-  )
-  const loading = !loaded
+  const applications = useMemo(() => query.data ?? [], [query.data])
+  const loading = query.isLoading
 
   const filtered = useMemo(
     () => filterApplications(applications, filters),
@@ -43,5 +38,22 @@ export function useApplications() {
     setFilters,
     isEmptyCatalog: !loading && applications.length === 0,
     isSearchEmpty: !loading && applications.length > 0 && filtered.length === 0,
+    error: query.error,
+    refetch: query.refetch,
+  }
+}
+
+/** Catalog for pickers / create / search — full application list. */
+export function useApplicationCatalog() {
+  const query = useQuery({
+    queryKey: queryKeys.applications.list({ sort: 'updated' }),
+    queryFn: () => apiListApplications({ sort: 'updated' }),
+  })
+
+  return {
+    catalog: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
   }
 }

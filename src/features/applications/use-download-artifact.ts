@@ -2,21 +2,26 @@ import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { formatFileSize } from '@/lib/format'
+import { apiDownloadArtifact, apiDownloadShare } from '@/services/api'
 
 export type DownloadTarget = {
   /** Unique key for loading state (artifact id or "latest:appId") */
   id: string
+  /** Real artifact id for API (required when not using shareToken) */
+  artifactId?: string
   filename: string
   version?: string
   sizeBytes?: number
-  /** Mock: force failure for demo */
+  /** Use public download route by artifact id (legacy) */
+  public?: boolean
+  /** Server share token — preferred for /d/:token landing */
+  shareToken?: string
+  /** Force failure for demo */
   forceError?: boolean
 }
 
 /**
- * Mock download with calm feedback:
- * button loading → toast success / error.
+ * Download artifact via API: button loading → toast success / error.
  * No dedicated download page.
  */
 export function useDownloadArtifact() {
@@ -27,6 +32,14 @@ export function useDownloadArtifact() {
     async (target: DownloadTarget) => {
       if (busyId) return
 
+      const artifactId = target.artifactId ?? target.id
+      if (!target.shareToken && (!artifactId || artifactId.startsWith('latest:'))) {
+        toast.error(t('download.failed'), {
+          description: t('download.failedHint'),
+        })
+        return
+      }
+
       setBusyId(target.id)
       const toastId = toast.loading(t('download.starting'), {
         description: [target.version ? `v${target.version}` : null, target.filename]
@@ -35,29 +48,18 @@ export function useDownloadArtifact() {
       })
 
       try {
-        // Mock network + file prepare
-        await new Promise((r) => setTimeout(r, 900 + Math.random() * 500))
-
         if (target.forceError) {
-          throw new Error('mock-fail')
+          throw new Error('force-fail')
         }
 
-        // Mock file blob download (tiny placeholder content)
-        const body = [
-          'Artifact Center — mock download',
-          `file: ${target.filename}`,
-          target.version ? `version: ${target.version}` : '',
-          target.sizeBytes != null ? `size: ${formatFileSize(target.sizeBytes)}` : '',
-          `at: ${new Date().toISOString()}`,
-        ]
-          .filter(Boolean)
-          .join('\n')
+        const { blob, filename: serverName } = target.shareToken
+          ? await apiDownloadShare(target.shareToken)
+          : await apiDownloadArtifact(artifactId, { public: target.public })
 
-        const blob = new Blob([body], { type: 'application/octet-stream' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = target.filename
+        a.download = serverName || target.filename
         document.body.appendChild(a)
         a.click()
         a.remove()
@@ -69,7 +71,8 @@ export function useDownloadArtifact() {
             .filter(Boolean)
             .join(' · '),
         })
-      } catch {
+      } catch (err) {
+        void err
         toast.error(t('download.failed'), {
           id: toastId,
           description: t('download.failedHint'),

@@ -1,6 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
@@ -11,9 +12,13 @@ import {
   findSimilarByName,
 } from '@/features/applications/create-app-matches'
 import { CreateAppReferenceRail } from '@/features/applications/create-app-reference-rail'
+import { useApplicationCatalog } from '@/features/applications/use-applications'
+import { queryKeys } from '@/lib/query-keys'
+import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { ApiError } from '@/services/http'
+import { apiCreateApplication } from '@/services/api'
 import { useAuthStore } from '@/store/auth-store'
-import { useApplicationsStore } from '@/store/applications-store'
 import type { Application, ApplicationPlatform } from '@/types/application'
 
 const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
@@ -49,16 +54,9 @@ function buildReferenceApps(
 export function CreateApplicationPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
-  const createApplication = useApplicationsStore((s) => s.createApplication)
-  const created = useApplicationsStore((s) => s.created)
-  const overrides = useApplicationsStore((s) => s.overrides)
-  const deletedIds = useApplicationsStore((s) => s.deletedIds)
-  const getCatalog = useApplicationsStore((s) => s.getCatalog)
-  void created
-  void overrides
-  void deletedIds
-  const catalog = getCatalog()
+  const queryClient = useQueryClient()
+  const role = useAuthStore((s) => s.user?.role)
+  const { catalog } = useApplicationCatalog()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -67,6 +65,10 @@ export function CreateApplicationPage() {
   const [repository, setRepository] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  if (!canWriteContent(role)) {
+    return <Navigate to="/" replace />
+  }
 
   const nameSimilar = findSimilarByName(catalog, name, RAIL_LIMIT)
   const packageMatch = findPackageMatches(catalog, packageName, RAIL_LIMIT)
@@ -98,20 +100,30 @@ export function CreateApplicationPage() {
     }
 
     setSubmitting(true)
-    await new Promise((r) => setTimeout(r, 400))
-
-    const app = createApplication({
-      name,
-      description,
-      packageName,
-      platform,
-      repository: repository || undefined,
-      owner: user?.name,
-    })
-
-    setSubmitting(false)
-    toast.success(t('createApp.success'), { description: app.name })
-    navigate(`/applications/${app.id}`, { replace: true })
+    try {
+      const app = await apiCreateApplication({
+        name: name.trim(),
+        description: description.trim(),
+        packageName: packageName.trim(),
+        platform,
+        repository: repository.trim() || undefined,
+      })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
+      toast.success(t('createApp.success'), { description: app.name })
+      navigate(`/applications/${app.id}`, { replace: true })
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'package_taken') {
+        setError(
+          t('createApp.packageTaken', {
+            name: packageName.trim(),
+          }),
+        )
+      } else {
+        setError(t('createApp.errorRequired'))
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const fieldClass = cn(

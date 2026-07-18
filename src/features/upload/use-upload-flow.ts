@@ -1,14 +1,16 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+import { useApplicationCatalog } from '@/features/applications/use-applications'
 import {
   detectFileKind,
   isEnabledKind,
   mockParseFile,
 } from '@/features/upload/mock-parse'
-import { useApplicationsStore } from '@/store/applications-store'
-import { useArtifactsStore } from '@/store/artifacts-store'
-import { useAuthStore } from '@/store/auth-store'
+import { queryKeys } from '@/lib/query-keys'
+import { ApiError } from '@/services/http'
+import { apiListArtifacts, apiUploadArtifact } from '@/services/api'
 import type { Application, ApplicationPlatform } from '@/types/application'
 import type {
   ParsedArtifactFile,
@@ -36,28 +38,12 @@ function emptyVersion(): VersionDraft {
 export function useUploadFlow() {
   const [params] = useSearchParams()
   const presetApp = params.get('app') ?? ''
+  const queryClient = useQueryClient()
+  const { catalog, loading: catalogLoading } = useApplicationCatalog()
 
-  const created = useApplicationsStore((s) => s.created)
-  const overrides = useApplicationsStore((s) => s.overrides)
-  const deletedIds = useApplicationsStore((s) => s.deletedIds)
-  const getById = useApplicationsStore((s) => s.getById)
-  const getCatalog = useApplicationsStore((s) => s.getCatalog)
-  const publishArtifact = useArtifactsStore((s) => s.publishArtifact)
-  const getArtifacts = useArtifactsStore((s) => s.getForApplication)
-  const user = useAuthStore((s) => s.user)
-
-  const catalog = useMemo(
-    () => getCatalog(),
-    [created, overrides, deletedIds, getCatalog],
-  )
-
-  const hasValidPreset = Boolean(presetApp && catalog.some((a) => a.id === presetApp))
-
-  /** Deep-link from detail (?app=) skips application pick — user can still go back to change. */
-  const [step, setStep] = useState<UploadStep>(() => (hasValidPreset ? 2 : 1))
-  const [applicationId, setApplicationId] = useState(() =>
-    hasValidPreset ? presetApp : '',
-  )
+  /** Deep-link from detail (?app=) skips application pick when id is known. */
+  const [step, setStep] = useState<UploadStep>(() => (presetApp ? 2 : 1))
+  const [applicationId, setApplicationId] = useState(presetApp)
   const [phase, setPhase] = useState<UploadPhase>('idle')
   const [fileError, setFileError] = useState<UploadFileError | null>(null)
   const [parsed, setParsed] = useState<ParsedArtifactFile | null>(null)
@@ -67,6 +53,8 @@ export function useUploadFlow() {
   const [done, setDone] = useState(false)
   const [draftSaved, setDraftSaved] = useState(false)
   const timers = useRef<number[]>([])
+  /** Keep real File for multipart upload */
+  const fileRef = useRef<File | null>(null)
 
   const clearTimers = () => {
     timers.current.forEach((t) => window.clearTimeout(t))
@@ -74,8 +62,8 @@ export function useUploadFlow() {
   }
 
   const application: Application | undefined = useMemo(
-    () => (applicationId ? getById(applicationId) : undefined),
-    [applicationId, created, overrides, deletedIds, getById],
+    () => (applicationId ? catalog.find((a) => a.id === applicationId) : undefined),
+    [applicationId, catalog],
   )
 
   const selectApplication = useCallback((id: string) => {
@@ -89,6 +77,7 @@ export function useUploadFlow() {
     setPhase('idle')
     setFileError(null)
     setParsed(null)
+    fileRef.current = null
   }, [])
 
   const processFile = useCallback((file: File, app?: Application) => {
@@ -97,6 +86,7 @@ export function useUploadFlow() {
     setParsed(null)
     setPublishError(null)
     setDraftSaved(false)
+    fileRef.current = file
 
     if (!file || file.size === 0) {
       setPhase('error')
@@ -118,8 +108,8 @@ export function useUploadFlow() {
 
     setPhase('uploading')
 
-    const t1 = window.setTimeout(() => setPhase('verifying'), 700)
-    const t2 = window.setTimeout(() => setPhase('hashing'), 1400)
+    const t1 = window.setTimeout(() => setPhase('verifying'), 400)
+    const t2 = window.setTimeout(() => setPhase('hashing'), 800)
     const t3 = window.setTimeout(() => {
       const result = mockParseFile({ name: file.name, size: file.size }, app)
       if (
@@ -151,7 +141,7 @@ export function useUploadFlow() {
         markLatest: true,
       })
       setPhase('ready')
-    }, 2200)
+    }, 1200)
 
     timers.current = [t1, t2, t3]
   }, [])
@@ -169,19 +159,19 @@ export function useUploadFlow() {
     return true
   }, [step, applicationId, phase, parsed, fileError, version])
 
-  const goNext = useCallback(() => {
+  const goNext = useCallback(async () => {
     if (!canNext) return
-    if (step === 3) {
-      if (application) {
-        const existing = getArtifacts(application.id)
+    if (step === 3 && application) {
+      try {
+        const existing = await apiListArtifacts(application.id)
         const dup = existing.some((a) => a.version === version.version.trim())
         setPublishError(dup ? 'duplicate_version' : null)
-      } else {
+      } catch {
         setPublishError(null)
       }
     }
     if (step < 4) setStep((s) => (s + 1) as UploadStep)
-  }, [canNext, step, application, version.version, getArtifacts])
+  }, [canNext, step, application, version.version])
 
   const goBack = useCallback(() => {
     setPublishError(null)
@@ -200,43 +190,49 @@ export function useUploadFlow() {
   }, [])
 
   const publish = useCallback(async () => {
-    if (!application || !parsed) return
+    if (!application || !parsed || !fileRef.current) return
     setPublishing(true)
     setPublishError(null)
-
-    await new Promise((r) => setTimeout(r, 900))
-
-    const existing = getArtifacts(application.id)
-    if (existing.some((a) => a.version === version.version.trim())) {
-      setPublishError('duplicate_version')
-      setPublishing(false)
-      return
-    }
 
     const platform = (version.platform ||
       parsed.platform ||
       application.platform) as ApplicationPlatform
 
-    publishArtifact({
-      applicationId: application.id,
-      version: version.version,
-      buildNumber: version.buildNumber,
-      platform,
-      sizeBytes: parsed.sizeBytes,
-      filename: parsed.name,
-      releaseNotes: version.releaseNotes,
-      channel: version.channel,
-      markLatest: version.markLatest,
-      uploader: user?.name,
-    })
+    try {
+      await apiUploadArtifact(application.id, fileRef.current, {
+        version: version.version.trim(),
+        buildNumber: version.buildNumber.trim(),
+        platform,
+        channel: version.channel,
+        releaseNotes: version.releaseNotes,
+        markLatest: version.markLatest,
+      })
 
-    setPublishing(false)
-    setDone(true)
-  }, [application, parsed, version, getArtifacts, publishArtifact, user?.name])
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.applications.all }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.artifacts.byApp(application.id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.applications.detail(application.id),
+        }),
+      ])
+
+      setDone(true)
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'duplicate_version') {
+        setPublishError('duplicate_version')
+      } else {
+        setPublishError('upload_failed')
+      }
+    } finally {
+      setPublishing(false)
+    }
+  }, [application, parsed, version, queryClient])
 
   const saveDraft = useCallback(async () => {
     setPublishing(true)
-    await new Promise((r) => setTimeout(r, 500))
+    await new Promise((r) => setTimeout(r, 300))
     setPublishing(false)
     setDraftSaved(true)
   }, [])
@@ -253,6 +249,7 @@ export function useUploadFlow() {
     setPublishing(false)
     setDone(false)
     setDraftSaved(false)
+    fileRef.current = null
   }, [])
 
   return {
@@ -279,5 +276,6 @@ export function useUploadFlow() {
     done,
     draftSaved,
     resetAll,
+    catalogLoading,
   }
 }

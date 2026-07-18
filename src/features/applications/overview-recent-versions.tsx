@@ -155,6 +155,7 @@ export function OverviewRecentVersions({
                   onClick={() =>
                     void download({
                       id: art.id,
+                      artifactId: art.id,
                       filename: art.filename,
                       version: art.version,
                       sizeBytes: art.sizeBytes,

@@ -22,6 +22,8 @@ export interface Artifact {
   channel?: UploadChannel
   releaseNotes: string
   filename: string
+  /** SHA-256 when provided by API */
+  sha256?: string
 }
 
 /** Resolve channel for display (mocks may omit channel). */

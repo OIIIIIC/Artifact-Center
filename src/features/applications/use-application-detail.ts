@@ -1,52 +1,50 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
-import { useApplicationsStore } from '@/store/applications-store'
-import { useArtifactsStore } from '@/store/artifacts-store'
+import { queryKeys } from '@/lib/query-keys'
+import { apiGetApplication, apiListArtifacts } from '@/services/api'
 import type { Application } from '@/types/application'
 import type { Artifact } from '@/types/artifact'
 
-const LOAD_MS = 420
-
 export function useApplicationDetail(id: string | undefined) {
-  const created = useApplicationsStore((s) => s.created)
-  const overrides = useApplicationsStore((s) => s.overrides)
-  const deletedIds = useApplicationsStore((s) => s.deletedIds)
-  const getById = useApplicationsStore((s) => s.getById)
-  const published = useArtifactsStore((s) => s.published)
-  const getForApplication = useArtifactsStore((s) => s.getForApplication)
-  const getLatest = useArtifactsStore((s) => s.getLatest)
-  /** When id changes, readyId lags until timeout → loading without sync setState in effect */
-  const [readyId, setReadyId] = useState<string | undefined>()
+  const appQuery = useQuery({
+    queryKey: queryKeys.applications.detail(id ?? ''),
+    queryFn: () => apiGetApplication(id!),
+    enabled: Boolean(id),
+    retry: (count, err) => {
+      // Don't retry hard 404s
+      if (err && typeof err === 'object' && 'status' in err && err.status === 404) {
+        return false
+      }
+      return count < 1
+    },
+  })
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setReadyId(id), LOAD_MS)
-    return () => window.clearTimeout(t)
-  }, [id])
+  const artsQuery = useQuery({
+    queryKey: queryKeys.artifacts.byApp(id ?? ''),
+    queryFn: () => apiListArtifacts(id!),
+    enabled: Boolean(id) && appQuery.isSuccess,
+  })
 
-  const loading = id !== readyId
+  const loading =
+    Boolean(id) && (appQuery.isLoading || (appQuery.isSuccess && artsQuery.isLoading))
 
-  // Subscribe to store slices so catalog mutations re-render detail
-  void created
-  void overrides
-  void deletedIds
-  void published
-
-  const application = useMemo<Application | undefined>(() => {
-    if (!id) return undefined
-    return getById(id)
-  }, [id, getById, created, overrides, deletedIds])
-
-  const artifacts = useMemo<Artifact[]>(
-    () => (id && application ? getForApplication(id) : []),
-    [id, application, getForApplication, published],
+  const application = useMemo<Application | undefined>(
+    () => appQuery.data,
+    [appQuery.data],
   )
 
+  const artifacts = useMemo<Artifact[]>(() => artsQuery.data ?? [], [artsQuery.data])
+
   const latest = useMemo(
-    () => (id && application ? getLatest(id) : undefined),
-    [id, application, getLatest, published],
+    () => artifacts.find((a) => a.status === 'latest') ?? artifacts[0],
+    [artifacts],
   )
 
   const recentVersions = useMemo(() => artifacts.slice(0, 3), [artifacts])
+
+  const notFound =
+    Boolean(id) && !loading && (appQuery.isError || (!appQuery.isLoading && !application))
 
   return {
     loading,
@@ -54,6 +52,9 @@ export function useApplicationDetail(id: string | undefined) {
     artifacts,
     latest,
     recentVersions,
-    notFound: !loading && !application,
+    notFound,
+    refetch: async () => {
+      await Promise.all([appQuery.refetch(), artsQuery.refetch()])
+    },
   }
 }
