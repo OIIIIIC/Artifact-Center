@@ -69,6 +69,18 @@ npm run dev           # http://localhost:3001
 
 根目录也可：`npm run dev:api`、`npm run db:setup`。
 
+## Linux 生产部署
+
+仓库提供生产镜像与 Compose 配置，包含前端 Nginx、API、PostgreSQL、自动迁移、首次管理员引导、健康检查和持久化卷。
+
+```bash
+cp deploy/.env.example deploy/.env
+# 修改 deploy/.env 中的密码、管理员与访问地址
+docker compose --env-file deploy/.env -f compose.prod.yml up -d --build
+```
+
+完整的首次部署、HTTPS、升级与备份恢复流程见 [Linux 生产部署](./docs/11-DEPLOYMENT.md)。
+
 ### 常用脚本
 
 ```bash

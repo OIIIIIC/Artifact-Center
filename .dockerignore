@@ -1,0 +1,13 @@
+node_modules
+apps/api/node_modules
+dist
+apps/api/dist
+.git
+.env
+.env.*
+data
+*.log
+docs
+references
+prompts
+assets

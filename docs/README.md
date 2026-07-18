@@ -12,6 +12,7 @@
 | [05-CODING-STANDARD.md](./05-CODING-STANDARD.md)           | 编码规范             |
 | [06-COMPONENT-GUIDELINES.md](./06-COMPONENT-GUIDELINES.md) | 组件分层与清单       |
 | [07-UI-PRINCIPLES.md](./07-UI-PRINCIPLES.md)               | UI 决策原则          |
+| [10-DATABASE.md](./10-DATABASE.md)                         | 数据库模型与迁移规范 |
 | [TODO.md](./TODO.md)                                       | 待办与后端后优先项   |
 
 ## 阅读顺序（新人 / AI）
@@ -20,7 +21,8 @@
 2. **DESIGN → UI Principles**（做任何界面前必读）
 3. Architecture → Roadmap
 4. Coding Standard → Component Guidelines
-5. **TODO**（前端收口与后续能力）
+5. **Database**（表结构、约束与迁移规范）
+6. **TODO**（前端收口与后续能力）
 
 ## 当前阶段
 

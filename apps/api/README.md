@@ -55,44 +55,45 @@ npm run dev:api
 
 ## 主要接口
 
-| Method | Path                                 | 说明                                |
-| ------ | ------------------------------------ | ----------------------------------- |
-| GET    | `/health`                            | 健康检查                            |
-| POST   | `/auth/login`                        | 登录拿 JWT                          |
-| GET    | `/auth/me`                           | 当前用户                            |
-| PATCH  | `/auth/me`                           | 更新资料/头像（返回新 token）       |
-| POST   | `/auth/change-password`              | 修改自己的密码                      |
-| GET    | `/search?q=`                         | 全局搜索应用/制品                   |
-| GET    | `/settings/retention`                | 保留策略 + 真实存储用量             |
-| PATCH  | `/settings/retention`                | 更新保留策略（admin）               |
-| POST   | `/settings/retention/run`            | 立即执行清理（admin）               |
-| GET    | `/audit`                             | 操作记录（可按 applicationId 过滤） |
-| GET    | `/users`                             | 用户列表（admin）                   |
-| POST   | `/users`                             | 管理员创建用户                      |
-| PATCH  | `/users/:id`                         | 改姓名/角色（admin）                |
-| DELETE | `/users/:id`                         | 删除用户（admin）                   |
-| POST   | `/users/:id/reset-password`          | 管理员重置密码                      |
-| GET    | `/applications`                      | 应用列表                            |
-| POST   | `/applications`                      | 创建应用                            |
-| GET    | `/applications/:id`                  | 应用详情                            |
-| PATCH  | `/applications/:id`                  | 更新应用                            |
-| DELETE | `/applications/:id`                  | 删除应用                            |
-| GET    | `/applications/:id/artifacts`        | 制品列表                            |
-| POST   | `/applications/:appId/artifacts`     | 上传（multipart）                   |
-| GET    | `/artifacts/:id`                     | 制品元数据                          |
-| PATCH  | `/artifacts/:id`                     | 更新渠道/状态/发布说明/标最新       |
-| DELETE | `/artifacts/:id`                     | 删除制品（含文件）                  |
-| GET    | `/artifacts/:id/download`            | 下载文件流                          |
-| POST   | `/applications/:appId/shares`        | 创建分享链接（maintainer+）         |
-| GET    | `/applications/:appId/shares`        | 分享列表                            |
-| DELETE | `/shares/:id`                        | 吊销分享                            |
-| GET    | `/public/shares/:token`              | 解析分享落地页                      |
-| GET    | `/public/shares/:token/download`     | 经分享下载                          |
-| GET    | `/public/applications/:id`           | 公开应用元数据（旧版）              |
-| GET    | `/public/applications/:id/artifacts` | 公开制品列表（旧版）                |
-| GET    | `/public/artifacts/:id/download`     | 公开下载（旧版）                    |
+| Method | Path                                | 说明                                |
+| ------ | ----------------------------------- | ----------------------------------- |
+| GET    | `/health`                           | 健康检查                            |
+| POST   | `/auth/login`                       | 登录拿 JWT                          |
+| GET    | `/auth/me`                          | 当前用户                            |
+| PATCH  | `/auth/me`                          | 更新资料/头像（返回新 token）       |
+| POST   | `/auth/change-password`             | 修改自己的密码                      |
+| GET    | `/search?q=`                        | 全局搜索应用/制品                   |
+| GET    | `/settings/retention`               | 保留策略 + 真实存储用量             |
+| PATCH  | `/settings/retention`               | 更新保留策略（admin）               |
+| POST   | `/settings/retention/run`           | 立即执行清理（admin）               |
+| GET    | `/audit`                            | 操作记录（可按 applicationId 过滤） |
+| GET    | `/users`                            | 用户列表（admin）                   |
+| POST   | `/users`                            | 管理员创建用户                      |
+| PATCH  | `/users/:id`                        | 改姓名/角色（admin）                |
+| DELETE | `/users/:id`                        | 删除用户（admin）                   |
+| POST   | `/users/:id/reset-password`         | 管理员重置密码                      |
+| GET    | `/applications`                     | 应用列表                            |
+| POST   | `/applications`                     | 创建应用                            |
+| GET    | `/applications/:id`                 | 应用详情                            |
+| PATCH  | `/applications/:id`                 | 更新应用                            |
+| DELETE | `/applications/:id`                 | 删除应用                            |
+| GET    | `/applications/:id/members`         | 应用成员列表                        |
+| PUT    | `/applications/:id/members/:userId` | 添加或更新应用成员角色              |
+| DELETE | `/applications/:id/members/:userId` | 移除应用成员                        |
+| GET    | `/applications/:id/artifacts`       | 制品列表                            |
+| GET    | `/applications/:id/releases`        | 发布记录与关联制品类型              |
+| POST   | `/applications/:appId/artifacts`    | 上传（multipart）                   |
+| GET    | `/artifacts/:id`                    | 制品元数据                          |
+| PATCH  | `/artifacts/:id`                    | 更新渠道/状态/发布说明/标最新       |
+| DELETE | `/artifacts/:id`                    | 删除制品（含文件）                  |
+| GET    | `/artifacts/:id/download`           | 下载文件流                          |
+| POST   | `/applications/:appId/shares`       | 创建分享链接（maintainer+）         |
+| GET    | `/applications/:appId/shares`       | 分享列表                            |
+| DELETE | `/shares/:id`                       | 吊销分享                            |
+| GET    | `/public/shares/:token`             | 解析分享落地页                      |
+| GET    | `/public/shares/:token/download`    | 经分享下载                          |
 
-除 `/health`、`POST /auth/login`、`/public/*` 外均需 `Authorization: Bearer <token>`。
+除 `/health`、`POST /auth/login`、服务端分享链接的 `/public/shares/*` 外均需 `Authorization: Bearer <token>`。
 
 ### 上传示例
 
