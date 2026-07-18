@@ -23,6 +23,9 @@ coverage/
 .cache/
 *.tsbuildinfo
 
+# Local artifact storage & runtime data
+data/
+
 # Tooling
 .eslintcache
 .prettiercache

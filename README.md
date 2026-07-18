@@ -6,13 +6,12 @@
 
 ## 当前阶段
 
-**工程 Bootstrap + Design System**
+**P1 MVP — 前端产品页已齐 + 后端脚手架就绪**
 
 - 文档规范：`docs/`
-- 前端已初始化：Vite + React + TypeScript + Tailwind v4 + shadcn/ui
+- **前端**：Vite + React + TS，应用目录 / 上传 / 详情 / 分享（当前仍可用 mock）
+- **后端**：`apps/api` — Hono + PostgreSQL + 本地文件存储
 - **首页**：`/` Applications（应用目录，非 Dashboard）
-- **Foundation**：`/design-system`、`/layout`
-- **禁止**：Dashboard / 统计大盘 / Login 等未规划页
 
 ## 规范（必读）
 
@@ -21,27 +20,62 @@
 | [02-DESIGN](./docs/02-DESIGN.md)               | 设计准则         |
 | [07-UI-PRINCIPLES](./docs/07-UI-PRINCIPLES.md) | UI 决策原则      |
 | [08-DESIGN-SYSTEM](./docs/08-DESIGN-SYSTEM.md) | 设计系统执行规范 |
+| [API README](./apps/api/README.md)             | 后端启动与接口   |
 
 ## 技术栈
 
+**前端**
+
 - React 19 · TypeScript · Vite
-- Tailwind CSS v4 · shadcn/ui (Nova)
+- Tailwind CSS v4 · shadcn/ui
 - Framer Motion · Lucide · TanStack Query · React Router · Zustand
-- ESLint · Prettier · Husky · lint-staged
+
+**后端（MVP）**
+
+- Hono · Drizzle ORM · PostgreSQL 16
+- JWT（jose）· bcrypt · 本地 `data/files` 存储
 
 ## 开发
+
+### 前端
+
+需同时运行后端（见下），Vite 将 `/api` 代理到 `http://localhost:3001`。
 
 ```bash
 npm install
 npm run dev
 ```
 
-打开 [http://localhost:5173/design-system](http://localhost:5173/design-system)
+打开 [http://localhost:5173](http://localhost:5173)  
+登录：`demo@enterprise.local` / `Demo@2026`
+
+### 后端
+
+需要本机 Docker（PostgreSQL）。
+
+```bash
+# 数据库
+npm run db:up
+
+# API 依赖 + 迁移 + 演示账号
+cd apps/api
+npm install
+npm run db:generate   # 首次 / schema 变更
+npm run db:setup      # migrate + seed
+npm run dev           # http://localhost:3001
+```
+
+演示账号：`demo@enterprise.local` / `Demo@2026`
+
+根目录也可：`npm run dev:api`、`npm run db:setup`。
+
+### 常用脚本
 
 ```bash
 npm run build
 npm run lint
 npm run typecheck
+npm run typecheck:api
 ```
 
 ## 仓库
