@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ActivityPanel } from '@/features/applications/activity-panel'
 import { ApplicationDetailHeader } from '@/features/applications/application-detail-header'
 import { ApplicationDetailSkeleton } from '@/features/applications/application-detail-skeleton'
 import { ApplicationSettingsPanel } from '@/features/applications/application-settings-panel'
@@ -14,11 +15,16 @@ import { ArtifactsTable } from '@/features/applications/artifacts-table'
 import { OverviewRecentVersions } from '@/features/applications/overview-recent-versions'
 import { ReleaseNotesPanel } from '@/features/applications/release-notes-panel'
 import { useApplicationDetail } from '@/features/applications/use-application-detail'
+import { ShareLinksPanel } from '@/features/share/share-links-panel'
+import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth-store'
 
 export function ApplicationDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams()
+  const role = useAuthStore((s) => s.user?.role)
+  const canWrite = canWriteContent(role)
   const { loading, application, artifacts, latest, recentVersions, notFound } =
     useApplicationDetail(id)
 
@@ -69,7 +75,13 @@ export function ApplicationDetailPage() {
       count: artifacts.length,
     },
     { value: 'release-notes', label: t('detail.tabReleaseNotes') },
-    { value: 'settings', label: t('detail.tabSettings') },
+    { value: 'activity', label: t('detail.tabActivity') },
+    ...(canWrite
+      ? ([
+          { value: 'shares', label: t('detail.tabShares') },
+          { value: 'settings', label: t('detail.tabSettings') },
+        ] as const)
+      : []),
   ] as const
 
   return (
@@ -153,9 +165,40 @@ export function ApplicationDetailPage() {
               <ReleaseNotesPanel artifacts={artifacts} applicationId={application.id} />
             </TabsContent>
 
-            <TabsContent value="settings" className="mt-0 outline-none">
-              <ApplicationSettingsPanel key={application.id} application={application} />
+            <TabsContent value="activity" className="mt-0 space-y-4 outline-none">
+              <div>
+                <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
+                  {t('detail.activityTitle')}
+                </h2>
+                <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+                  {t('detail.activityHint')}
+                </p>
+              </div>
+              <ActivityPanel applicationId={application.id} />
             </TabsContent>
+
+            {canWrite ? (
+              <TabsContent value="shares" className="mt-0 space-y-4 outline-none">
+                <div>
+                  <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
+                    {t('detail.sharesTitle')}
+                  </h2>
+                  <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
+                    {t('detail.sharesHint')}
+                  </p>
+                </div>
+                <ShareLinksPanel applicationId={application.id} />
+              </TabsContent>
+            ) : null}
+
+            {canWrite ? (
+              <TabsContent value="settings" className="mt-0 outline-none">
+                <ApplicationSettingsPanel
+                  key={application.id}
+                  application={application}
+                />
+              </TabsContent>
+            ) : null}
           </Tabs>
         </div>
       </PageContainer>

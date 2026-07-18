@@ -1,4 +1,3 @@
-import { useArtifactsStore } from '@/store/artifacts-store'
 import type { Application } from '@/types/application'
 import type { Artifact } from '@/types/artifact'
 
@@ -63,12 +62,14 @@ function scoreArtifact(art: Artifact, app: Application, q: string): number {
 }
 
 /**
- * Client-side global search over catalog applications + mock artifacts.
+ * Client-side global search over applications (+ optional per-app artifacts).
+ * Artifact hits require a getArtifacts loader (e.g. React Query cache).
  */
 export function runSearch(
   rawQuery: string,
   applications: Application[],
   limits?: { applications?: number; artifacts?: number },
+  getArtifacts?: (appId: string) => Artifact[],
 ): SearchResults {
   const query = rawQuery.trim()
   const appLimit = limits?.applications ?? 8
@@ -78,40 +79,36 @@ export function runSearch(
     return { query, applications: [], artifacts: [], total: 0 }
   }
 
-  const applicationsHits: ApplicationHit[] = applications
+  const appHits: ApplicationHit[] = applications
     .map((application) => ({
       kind: 'application' as const,
       application,
       score: scoreApplication(application, query),
     }))
     .filter((h) => h.score > 0)
-    .sort(
-      (a, b) => b.score - a.score || a.application.name.localeCompare(b.application.name),
-    )
+    .sort((a, b) => b.score - a.score)
     .slice(0, appLimit)
 
-  const getArts = useArtifactsStore.getState().getForApplication
-  const artifactsHits: ArtifactHit[] = []
-  for (const application of applications) {
-    const arts = getArts(application.id)
-    for (const artifact of arts) {
-      const score = scoreArtifact(artifact, application, query)
-      if (score > 0) {
-        artifactsHits.push({ kind: 'artifact', artifact, application, score })
+  const artHits: ArtifactHit[] = []
+  if (getArtifacts) {
+    for (const app of applications) {
+      const arts = getArtifacts(app.id)
+      for (const artifact of arts) {
+        const score = scoreArtifact(artifact, app, query)
+        if (score > 0) {
+          artHits.push({ kind: 'artifact', artifact, application: app, score })
+        }
       }
     }
+    artHits.sort((a, b) => b.score - a.score)
   }
-  artifactsHits.sort(
-    (a, b) =>
-      b.score - a.score || b.artifact.uploadedAt.localeCompare(a.artifact.uploadedAt),
-  )
 
-  const artifacts = artifactsHits.slice(0, artLimit)
+  const artifacts = artHits.slice(0, artLimit)
 
   return {
     query,
-    applications: applicationsHits,
+    applications: appHits,
     artifacts,
-    total: applicationsHits.length + artifacts.length,
+    total: appHits.length + artifacts.length,
   }
 }

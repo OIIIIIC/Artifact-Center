@@ -5,8 +5,9 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/store/auth-store'
-import { shareUrlForToken, useShareStore } from '@/store/share-store'
+import { ApiError } from '@/services/http'
+import { apiCreateShare } from '@/services/api'
+import { shareUrlForToken } from '@/store/share-store'
 import type { Artifact } from '@/types/artifact'
 import type { ShareMode } from '@/types/share'
 
@@ -23,8 +24,7 @@ interface ShareDialogProps {
 }
 
 /**
- * Create a share download link and copy it.
- * Not a full modal system — lightweight panel for calm UI.
+ * Create a server-issued share download link and copy it.
  */
 export function ShareDialog({
   open,
@@ -35,8 +35,6 @@ export function ShareDialog({
   className,
 }: ShareDialogProps) {
   const { t } = useTranslation()
-  const user = useAuthStore((s) => s.user)
-  const createLink = useShareStore((s) => s.createLink)
 
   const [mode, setMode] = useState<ShareMode>(artifact ? 'artifact' : 'latest')
   const [expiry, setExpiry] = useState<ExpiryOption>(7)
@@ -55,25 +53,24 @@ export function ShareDialog({
   const onCreate = async () => {
     if (mode === 'artifact' && !artifact) return
     setBusy(true)
-    await new Promise((r) => setTimeout(r, 200))
 
     try {
-      const link = createLink({
-        applicationId,
-        applicationName,
+      const share = await apiCreateShare(applicationId, {
         mode,
         artifactId: mode === 'artifact' ? artifact!.id : undefined,
-        artifact: mode === 'artifact' ? artifact : undefined,
         expiresInDays: expiry === 0 ? 0 : expiry,
-        /** Prefer full name; falls back in store */
-        createdBy: user?.name || user?.email,
       })
-      const url = shareUrlForToken(link.token)
-      await navigator.clipboard.writeText(url)
-      setCopiedUrl(url)
-      toast.success(t('share.copied'), { description: applicationName })
-    } catch {
-      toast.error(t('share.copyFailed'))
+      const url = shareUrlForToken(share.token)
+      try {
+        await navigator.clipboard.writeText(url)
+        setCopiedUrl(url)
+        toast.success(t('share.copied'), { description: applicationName })
+      } catch {
+        setCopiedUrl(url)
+        toast.error(t('share.copyFailed'))
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t('share.createFailed'))
     } finally {
       setBusy(false)
     }

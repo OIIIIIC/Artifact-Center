@@ -32,6 +32,8 @@ export type SharePayloadV1 = {
   ch?: UploadChannel
   up?: string
   at?: string
+  /** release notes (pinned snapshot) */
+  rn?: string
 }
 
 export type EncodeShareInput = {
@@ -73,6 +75,8 @@ export function encodeShareToken(input: EncodeShareInput): string {
     payload.up = art.uploader
     payload.at = art.uploadedAt
     payload.i = art.id
+    const notes = art.releaseNotes?.trim()
+    if (notes) payload.rn = notes.slice(0, 2000)
   }
 
   const json = JSON.stringify(payload)
@@ -137,7 +141,7 @@ export function artifactFromSnapshot(payload: SharePayloadV1): Artifact | null {
     uploader: payload.up || '—',
     status: 'stable',
     channel: payload.ch,
-    releaseNotes: '',
+    releaseNotes: payload.rn?.trim() || '',
     filename: payload.f,
   }
 }

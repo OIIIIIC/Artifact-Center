@@ -11,10 +11,9 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, FileBox, LayoutGrid, Search, SearchX } from 'lucide-react'
 
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
-import { runSearch } from '@/features/search/run-search'
+import { useServerSearch } from '@/features/search/use-server-search'
 import { useModKeyLabel } from '@/hooks/use-mod-key-label'
 import { cn } from '@/lib/utils'
-import { useApplicationsStore } from '@/store/applications-store'
 
 interface GlobalSearchDialogProps {
   open: boolean
@@ -27,18 +26,6 @@ interface GlobalSearchDialogProps {
 export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const created = useApplicationsStore((s) => s.created)
-  const overrides = useApplicationsStore((s) => s.overrides)
-  const deletedIds = useApplicationsStore((s) => s.deletedIds)
-  const getCatalog = useApplicationsStore((s) => s.getCatalog)
-  // Keep store subscriptions so catalog stays fresh
-  void created
-  void overrides
-  void deletedIds
-  const catalog = useMemo(
-    () => getCatalog(),
-    [getCatalog, created, overrides, deletedIds],
-  )
 
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -46,10 +33,10 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
   const listRef = useRef<HTMLDivElement>(null)
   const shortcut = useModKeyLabel('K')
 
-  const results = useMemo(
-    () => runSearch(query, catalog, { applications: 6, artifacts: 8 }),
-    [query, catalog],
-  )
+  const { results } = useServerSearch(open ? query : '', {
+    applications: 6,
+    artifacts: 8,
+  })
 
   const flatItems = useMemo(() => {
     return [

@@ -1,16 +1,14 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
-import { FileBox, LayoutGrid, Search, SearchX } from 'lucide-react'
+import { FileBox, LayoutGrid, Loader2, Search, SearchX } from 'lucide-react'
 
 import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
 import { Input } from '@/components/ui/input'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
-import { runSearch } from '@/features/search/run-search'
+import { useServerSearch } from '@/features/search/use-server-search'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { useApplicationsStore } from '@/store/applications-store'
 
 /**
  * Full-page search results — Applications / Artifacts groups.
@@ -21,23 +19,10 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
 
-  const created = useApplicationsStore((s) => s.created)
-  const overrides = useApplicationsStore((s) => s.overrides)
-  const deletedIds = useApplicationsStore((s) => s.deletedIds)
-  const getCatalog = useApplicationsStore((s) => s.getCatalog)
-  const catalog = useMemo(
-    () => getCatalog(),
-    [created, overrides, deletedIds, getCatalog],
-  )
-
-  const results = useMemo(
-    () =>
-      runSearch(query, catalog, {
-        applications: 40,
-        artifacts: 60,
-      }),
-    [query, catalog],
-  )
+  const { results, loading } = useServerSearch(query, {
+    applications: 40,
+    artifacts: 60,
+  })
 
   const setQuery = (value: string) => {
     const next = new URLSearchParams(params)
@@ -47,7 +32,7 @@ export function SearchPage() {
   }
 
   const hasQuery = query.trim().length > 0
-  const empty = hasQuery && results.total === 0
+  const empty = hasQuery && !loading && results.total === 0
 
   return (
     <AppLayout breadcrumbs={[{ label: t('search.pageTitle') }]}>
@@ -80,6 +65,13 @@ export function SearchPage() {
             />
           ) : null}
 
+          {hasQuery && loading ? (
+            <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+              <span className="text-[0.8125rem]">{t('common.loading')}</span>
+            </div>
+          ) : null}
+
           {empty ? (
             <EmptyState
               icon={SearchX}
@@ -88,7 +80,7 @@ export function SearchPage() {
             />
           ) : null}
 
-          {hasQuery && !empty ? (
+          {hasQuery && !loading && !empty ? (
             <div className="space-y-10">
               <p className="text-[0.8125rem] text-muted-foreground">
                 {t('search.resultCount', { count: results.total })}

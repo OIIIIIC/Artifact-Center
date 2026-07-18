@@ -1,5 +1,5 @@
+import { useQuery } from '@tanstack/react-query'
 import { Download, Loader2, Package } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
@@ -22,30 +22,48 @@ export function ShareDownloadPage() {
   void i18n.language
   const { download, isBusy } = useDownloadArtifact()
 
-  const [tick, setTick] = useState(0)
-  useEffect(() => {
-    const id = window.setTimeout(() => setTick((n) => n + 1), 50)
-    return () => window.clearTimeout(id)
-  }, [token])
+  const resolveQuery = useQuery({
+    queryKey: ['share-resolve', token],
+    queryFn: () => resolveShareToken(token),
+    enabled: Boolean(token),
+    staleTime: 30_000,
+    retry: 1,
+  })
 
-  const result = useMemo(() => resolveShareToken(token), [token, tick])
+  const result = resolveQuery.data
+
+  if (resolveQuery.isLoading || !result) {
+    return (
+      <BlankLayout>
+        <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-6 py-16">
+          <div className="size-8 animate-pulse rounded-xl bg-muted" aria-hidden />
+          <span className="sr-only">Loading</span>
+        </div>
+      </BlankLayout>
+    )
+  }
+
   const busy = result.ok ? isBusy(`share:${result.artifact.id}`) : false
 
   if (!result.ok) {
     const title =
       result.reason === 'expired'
         ? t('share.expiredTitle')
-        : result.reason === 'artifact_missing'
-          ? t('share.noArtifactTitle')
-          : result.reason === 'app_missing'
-            ? t('share.invalidTitle')
-            : t('share.invalidTitle')
+        : result.reason === 'revoked'
+          ? t('share.revokedTitle')
+          : result.reason === 'artifact_missing'
+            ? t('share.noArtifactTitle')
+            : result.reason === 'app_missing'
+              ? t('share.invalidTitle')
+              : t('share.invalidTitle')
     const desc =
       result.reason === 'expired'
         ? t('share.expiredDesc')
-        : result.reason === 'artifact_missing'
-          ? t('share.noArtifactDesc')
-          : t('share.invalidDesc')
+        : result.reason === 'revoked'
+          ? t('share.revokedDesc')
+          : result.reason === 'artifact_missing'
+            ? t('share.noArtifactDesc')
+            : t('share.invalidDesc')
 
     return (
       <BlankLayout>
@@ -167,6 +185,22 @@ export function ShareDownloadPage() {
           </dl>
         </div>
 
+        {artifact.releaseNotes?.trim() ? (
+          <div
+            className={cn(
+              'mt-4 rounded-2xl bg-muted/20 px-5 py-4 ring-1 ring-border/50',
+              'dark:bg-muted/10 dark:ring-border/70',
+            )}
+          >
+            <p className="text-[0.6875rem] font-medium tracking-wide text-muted-foreground/80 uppercase">
+              {t('share.releaseNotesTitle')}
+            </p>
+            <p className="mt-1.5 line-clamp-6 whitespace-pre-wrap text-[0.8125rem] leading-relaxed text-foreground/90">
+              {artifact.releaseNotes.trim()}
+            </p>
+          </div>
+        ) : null}
+
         <p className="mt-5 text-center text-[0.8125rem] text-muted-foreground">
           {t('share.confirmHint')}
         </p>
@@ -179,9 +213,12 @@ export function ShareDownloadPage() {
           onClick={() =>
             void download({
               id: `share:${artifact.id}`,
+              artifactId: artifact.id,
               filename: artifact.filename,
               version: artifact.version,
               sizeBytes: artifact.sizeBytes,
+              public: !result.serverToken,
+              shareToken: result.serverToken,
             })
           }
         >
