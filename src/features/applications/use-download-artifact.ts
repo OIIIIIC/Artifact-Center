@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 
 import { apiDownloadArtifact, apiDownloadShare } from '@/services/api'
 import { ArtifactDownloadConfirmDialog } from '@/features/applications/artifact-risk-warning'
+import { getRequestErrorMessage } from '@/lib/request-error'
 import type { ArtifactOperationRiskStatus } from '@/types/artifact'
 
 export type DownloadTarget = {
@@ -75,10 +76,13 @@ export function useDownloadArtifact() {
             .join(' · '),
         })
       } catch (err) {
-        void err
         toast.error(t('download.failed'), {
           id: toastId,
-          description: t('download.failedHint'),
+          description: getRequestErrorMessage(err, {
+            offline: t('common.requestFailedOffline'),
+            unavailable: t('common.requestFailedUnavailable'),
+            fallback: t('download.failedHint'),
+          }),
         })
       } finally {
         setBusyId(null)

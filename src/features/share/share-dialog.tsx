@@ -5,8 +5,8 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
+import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
-import { ApiError } from '@/services/http'
 import { apiCreateShare } from '@/services/api'
 import { shareUrlForToken } from '@/store/share-store'
 import { getArtifactRiskStatus, type Artifact } from '@/types/artifact'
@@ -81,7 +81,13 @@ export function ShareDialog({
         toast.error(t('share.copyFailed'))
       }
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : t('share.createFailed'))
+      toast.error(
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('share.createFailed'),
+        }),
+      )
     } finally {
       setBusy(false)
     }

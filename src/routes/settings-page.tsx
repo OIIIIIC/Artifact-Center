@@ -35,13 +35,16 @@ import {
   ModalTitle,
 } from '@/components/ui/modal'
 import { AvatarUpload } from '@/features/settings/avatar-upload'
+import { FormError } from '@/components/feedback'
 import { MEMBER_ROLES, type MemberRole } from '@/features/settings/mock-members'
 import { PasswordField, PasswordPolicyHints } from '@/features/settings/password-field'
 import { formatFileSize } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
 import { checkPassword } from '@/lib/password'
+import { getRequestErrorMessage } from '@/lib/request-error'
 import { ApiError } from '@/services/http'
+import { isConnectivityError } from '@/services/http'
 import {
   apiAdminResetPassword,
   apiCreateUser,
@@ -134,6 +137,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
   // Add member (admin creates user with initial password)
   const [showAddMember, setShowAddMember] = useState(false)
   const [newName, setNewName] = useState('')
+  const [newUsername, setNewUsername] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newMemberPassword, setNewMemberPassword] = useState('')
   const [newMemberPasswordConfirm, setNewMemberPasswordConfirm] = useState('')
@@ -242,6 +246,13 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
   const roleLabel = (role: MemberRole) => t(`settings.role.${role}`)
 
   const memberErrorFromApi = (err: unknown) => {
+    if (isConnectivityError(err)) {
+      return getRequestErrorMessage(err, {
+        offline: t('common.requestFailedOffline'),
+        unavailable: t('common.requestFailedUnavailable'),
+        fallback: t('settings.memberErrorGeneric'),
+      })
+    }
     if (err instanceof ApiError) {
       switch (err.code) {
         case 'email_taken':
@@ -391,7 +402,11 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
       toast.success(t('settings.retentionSaved'))
     } catch (err) {
       toast.error(
-        err instanceof ApiError ? err.message : t('settings.retentionSaveFailed'),
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('settings.retentionSaveFailed'),
+        }),
       )
     } finally {
       setRetentionSaving(false)
@@ -414,7 +429,13 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
         }),
       })
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : t('settings.cleanupFailed'))
+      toast.error(
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('settings.cleanupFailed'),
+        }),
+      )
     } finally {
       setCleanupRunning(false)
     }
@@ -423,8 +444,9 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
   const onAddMember = async () => {
     setAddError(null)
     const name = newName.trim()
+    const username = newUsername.trim()
     const email = newEmail.trim()
-    if (!name || !email || !newMemberPassword) {
+    if (!name || !username || !email || !newMemberPassword) {
       setAddError(t('settings.memberErrorEmptyFields'))
       return
     }
@@ -444,6 +466,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
     try {
       const member = await apiCreateUser({
         name,
+        username,
         email,
         password: newMemberPassword,
         role: newRole,
@@ -477,6 +500,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
         }),
       })
       setNewName('')
+      setNewUsername('')
       setNewEmail('')
       setNewMemberPassword('')
       setNewMemberPasswordConfirm('')
@@ -651,11 +675,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                       </label>
                     </div>
 
-                    {profileError ? (
-                      <p className="text-[0.8125rem] text-destructive" role="alert">
-                        {profileError}
-                      </p>
-                    ) : null}
+                    <FormError message={profileError} />
 
                     <div className="flex justify-end">
                       <Button
@@ -736,11 +756,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                           matchAgainst={newPassword}
                         />
                       </div>
-                      {passwordError ? (
-                        <p className="text-[0.8125rem] text-destructive" role="alert">
-                          {passwordError}
-                        </p>
-                      ) : null}
+                      <FormError message={passwordError} />
                       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/50 pt-4">
                         <Button
                           type="button"
@@ -939,6 +955,19 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                                 placeholder={t('settings.memberNamePlaceholder')}
                                 className="h-10 rounded-lg"
                                 disabled={adding}
+                              />
+                            </label>
+                            <label className="block space-y-1.5">
+                              <span className="text-[0.75rem] font-medium text-foreground">
+                                {t('settings.fieldUsername')}
+                              </span>
+                              <Input
+                                value={newUsername}
+                                onChange={(e) => setNewUsername(e.target.value)}
+                                placeholder={t('settings.memberUsernamePlaceholder')}
+                                className="h-10 rounded-lg"
+                                disabled={adding}
+                                autoComplete="username"
                               />
                             </label>
                             <label className="block space-y-1.5">
@@ -1148,11 +1177,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                               )
                             ) : null}
                           </div>
-                          {addError ? (
-                            <p className="text-[0.8125rem] text-destructive" role="alert">
-                              {addError}
-                            </p>
-                          ) : null}
+                          <FormError message={addError} />
                         </ModalBody>
                         <ModalFooter>
                           <Button
@@ -1352,14 +1377,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                                       matchAgainst={resetPassword}
                                     />
                                   </div>
-                                  {resetError ? (
-                                    <p
-                                      className="text-[0.8125rem] text-destructive"
-                                      role="alert"
-                                    >
-                                      {resetError}
-                                    </p>
-                                  ) : null}
+                                  <FormError message={resetError} />
                                   <div className="flex flex-wrap justify-end gap-2">
                                     <Button
                                       type="button"

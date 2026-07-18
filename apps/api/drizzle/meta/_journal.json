@@ -36,6 +36,13 @@
       "when": 1784430000000,
       "tag": "0004_artifact_domain",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784470000000,
+      "tag": "0005_usernames",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { BlankLayout } from '@/components/layout'
+import { FormError } from '@/components/feedback'
 import { LocaleSwitch } from '@/components/layout/locale-switch'
 import { ThemeSwitch } from '@/components/layout/theme-switch'
 import { Button } from '@/components/ui/button'
@@ -26,7 +27,7 @@ export function LoginPage() {
       ? (location.state as { from: string }).from
       : '/'
 
-  const [email, setEmail] = useState('demo@enterprise.local')
+  const [identifier, setIdentifier] = useState('demo')
   const [password, setPassword] = useState('Demo@2026')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -37,19 +38,18 @@ export function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setLoading(true)
-    const result = await login({ email, password })
+    const result = await login({ identifier, password })
     setLoading(false)
     if (!result.ok) {
       if (result.code === 'wrong_password') {
         setError(t('auth.errorWrongPassword'))
       } else if (result.code === 'weak_password') {
         setError(t('auth.errorWeakPassword'))
-      } else if (result.code === 'invalid_email') {
-        setError(t('auth.errorInvalidEmail'))
       } else if (result.code === 'empty') {
         setError(t('auth.errorEmpty'))
+      } else if (result.code === 'network') {
+        setError(t('auth.errorNetwork'))
       } else {
         setError(t('auth.errorWrongPassword'))
       }
@@ -97,15 +97,18 @@ export function LoginPage() {
                 htmlFor="login-email"
                 className="text-[0.8125rem] font-medium text-foreground"
               >
-                {t('auth.email')}
+                {t('auth.identifier')}
               </label>
               <Input
-                id="login-email"
-                type="email"
+                id="login-identifier"
+                type="text"
                 autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('auth.emailPlaceholder')}
+                value={identifier}
+                onChange={(e) => {
+                  setIdentifier(e.target.value)
+                  if (error) setError(null)
+                }}
+                placeholder={t('auth.identifierPlaceholder')}
                 className="h-10 rounded-lg"
                 disabled={loading}
                 required
@@ -124,7 +127,10 @@ export function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (error) setError(null)
+                }}
                 placeholder={t('auth.passwordPlaceholder')}
                 className="h-10 rounded-lg"
                 disabled={loading}
@@ -132,11 +138,7 @@ export function LoginPage() {
               />
             </div>
 
-            {error ? (
-              <p className="text-[0.8125rem] text-destructive" role="alert">
-                {error}
-              </p>
-            ) : null}
+            <FormError message={error} />
 
             <Button type="submit" size="lg" className="w-full" disabled={loading}>
               {loading ? t('auth.signingIn') : t('auth.signIn')}

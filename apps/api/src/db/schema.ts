@@ -58,6 +58,7 @@ export const shareModeEnum = pgEnum('share_mode', ['latest', 'artifact'])
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
+  username: varchar('username', { length: 64 }).notNull().unique(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   name: varchar('name', { length: 120 }).notNull(),
   passwordHash: text('password_hash').notNull(),

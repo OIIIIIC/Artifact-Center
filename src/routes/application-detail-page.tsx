@@ -1,4 +1,4 @@
-import { Inbox } from 'lucide-react'
+import { Inbox, RefreshCw, ServerCrash } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
@@ -34,6 +34,8 @@ export function ApplicationDetailPage() {
     latest,
     recentVersions,
     notFound,
+    loadError,
+    refetch,
   } = useApplicationDetail(id)
   const canWrite =
     user?.role === 'admin' ||
@@ -50,6 +52,31 @@ export function ApplicationDetailPage() {
             <p className="sr-only">{t('detail.loading')}</p>
             <ApplicationDetailSkeleton />
           </div>
+        </PageContainer>
+      </AppLayout>
+    )
+  }
+
+  if (loadError || (!application && !notFound)) {
+    return (
+      <AppLayout
+        breadcrumbs={[
+          { label: t('detail.breadcrumbApps'), href: '/' },
+          { label: t('common.serviceUnavailableTitle') },
+        ]}
+      >
+        <PageContainer rhythm="product">
+          <EmptyState
+            icon={ServerCrash}
+            title={t('common.serviceUnavailableTitle')}
+            description={t('common.serviceUnavailableDescription')}
+            action={
+              <Button type="button" size="lg" onClick={() => void refetch()}>
+                <RefreshCw className="size-3.5" strokeWidth={1.75} />
+                {t('common.retry')}
+              </Button>
+            }
+          />
         </PageContainer>
       </AppLayout>
     )

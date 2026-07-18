@@ -15,6 +15,7 @@ const roleEnum = z.enum(['admin', 'maintainer', 'viewer'])
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
+  username: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,63}$/),
   email: z.string().email().max(255),
   password: z.string().min(1).max(72),
   role: roleEnum.default('viewer'),
@@ -32,6 +33,7 @@ const resetPasswordSchema = z.object({
 function mapUser(row: typeof users.$inferSelect) {
   return {
     id: row.id,
+    username: row.username,
     email: row.email,
     name: row.name,
     role: row.role,
@@ -78,6 +80,7 @@ userRoutes.post('/', async (c) => {
   }
 
   const name = parsed.data.name.trim()
+  const username = parsed.data.username.trim().toLowerCase()
   const email = parsed.data.email.trim().toLowerCase()
   const password = parsed.data.password
   const role = parsed.data.role
@@ -100,11 +103,21 @@ userRoutes.post('/', async (c) => {
     return jsonError(c, 409, 'email_taken', 'Email already registered')
   }
 
+  const [usernameDup] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.username, username))
+    .limit(1)
+  if (usernameDup) {
+    return jsonError(c, 409, 'username_taken', 'Username already registered')
+  }
+
   const passwordHash = await hashPassword(password)
   const [row] = await db
     .insert(users)
     .values({
       name,
+      username,
       email,
       passwordHash,
       role,
@@ -115,8 +128,8 @@ userRoutes.post('/', async (c) => {
     action: 'user.create',
     objectType: 'user',
     objectId: row.id,
-    summary: `创建用户 ${row.name}（${row.email}，${row.role}）`,
-    meta: { email: row.email, role: row.role },
+    summary: `创建用户 ${row.name}（${row.username}，${row.role}）`,
+    meta: { username: row.username, email: row.email, role: row.role },
   })
 
   return c.json({ user: mapUser(row) }, 201)

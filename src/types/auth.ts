@@ -1,5 +1,6 @@
 export interface AuthUser {
   id: string
+  username: string
   name: string
   email: string
   role: 'admin' | 'maintainer' | 'viewer'
@@ -8,7 +9,7 @@ export interface AuthUser {
 }
 
 export interface LoginCredentials {
-  email: string
+  identifier: string
   password: string
 }
 

@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/modal'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { queryKeys } from '@/lib/query-keys'
+import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import {
   apiListApplicationMemberCandidates,
@@ -116,8 +117,14 @@ export function ApplicationMembersPanel({
       await apiUpsertApplicationMember(applicationId, candidate.id, role)
       await refresh()
       toast.success(t('appMembers.added'), { description: candidate.name })
-    } catch {
-      toast.error(t('appMembers.saveFailed'))
+    } catch (err) {
+      toast.error(
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('appMembers.saveFailed'),
+        }),
+      )
     } finally {
       setPendingId(null)
     }
@@ -133,8 +140,14 @@ export function ApplicationMembersPanel({
       await apiUpsertApplicationMember(applicationId, member.id, role)
       await refresh()
       toast.success(t('appMembers.roleUpdated'), { description: member.name })
-    } catch {
-      toast.error(t('appMembers.saveFailed'))
+    } catch (err) {
+      toast.error(
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('appMembers.saveFailed'),
+        }),
+      )
     } finally {
       setPendingId(null)
     }
@@ -147,8 +160,14 @@ export function ApplicationMembersPanel({
       await refresh()
       setRemoveId(null)
       toast.success(t('appMembers.removed'), { description: member.name })
-    } catch {
-      toast.error(t('appMembers.saveFailed'))
+    } catch (err) {
+      toast.error(
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('appMembers.saveFailed'),
+        }),
+      )
     } finally {
       setPendingId(null)
     }

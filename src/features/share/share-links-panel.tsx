@@ -7,8 +7,8 @@ import { EmptyState } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
 import { formatRelativeTime } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
+import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
-import { ApiError } from '@/services/http'
 import { apiListShares, apiRevokeShare } from '@/services/api'
 import { shareUrlForToken } from '@/store/share-store'
 
@@ -56,7 +56,13 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
       })
       toast.success(t('share.revokedToast'))
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : t('share.revokeFailed'))
+      toast.error(
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('share.revokeFailed'),
+        }),
+      )
     }
   }
 

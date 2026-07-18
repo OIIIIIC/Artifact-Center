@@ -5,6 +5,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
+import { FormError } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -15,6 +16,7 @@ import { CreateAppReferenceRail } from '@/features/applications/create-app-refer
 import { useApplicationCatalog } from '@/features/applications/use-applications'
 import { queryKeys } from '@/lib/query-keys'
 import { APPLICATION_FIELD_LIMITS } from '@/lib/application-fields'
+import { getRequestErrorMessage } from '@/lib/request-error'
 import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { ApiError } from '@/services/http'
@@ -127,7 +129,13 @@ export function CreateApplicationPage() {
           }),
         )
       } else {
-        setError(t('createApp.errorRequired'))
+        setError(
+          getRequestErrorMessage(err, {
+            offline: t('common.requestFailedOffline'),
+            unavailable: t('common.requestFailedUnavailable'),
+            fallback: t('createApp.errorRequired'),
+          }),
+        )
       }
     } finally {
       setSubmitting(false)
@@ -193,7 +201,10 @@ export function CreateApplicationPage() {
                     </span>
                     <Input
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => {
+                        setName(e.target.value)
+                        if (error) setError(null)
+                      }}
                       placeholder={t('createApp.namePlaceholder')}
                       className="h-10 rounded-lg"
                       disabled={submitting}
@@ -229,16 +240,16 @@ export function CreateApplicationPage() {
                       />
                     </label>
                     {/* Hard conflict only — soft matches live in the rail */}
-                    {packageMatch.exact ? (
-                      <p
-                        className="text-[0.75rem] leading-relaxed text-destructive"
-                        role="alert"
-                      >
-                        {t('createApp.packageTakenLead', {
-                          name: packageMatch.exact.name,
-                        })}
-                      </p>
-                    ) : null}
+                    <FormError
+                      className="text-[0.75rem] leading-relaxed"
+                      message={
+                        packageMatch.exact
+                          ? t('createApp.packageTakenLead', {
+                              name: packageMatch.exact.name,
+                            })
+                          : null
+                      }
+                    />
                   </div>
 
                   <label className="block space-y-1.5 sm:col-span-2">
@@ -247,7 +258,10 @@ export function CreateApplicationPage() {
                     </span>
                     <textarea
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      onChange={(e) => {
+                        setDescription(e.target.value)
+                        if (error) setError(null)
+                      }}
                       placeholder={t('createApp.descriptionPlaceholder')}
                       rows={3}
                       disabled={submitting}
@@ -304,11 +318,7 @@ export function CreateApplicationPage() {
                   </label>
                 </div>
 
-                {error ? (
-                  <p className="text-[0.8125rem] text-destructive" role="alert">
-                    {error}
-                  </p>
-                ) : null}
+                <FormError message={error} />
               </div>
 
               <div

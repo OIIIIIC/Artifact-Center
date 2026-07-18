@@ -20,8 +20,10 @@ async function main() {
   const name = process.env.BOOTSTRAP_ADMIN_NAME?.trim()
   const email = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase()
   const password = process.env.BOOTSTRAP_ADMIN_PASSWORD
+  const username =
+    process.env.BOOTSTRAP_ADMIN_USERNAME?.trim().toLowerCase() ?? email?.split('@')[0]
 
-  if (!name || !email || !password) {
+  if (!name || !email || !password || !username) {
     throw new Error(
       'No administrator exists. Set BOOTSTRAP_ADMIN_NAME, BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD.',
     )
@@ -43,6 +45,7 @@ async function main() {
 
   await db.insert(users).values({
     name,
+    username,
     email,
     passwordHash: await hashPassword(password),
     role: 'admin',

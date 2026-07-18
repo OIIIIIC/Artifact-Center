@@ -11,6 +11,8 @@ export type HttpError = {
   details?: unknown
 }
 
+export type ConnectivityStatus = 'offline' | 'unavailable' | null
+
 export const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') || '/api'
 
@@ -26,6 +28,39 @@ export class ApiError extends Error {
     this.code = err.code
     this.details = err.details
   }
+}
+
+let connectivityStatus: ConnectivityStatus = null
+const connectivityListeners = new Set<() => void>()
+
+function updateConnectivityStatus(next: ConnectivityStatus) {
+  if (connectivityStatus === next) return
+  connectivityStatus = next
+  connectivityListeners.forEach((listener) => listener())
+}
+
+export function getConnectivityStatus() {
+  return connectivityStatus
+}
+
+export function subscribeConnectivityStatus(listener: () => void) {
+  connectivityListeners.add(listener)
+  return () => connectivityListeners.delete(listener)
+}
+
+export function setConnectivityStatus(next: ConnectivityStatus) {
+  updateConnectivityStatus(next)
+}
+
+export function getConnectivityStatusForError(error: unknown): ConnectivityStatus {
+  if (!(error instanceof ApiError)) return null
+  if (error.status >= 500) return 'unavailable'
+  if (error.status !== 0) return null
+  return typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'unavailable'
+}
+
+export function isConnectivityError(error: unknown) {
+  return getConnectivityStatusForError(error) !== null
 }
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
@@ -62,6 +97,22 @@ async function parseError(res: Response): Promise<ApiError> {
   return new ApiError({ status: res.status, code, message, details })
 }
 
+async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    const response = await fetch(input, init)
+    updateConnectivityStatus(null)
+    return response
+  } catch {
+    const error = new ApiError({
+      status: 0,
+      code: 'network_error',
+      message: 'Network request failed',
+    })
+    updateConnectivityStatus(getConnectivityStatusForError(error))
+    throw error
+  }
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, rawBody, public: isPublic, headers: initHeaders, ...rest } = options
   const headers = new Headers(initHeaders)
@@ -77,7 +128,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     finalBody = JSON.stringify(body)
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetchApi(`${API_BASE_URL}${path}`, {
     ...rest,
     headers,
     body: finalBody === null ? undefined : finalBody,
@@ -89,7 +140,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (!res.ok) {
-    throw await parseError(res)
+    const error = await parseError(res)
+    updateConnectivityStatus(getConnectivityStatusForError(error))
+    throw error
   }
 
   if (res.status === 204) {
@@ -114,7 +167,7 @@ export async function requestBlob(
     if (token) headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, { headers })
+  const res = await fetchApi(`${API_BASE_URL}${path}`, { headers })
 
   if (res.status === 401 && !options.public) {
     setAccessToken(null)
@@ -122,7 +175,9 @@ export async function requestBlob(
   }
 
   if (!res.ok) {
-    throw await parseError(res)
+    const error = await parseError(res)
+    updateConnectivityStatus(getConnectivityStatusForError(error))
+    throw error
   }
 
   const disposition = res.headers.get('content-disposition') ?? ''

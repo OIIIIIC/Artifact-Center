@@ -16,6 +16,7 @@
     "saveDraft": "Save Draft",
     "clearFilters": "Clear filters",
     "loading": "Loading…",
+    "loadMore": "Load more",
     "selected": "Selected",
     "yes": "Yes",
     "no": "No",
@@ -27,7 +28,14 @@
     "language": "Language",
     "openNav": "Open navigation",
     "closeNav": "Close navigation",
-    "breadcrumb": "Breadcrumb"
+    "breadcrumb": "Breadcrumb",
+    "retry": "Retry",
+    "offlineTitle": "You are offline",
+    "offlineDescription": "The network connection was lost. Try again after it is restored.",
+    "requestFailedOffline": "The network connection was lost. This action was not completed.",
+    "requestFailedUnavailable": "The service is temporarily unavailable. This action was not completed.",
+    "serviceUnavailableTitle": "Service temporarily unavailable",
+    "serviceUnavailableDescription": "Artifact Center could not be reached. Please try again shortly."
   },
   "activity": {
     "emptyTitle": "No activity yet",
@@ -95,6 +103,8 @@
   "auth": {
     "subtitle": "Sign in to Artifact Center",
     "email": "Email",
+    "identifier": "Email or username",
+    "identifierPlaceholder": "Enter email or username",
     "password": "Password",
     "emailPlaceholder": "name@company.com",
     "passwordPlaceholder": "Enter password",
@@ -106,6 +116,7 @@
     "errorWrongPassword": "Incorrect email or password.",
     "errorWeakPassword": "Password is too weak: min 8 chars, letters + digits, not a common password.",
     "errorInvalidEmail": "Enter a valid email address.",
+    "errorNetwork": "Artifact Center could not be reached. Please try again shortly.",
     "demoHint": "Demo: demo@enterprise.local / Demo@2026 (new accounts must set a policy-compliant password)"
   },
   "password": {
@@ -185,6 +196,8 @@
     "generalDesc": "Edit your display name and email. Role is assigned by access control and cannot be changed here.",
     "accountHint": "Demo session · role comes from the signed-in account",
     "fieldName": "Display name",
+    "fieldUsername": "Username",
+    "memberUsernamePlaceholder": "For example, zhangsan",
     "fieldEmail": "Email",
     "fieldRole": "Role",
     "saveProfile": "Save profile",

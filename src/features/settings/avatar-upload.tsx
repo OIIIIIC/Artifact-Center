@@ -4,6 +4,7 @@ import { Camera, Trash2 } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { FormError } from '@/components/feedback'
 import { cn } from '@/lib/utils'
 
 const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
@@ -124,11 +125,7 @@ export function AvatarUpload({
           ) : null}
         </div>
         <p className="text-[0.75rem] text-muted-foreground">{t('settings.avatarHint')}</p>
-        {error ? (
-          <p className="text-[0.75rem] text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
+        <FormError message={error} className="[&_p]:text-[0.75rem]" />
       </div>
 
       <input

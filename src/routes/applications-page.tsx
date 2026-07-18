@@ -1,4 +1,4 @@
-import { Inbox, Plus, SearchX, Upload } from 'lucide-react'
+import { Inbox, Plus, RefreshCw, SearchX, ServerCrash, Upload } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -18,8 +18,16 @@ export function ApplicationsPage() {
   const { t } = useTranslation()
   const role = useAuthStore((s) => s.user?.role)
   const canWrite = canWriteContent(role)
-  const { loading, filtered, filters, setFilters, isEmptyCatalog, isSearchEmpty } =
-    useApplications()
+  const {
+    loading,
+    filtered,
+    filters,
+    setFilters,
+    isEmptyCatalog,
+    isSearchEmpty,
+    error,
+    refetch,
+  } = useApplications()
 
   return (
     <AppLayout breadcrumbs={[{ label: t('nav.applications') }]}>
@@ -83,6 +91,20 @@ export function ApplicationsPage() {
               <p className="sr-only">{t('applications.loading')}</p>
               <ApplicationGridSkeleton />
             </div>
+          ) : null}
+
+          {!loading && error ? (
+            <EmptyState
+              icon={ServerCrash}
+              title={t('common.serviceUnavailableTitle')}
+              description={t('common.serviceUnavailableDescription')}
+              action={
+                <Button type="button" size="lg" onClick={() => void refetch()}>
+                  <RefreshCw className="size-3.5" strokeWidth={1.75} />
+                  {t('common.retry')}
+                </Button>
+              }
+            />
           ) : null}
 
           {!loading && isEmptyCatalog ? (

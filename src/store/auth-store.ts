@@ -74,9 +74,15 @@ export const useAuthStore = create<AuthState>()(
         try {
           const user = await apiMe()
           set({ user, bootstrapped: true })
-        } catch {
-          setAccessToken(null)
-          set({ user: null, token: null, bootstrapped: true })
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 401) {
+            setAccessToken(null)
+            set({ user: null, token: null, bootstrapped: true })
+            return
+          }
+
+          // 服务暂时不可用时保留本地会话，由页面查询展示可重试的错误状态。
+          set({ bootstrapped: true })
         }
       },
 
@@ -158,17 +164,14 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      login: async ({ email, password }) => {
-        const trimmed = email.trim()
+      login: async ({ identifier, password }) => {
+        const trimmed = identifier.trim()
         if (!trimmed || !password) {
           return { ok: false, code: 'empty' }
         }
-        if (!isValidEmail(trimmed)) {
-          return { ok: false, code: 'invalid_email' }
-        }
 
         try {
-          const { token, user } = await apiLogin({ email: trimmed, password })
+          const { token, user } = await apiLogin({ identifier: trimmed, password })
           set(applySession(token, user))
           return { ok: true }
         } catch (err) {
@@ -177,7 +180,7 @@ export const useAuthStore = create<AuthState>()(
               return { ok: false, code: 'wrong_password' }
             }
           }
-          return { ok: false, code: 'wrong_password' }
+          return { ok: false, code: 'network' }
         }
       },
     }),

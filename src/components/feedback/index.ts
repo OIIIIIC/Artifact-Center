@@ -1,3 +1,5 @@
+export { ConnectivityNotice } from './connectivity-notice'
 export { EmptyState } from './empty-state'
+export { FormError } from './form-error'
 export { Loading } from './loading'
 export { PageSkeleton } from './page-skeleton'

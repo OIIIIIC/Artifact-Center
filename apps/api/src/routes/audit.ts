@@ -19,6 +19,8 @@ auditRoutes.get('/', async (c) => {
   const applicationId = c.req.query('applicationId')?.trim()
   const limitRaw = Number(c.req.query('limit') ?? 50)
   const limit = Math.min(200, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 50))
+  const offsetRaw = Number(c.req.query('offset') ?? 0)
+  const offset = Math.max(0, Number.isFinite(offsetRaw) ? Math.floor(offsetRaw) : 0)
 
   if (applicationId) {
     // UUID shape guard
@@ -42,8 +44,14 @@ auditRoutes.get('/', async (c) => {
         .from(auditLogs)
         .where(eq(auditLogs.applicationId, applicationId))
         .orderBy(desc(auditLogs.createdAt))
+        .offset(offset)
         .limit(limit)
-    : await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit)
+    : await db
+        .select()
+        .from(auditLogs)
+        .orderBy(desc(auditLogs.createdAt))
+        .offset(offset)
+        .limit(limit)
 
   // Non-admins only see entries that are app-scoped when not filtering?
   // For MVP: all authenticated users can read audit (internal tool).
@@ -58,13 +66,13 @@ auditRoutes.get('/', async (c) => {
     )
     return c.json({
       items: filtered.map(mapRow),
-      total: filtered.length,
+      nextOffset: filtered.length === limit ? offset + filtered.length : null,
     })
   }
 
   return c.json({
     items: rows.map(mapRow),
-    total: rows.length,
+    nextOffset: rows.length === limit ? offset + rows.length : null,
   })
 })
 

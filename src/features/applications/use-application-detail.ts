@@ -8,6 +8,7 @@ import {
   apiListArtifacts,
   apiListReleases,
 } from '@/services/api'
+import { ApiError } from '@/services/http'
 import type { Application } from '@/types/application'
 import type { Artifact } from '@/types/artifact'
 import type { Release } from '@/types/release'
@@ -69,8 +70,14 @@ export function useApplicationDetail(id: string | undefined) {
 
   const recentVersions = useMemo(() => artifacts.slice(0, 3), [artifacts])
 
+  const error =
+    appQuery.error ?? artsQuery.error ?? releasesQuery.error ?? membersQuery.error ?? null
   const notFound =
-    Boolean(id) && !loading && (appQuery.isError || (!appQuery.isLoading && !application))
+    Boolean(id) &&
+    !loading &&
+    appQuery.error instanceof ApiError &&
+    appQuery.error.status === 404
+  const loadError = Boolean(id) && !loading && Boolean(error) && !notFound
 
   return {
     loading,
@@ -81,6 +88,7 @@ export function useApplicationDetail(id: string | undefined) {
     latest,
     recentVersions,
     notFound,
+    loadError,
     refetch: async () => {
       await Promise.all([
         appQuery.refetch(),

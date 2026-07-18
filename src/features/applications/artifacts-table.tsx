@@ -31,9 +31,9 @@ import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
+import { getRequestErrorMessage } from '@/lib/request-error'
 import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
-import { ApiError } from '@/services/http'
 import { apiDeleteArtifact, apiUpdateArtifact } from '@/services/api'
 import { useAuthStore } from '@/store/auth-store'
 import type { ApplicationStatus } from '@/types/application'
@@ -114,7 +114,11 @@ export function ArtifactsTable({
       })
     } catch (err) {
       toast.error(
-        err instanceof ApiError ? err.message : t('detail.artifactActionFailed'),
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('detail.artifactActionFailed'),
+        }),
       )
     } finally {
       setBusyAction(null)
@@ -136,7 +140,11 @@ export function ArtifactsTable({
       })
     } catch (err) {
       toast.error(
-        err instanceof ApiError ? err.message : t('detail.artifactActionFailed'),
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('detail.artifactActionFailed'),
+        }),
       )
     } finally {
       setBusyAction(null)
@@ -155,7 +163,11 @@ export function ArtifactsTable({
       })
     } catch (err) {
       toast.error(
-        err instanceof ApiError ? err.message : t('detail.artifactActionFailed'),
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('detail.artifactActionFailed'),
+        }),
       )
     } finally {
       setBusyAction(null)

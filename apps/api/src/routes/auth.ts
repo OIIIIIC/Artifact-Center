@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -12,7 +12,7 @@ import { validatePassword } from '../lib/password-policy.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1).max(255),
   password: z.string().min(1),
 })
 
@@ -31,6 +31,7 @@ const changePasswordSchema = z.object({
 function mapUser(user: typeof users.$inferSelect) {
   return {
     id: user.id,
+    username: user.username,
     email: user.email,
     name: user.name,
     role: user.role,
@@ -57,21 +58,25 @@ authRoutes.post('/login', async (c) => {
       c,
       400,
       'invalid_body',
-      'Email and password required',
+      'Username or email and password required',
       parsed.error.flatten(),
     )
   }
 
-  const email = parsed.data.email.trim().toLowerCase()
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
+  const identifier = parsed.data.identifier.trim().toLowerCase()
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(or(eq(users.username, identifier), eq(users.email, identifier)))
+    .limit(1)
 
   if (!user) {
-    return jsonError(c, 401, 'invalid_credentials', 'Invalid email or password')
+    return jsonError(c, 401, 'invalid_credentials', 'Invalid username, email or password')
   }
 
   const ok = await verifyPassword(parsed.data.password, user.passwordHash)
   if (!ok) {
-    return jsonError(c, 401, 'invalid_credentials', 'Invalid email or password')
+    return jsonError(c, 401, 'invalid_credentials', 'Invalid username, email or password')
   }
 
   const token = await issueToken(user)
@@ -79,7 +84,7 @@ authRoutes.post('/login', async (c) => {
     action: 'auth.login',
     objectType: 'session',
     objectId: user.id,
-    summary: `登录 ${user.email}`,
+    summary: `登录 ${user.username}`,
     actorId: user.id,
     actorName: user.name,
   })

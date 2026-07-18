@@ -1,8 +1,21 @@
-import { useQuery } from '@tanstack/react-query'
-import { Activity, Loader2 } from 'lucide-react'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import {
+  Activity,
+  Download,
+  KeyRound,
+  Loader2,
+  Pencil,
+  Plus,
+  Settings2,
+  Share2,
+  Trash2,
+  Upload,
+  type LucideIcon,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/feedback'
+import { Button } from '@/components/ui/button'
 import { formatRelativeTime } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
@@ -12,39 +25,55 @@ interface ActivityPanelProps {
   applicationId: string
 }
 
-function actionTone(action: string): string {
-  if (action.includes('delete')) return 'bg-destructive/15 text-destructive'
-  if (action.includes('upload') || action.includes('create')) {
-    return 'bg-emerald-500/12 text-emerald-800 dark:text-emerald-200'
+function actionVisual(action: string): { icon: LucideIcon; tone: string } {
+  if (action.includes('delete')) {
+    return { icon: Trash2, tone: 'bg-destructive/10 text-destructive' }
   }
+  if (action.includes('share'))
+    return { icon: Share2, tone: 'bg-muted/60 text-muted-foreground' }
+  if (action.includes('upload'))
+    return { icon: Upload, tone: 'bg-muted/60 text-muted-foreground' }
   if (action.includes('download')) {
-    return 'bg-sky-500/12 text-sky-900 dark:text-sky-200'
+    return { icon: Download, tone: 'bg-muted/60 text-muted-foreground' }
   }
-  return 'bg-muted text-muted-foreground'
+  if (action.includes('create'))
+    return { icon: Plus, tone: 'bg-muted/60 text-muted-foreground' }
+  if (action.includes('update'))
+    return { icon: Pencil, tone: 'bg-muted/60 text-muted-foreground' }
+  if (action.includes('settings')) {
+    return { icon: Settings2, tone: 'bg-muted/60 text-muted-foreground' }
+  }
+  if (action.includes('auth'))
+    return { icon: KeyRound, tone: 'bg-muted/60 text-muted-foreground' }
+  return { icon: Activity, tone: 'bg-muted/60 text-muted-foreground' }
 }
 
-function actionLabel(action: string, t: (k: string) => string): string {
-  const key = `activity.action.${action}` as const
-  const translated = t(key)
-  return translated === key ? action : translated
-}
-
-function Row({ item }: { item: AuditLogItem }) {
-  const { t, i18n } = useTranslation()
+function Row({ item, isLast }: { item: AuditLogItem; isLast: boolean }) {
+  const { i18n } = useTranslation()
   void i18n.language
+  const { icon: Icon, tone } = actionVisual(item.action)
 
   return (
-    <li className="flex gap-3 px-4 py-3.5">
-      <span
-        className={cn(
-          'mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[0.6875rem] font-medium',
-          actionTone(item.action),
-        )}
-      >
-        {actionLabel(item.action, t)}
-      </span>
+    <li className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 px-4 py-3.5 sm:px-5">
+      <div className="relative flex justify-center">
+        {!isLast ? (
+          <span
+            className="absolute top-8 bottom-[-0.875rem] w-px bg-border/70 dark:bg-border"
+            aria-hidden
+          />
+        ) : null}
+        <span
+          className={cn(
+            'relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
+            tone,
+          )}
+          aria-hidden
+        >
+          <Icon className="size-3.5" strokeWidth={1.75} />
+        </span>
+      </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[0.875rem] text-foreground">{item.summary}</p>
+        <p className="text-[0.875rem] font-medium text-foreground">{item.summary}</p>
         <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
           {item.actorName}
           {' · '}
@@ -60,9 +89,12 @@ function Row({ item }: { item: AuditLogItem }) {
  */
 export function ActivityPanel({ applicationId }: ActivityPanelProps) {
   const { t } = useTranslation()
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: queryKeys.audit.byApp(applicationId),
-    queryFn: () => apiListAudit({ applicationId, limit: 80 }),
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      apiListAudit({ applicationId, limit: 30, offset: pageParam }),
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
   })
 
   if (query.isLoading) {
@@ -84,7 +116,7 @@ export function ActivityPanel({ applicationId }: ActivityPanelProps) {
     )
   }
 
-  const items = query.data ?? []
+  const items = query.data?.pages.flatMap((page) => page.items) ?? []
   if (items.length === 0) {
     return (
       <EmptyState
@@ -96,10 +128,25 @@ export function ActivityPanel({ applicationId }: ActivityPanelProps) {
   }
 
   return (
-    <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl ring-1 ring-border/70">
-      {items.map((item) => (
-        <Row key={item.id} item={item} />
-      ))}
-    </ul>
+    <div className="space-y-3">
+      <ul className="overflow-hidden rounded-xl ring-1 ring-border/70 dark:ring-border">
+        {items.map((item, index) => (
+          <Row key={item.id} item={item} isLast={index === items.length - 1} />
+        ))}
+      </ul>
+      {query.hasNextPage ? (
+        <div className="flex justify-center">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={query.isFetchingNextPage}
+            onClick={() => void query.fetchNextPage()}
+          >
+            {query.isFetchingNextPage ? t('common.loading') : t('common.loadMore')}
+          </Button>
+        </div>
+      ) : null}
+    </div>
   )
 }

@@ -13,6 +13,7 @@ import type { UploadChannel } from '@/types/upload'
 
 type ApiUser = {
   id: string
+  username: string
   email: string
   name: string
   role: AuthUser['role']
@@ -22,6 +23,7 @@ type ApiUser = {
 function mapUser(u: ApiUser): AuthUser {
   return {
     id: u.id,
+    username: u.username,
     email: u.email,
     name: u.name,
     role: u.role,
@@ -36,7 +38,7 @@ export async function apiLogin(credentials: LoginCredentials): Promise<{
   const data = await request<{ token: string; user: ApiUser }>('/auth/login', {
     method: 'POST',
     body: {
-      email: credentials.email.trim(),
+      identifier: credentials.identifier.trim(),
       password: credentials.password,
     },
     public: true,
@@ -91,18 +93,19 @@ export type AuditLogItem = {
   createdAt: string
 }
 
+export type PageResult<T> = { items: T[]; nextOffset: number | null }
+
 export async function apiListAudit(params?: {
   applicationId?: string
   limit?: number
-}): Promise<AuditLogItem[]> {
+  offset?: number
+}): Promise<PageResult<AuditLogItem>> {
   const sp = new URLSearchParams()
   if (params?.applicationId) sp.set('applicationId', params.applicationId)
   if (params?.limit) sp.set('limit', String(params.limit))
+  if (params?.offset) sp.set('offset', String(params.offset))
   const qs = sp.toString()
-  const data = await request<{ items: AuditLogItem[]; total: number }>(
-    `/audit${qs ? `?${qs}` : ''}`,
-  )
-  return data.items
+  return request<PageResult<AuditLogItem>>(`/audit${qs ? `?${qs}` : ''}`)
 }
 
 /* ── Search ───────────────────────────────────────────── */
@@ -155,6 +158,7 @@ export async function apiListUsers(): Promise<TeamMemberDto[]> {
 
 export type CreateUserBody = {
   name: string
+  username: string
   email: string
   password: string
   role: AuthUser['role']

@@ -32,8 +32,9 @@ export function useApplications() {
     filtered,
     filters,
     setFilters,
-    isEmptyCatalog: !loading && applications.length === 0,
-    isSearchEmpty: !loading && applications.length > 0 && filtered.length === 0,
+    isEmptyCatalog: !loading && !query.isError && applications.length === 0,
+    isSearchEmpty:
+      !loading && !query.isError && applications.length > 0 && filtered.length === 0,
     error: query.error,
     refetch: query.refetch,
   }

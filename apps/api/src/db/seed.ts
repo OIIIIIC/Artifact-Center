@@ -21,6 +21,7 @@ async function main() {
   const [user] = await db
     .insert(users)
     .values({
+      username: 'demo',
       email: env.seedEmail,
       name: env.seedName,
       passwordHash,

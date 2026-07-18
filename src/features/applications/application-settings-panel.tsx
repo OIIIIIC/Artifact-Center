@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { StatusBadge } from '@/components/common'
+import { FormError } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ApplicationMembersPanel } from '@/features/applications/application-members-panel'
@@ -15,6 +16,7 @@ import {
   type ApplicationEditableField,
 } from '@/lib/application-fields'
 import { queryKeys } from '@/lib/query-keys'
+import { getRequestErrorMessage } from '@/lib/request-error'
 import { canDeleteApplication } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { apiDeleteApplication, apiUpdateApplication } from '@/services/api'
@@ -158,7 +160,11 @@ export function ApplicationSettingsPanel({
         setError(message)
       } else {
         setError(
-          caught instanceof ApiError ? caught.message : t('appSettings.errorGeneric'),
+          getRequestErrorMessage(caught, {
+            offline: t('common.requestFailedOffline'),
+            unavailable: t('common.requestFailedUnavailable'),
+            fallback: t('appSettings.errorGeneric'),
+          }),
         )
       }
     } finally {
@@ -174,8 +180,14 @@ export function ApplicationSettingsPanel({
       await queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
       toast.success(t('appSettings.deleted'), { description: application.name })
       navigate('/', { replace: true })
-    } catch {
-      toast.error(t('appSettings.errorGeneric'))
+    } catch (err) {
+      toast.error(
+        getRequestErrorMessage(err, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('appSettings.errorGeneric'),
+        }),
+      )
       setDeleting(false)
     }
   }
@@ -401,7 +413,10 @@ function BasicSettings({
                 fieldErrors.description && 'ring-destructive/50',
               )}
             />
-            <FieldError message={fieldErrors.description} />
+            <FormError
+              message={fieldErrors.description}
+              className="[&_p]:text-[0.75rem]"
+            />
           </label>
           <div className="space-y-1.5">
             <span className="text-[0.8125rem] font-medium text-foreground">
@@ -466,11 +481,7 @@ function BasicSettings({
         </div>
       </div>
 
-      {error ? (
-        <p className="text-[0.8125rem] text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <FormError message={error} /> : null}
       {dirty ? (
         <div className="flex justify-end">
           <Button type="button" size="lg" disabled={saving} onClick={onSave}>
@@ -605,7 +616,7 @@ function TextField({
         )}
         aria-invalid={Boolean(error) || undefined}
       />
-      <FieldError message={error} />
+      <FormError message={error} className="[&_p]:text-[0.75rem]" />
     </label>
   )
 }
@@ -637,14 +648,6 @@ function FieldLabel({
       </span>
     </span>
   )
-}
-
-function FieldError({ message }: { message?: string }) {
-  return message ? (
-    <span className="block text-[0.75rem] text-destructive" role="alert">
-      {message}
-    </span>
-  ) : null
 }
 
 function Choice({
