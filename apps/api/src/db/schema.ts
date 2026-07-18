@@ -1,5 +1,6 @@
 import {
   bigint,
+  check,
   integer,
   jsonb,
   pgEnum,
@@ -11,8 +12,14 @@ import {
   varchar,
   index,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'maintainer', 'viewer'])
+
+export const applicationMemberRoleEnum = pgEnum('application_member_role', [
+  'maintainer',
+  'viewer',
+])
 
 export const appPlatformEnum = pgEnum('app_platform', ['android', 'windows', 'zip'])
 
@@ -28,6 +35,14 @@ export const artifactStatusEnum = pgEnum('artifact_status', [
   'latest',
   'stable',
   'beta',
+  'deprecated',
+  'archived',
+])
+
+export const artifactTypeEnum = pgEnum('artifact_type', ['apk', 'aab', 'exe', 'zip'])
+
+export const releaseStatusEnum = pgEnum('release_status', [
+  'published',
   'deprecated',
   'archived',
 ])
@@ -72,6 +87,57 @@ export const applications = pgTable(
   (t) => [uniqueIndex('applications_package_name_uidx').on(t.packageName)],
 )
 
+/** 应用内成员关系；平台管理员不需要显式成员记录。 */
+export const applicationMembers = pgTable(
+  'application_members',
+  {
+    applicationId: uuid('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: applicationMemberRoleEnum('role').notNull().default('viewer'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('application_members_application_user_uidx').on(
+      t.applicationId,
+      t.userId,
+    ),
+    index('application_members_user_application_idx').on(t.userId, t.applicationId),
+  ],
+)
+
+/**
+ * Release 是应用内一个可读的发布上下文，可关联多个不同类型的制品。
+ * 现有上传接口会按“应用 + 版本”自动创建或复用 Release。
+ */
+export const releases = pgTable(
+  'releases',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    applicationId: uuid('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    version: varchar('version', { length: 64 }).notNull(),
+    releaseNotes: text('release_notes').notNull().default(''),
+    status: releaseStatusEnum('status').notNull().default('published'),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    createdByName: varchar('created_by_name', { length: 120 }).notNull().default(''),
+    publishedAt: timestamp('published_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('releases_application_version_uidx').on(t.applicationId, t.version),
+    index('releases_application_published_at_idx').on(t.applicationId, t.publishedAt),
+  ],
+)
+
 export const artifacts = pgTable(
   'artifacts',
   {
@@ -79,9 +145,13 @@ export const artifacts = pgTable(
     applicationId: uuid('application_id')
       .notNull()
       .references(() => applications.id, { onDelete: 'cascade' }),
+    releaseId: uuid('release_id')
+      .notNull()
+      .references(() => releases.id, { onDelete: 'cascade' }),
     version: varchar('version', { length: 64 }).notNull(),
     buildNumber: varchar('build_number', { length: 64 }).notNull().default(''),
     platform: appPlatformEnum('platform').notNull(),
+    type: artifactTypeEnum('type').notNull(),
     channel: channelEnum('channel').notNull().default('stable'),
     status: artifactStatusEnum('status').notNull().default('stable'),
     filename: varchar('filename', { length: 500 }).notNull(),
@@ -89,13 +159,28 @@ export const artifacts = pgTable(
     sha256: varchar('sha256', { length: 64 }),
     storageKey: text('storage_key').notNull(),
     releaseNotes: text('release_notes').notNull().default(''),
-    uploaderId: uuid('uploader_id').references(() => users.id),
+    uploaderId: uuid('uploader_id').references(() => users.id, { onDelete: 'set null' }),
     uploaderName: varchar('uploader_name', { length: 120 }).notNull().default(''),
+    parsedMeta: jsonb('parsed_meta').$type<Record<string, unknown>>(),
+    buildMeta: jsonb('build_meta').$type<Record<string, unknown>>(),
     uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     /** When status/channel became deprecated (for retention archive) */
     deprecatedAt: timestamp('deprecated_at', { withTimezone: true }),
   },
-  (t) => [uniqueIndex('artifacts_app_version_uidx').on(t.applicationId, t.version)],
+  (t) => [
+    uniqueIndex('artifacts_release_type_build_uidx').on(
+      t.releaseId,
+      t.type,
+      t.buildNumber,
+    ),
+    uniqueIndex('artifacts_one_latest_per_application_uidx')
+      .on(t.applicationId)
+      .where(sql`${t.status} = 'latest'`),
+    index('artifacts_application_uploaded_at_idx').on(t.applicationId, t.uploadedAt),
+    index('artifacts_release_id_idx').on(t.releaseId),
+    check('artifacts_size_bytes_nonnegative', sql`${t.sizeBytes} >= 0`),
+  ],
 )
 
 /**
@@ -128,7 +213,7 @@ export const shareLinks = pgTable(
       .references(() => applications.id, { onDelete: 'cascade' }),
     mode: shareModeEnum('mode').notNull().default('latest'),
     artifactId: uuid('artifact_id').references(() => artifacts.id, {
-      onDelete: 'set null',
+      onDelete: 'cascade',
     }),
     createdById: uuid('created_by_id').references(() => users.id, {
       onDelete: 'set null',
@@ -141,7 +226,11 @@ export const shareLinks = pgTable(
   },
   (t) => [
     index('share_links_application_id_idx').on(t.applicationId),
-    index('share_links_token_idx').on(t.token),
+    index('share_links_application_created_at_idx').on(t.applicationId, t.createdAt),
+    check(
+      'share_links_mode_artifact_check',
+      sql`(${t.mode} = 'latest' AND ${t.artifactId} IS NULL) OR (${t.mode} = 'artifact' AND ${t.artifactId} IS NOT NULL)`,
+    ),
   ],
 )
 
@@ -171,12 +260,15 @@ export const auditLogs = pgTable(
   (t) => [
     index('audit_logs_created_at_idx').on(t.createdAt),
     index('audit_logs_application_id_idx').on(t.applicationId),
+    index('audit_logs_application_created_at_idx').on(t.applicationId, t.createdAt),
     index('audit_logs_action_idx').on(t.action),
   ],
 )
 
 export type User = typeof users.$inferSelect
 export type Application = typeof applications.$inferSelect
+export type ApplicationMember = typeof applicationMembers.$inferSelect
+export type Release = typeof releases.$inferSelect
 export type Artifact = typeof artifacts.$inferSelect
 export type ShareLink = typeof shareLinks.$inferSelect
 export type AuditLog = typeof auditLogs.$inferSelect

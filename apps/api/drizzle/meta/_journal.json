@@ -29,6 +29,13 @@
       "when": 1784281918485,
       "tag": "0003_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784430000000,
+      "tag": "0004_artifact_domain",
+      "breakpoints": true
     }
   ]
 }
