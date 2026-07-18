@@ -5,6 +5,7 @@ import { db } from '../db/client.js'
 import { auditLogs } from '../db/schema.js'
 import { jsonError } from '../lib/errors.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
+import { hasApplicationRole } from '../middleware/application-access.js'
 
 /**
  * GET /audit — activity feed.
@@ -30,6 +31,11 @@ auditRoutes.get('/', async (c) => {
     }
   }
 
+  const user = c.get('user')
+  if (applicationId && !(await hasApplicationRole(user, applicationId, 'viewer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
+
   const rows = applicationId
     ? await db
         .select()
@@ -42,7 +48,6 @@ auditRoutes.get('/', async (c) => {
   // Non-admins only see entries that are app-scoped when not filtering?
   // For MVP: all authenticated users can read audit (internal tool).
   // Tighten later if needed with requireAdmin for global feed.
-  const user = c.get('user')
   if (!applicationId && user.role !== 'admin') {
     // Maintainers/viewers: only return app-related entries (no user.* / global noise)
     const filtered = rows.filter(

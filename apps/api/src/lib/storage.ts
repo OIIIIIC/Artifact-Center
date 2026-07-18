@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs'
-import { mkdir, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, statfs, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import type { Readable } from 'node:stream'
@@ -10,6 +10,30 @@ import { env } from '../env.js'
 export function ensureStorageRoot() {
   if (!existsSync(env.storagePath)) {
     mkdirSync(env.storagePath, { recursive: true })
+  }
+}
+
+export type StorageDiskSpace = {
+  totalBytes: number
+  usedBytes: number
+  freeBytes: number
+}
+
+/** 获取制品目录所在文件系统的实时容量；Windows 与 Linux 均支持。 */
+export async function getStorageDiskSpace(): Promise<StorageDiskSpace | null> {
+  try {
+    ensureStorageRoot()
+    const stats = await statfs(env.storagePath, { bigint: true })
+    const totalBytes = Number(stats.blocks * stats.bsize)
+    const freeBytes = Number(stats.bavail * stats.bsize)
+    return {
+      totalBytes,
+      freeBytes,
+      usedBytes: Math.max(0, totalBytes - freeBytes),
+    }
+  } catch (error) {
+    console.error('[storage] statfs failed', env.storagePath, error)
+    return null
   }
 }
 

@@ -66,7 +66,7 @@ app.notFound((c) =>
 app.onError((err, c) => {
   console.error(err)
   return c.json(
-    { error: { code: 'internal_error', message: 'Internal server error' } },
+    { error: { code: 'internal_error', message: '服务器处理请求时发生错误' } },
     500,
   )
 })
@@ -75,7 +75,15 @@ console.log(`Artifact Center API → http://localhost:${env.port}`)
 console.log(`  storage: ${env.storagePath}`)
 console.log(`  cors:    ${env.corsOrigin}`)
 
-serve({
+const server = serve({
   fetch: app.fetch,
+  hostname: env.host,
   port: env.port,
 })
+
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.once(signal, () => {
+    console.log(`[server] received ${signal}, shutting down`)
+    server.close(() => process.exit(0))
+  })
+}

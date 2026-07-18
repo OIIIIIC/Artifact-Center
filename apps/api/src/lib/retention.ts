@@ -1,4 +1,4 @@
-import { and, asc, eq, ne, or } from 'drizzle-orm'
+import { and, asc, eq, ne, or, sql } from 'drizzle-orm'
 
 import { db } from '../db/client.js'
 import {
@@ -8,15 +8,18 @@ import {
   type RetentionSettings,
 } from '../db/schema.js'
 import { refreshApplicationArtifactStats } from './artifact-helpers.js'
-import { deleteStorageFile } from './storage.js'
+import { deleteStorageFile, getStorageDiskSpace } from './storage.js'
 
 const DEFAULT_ID = 'default'
 
 export type RetentionPolicyDto = {
   maxVersions: number
   archiveDeprecatedDays: number
-  storageQuotaBytes: number
-  storageUsedBytes: number
+  artifactStorageBytes: number
+  diskTotalBytes: number | null
+  diskUsedBytes: number | null
+  diskFreeBytes: number | null
+  measuredAt: string
   updatedAt: string
 }
 
@@ -53,18 +56,26 @@ export async function ensureRetentionSettings(): Promise<RetentionSettings> {
 }
 
 export async function getStorageUsedBytes(): Promise<number> {
-  const rows = await db.select({ sizeBytes: artifacts.sizeBytes }).from(artifacts)
-  return rows.reduce((sum, r) => sum + (r.sizeBytes || 0), 0)
+  const [row] = await db
+    .select({ total: sql<string>`coalesce(sum(${artifacts.sizeBytes}), 0)` })
+    .from(artifacts)
+  return Number(row?.total ?? 0)
 }
 
 export async function getRetentionPolicy(): Promise<RetentionPolicyDto> {
   const s = await ensureRetentionSettings()
-  const storageUsedBytes = await getStorageUsedBytes()
+  const [artifactStorageBytes, diskSpace] = await Promise.all([
+    getStorageUsedBytes(),
+    getStorageDiskSpace(),
+  ])
   return {
     maxVersions: s.maxVersions,
     archiveDeprecatedDays: s.archiveDeprecatedDays,
-    storageQuotaBytes: s.storageQuotaBytes,
-    storageUsedBytes,
+    artifactStorageBytes,
+    diskTotalBytes: diskSpace?.totalBytes ?? null,
+    diskUsedBytes: diskSpace?.usedBytes ?? null,
+    diskFreeBytes: diskSpace?.freeBytes ?? null,
+    measuredAt: new Date().toISOString(),
     updatedAt: s.updatedAt.toISOString(),
   }
 }
@@ -72,7 +83,6 @@ export async function getRetentionPolicy(): Promise<RetentionPolicyDto> {
 export async function updateRetentionSettings(input: {
   maxVersions?: number
   archiveDeprecatedDays?: number
-  storageQuotaBytes?: number
 }): Promise<RetentionPolicyDto> {
   await ensureRetentionSettings()
   const [row] = await db
@@ -82,20 +92,23 @@ export async function updateRetentionSettings(input: {
       ...(input.archiveDeprecatedDays !== undefined
         ? { archiveDeprecatedDays: input.archiveDeprecatedDays }
         : {}),
-      ...(input.storageQuotaBytes !== undefined
-        ? { storageQuotaBytes: input.storageQuotaBytes }
-        : {}),
       updatedAt: new Date(),
     })
     .where(eq(retentionSettings.id, DEFAULT_ID))
     .returning()
 
-  const storageUsedBytes = await getStorageUsedBytes()
+  const [artifactStorageBytes, diskSpace] = await Promise.all([
+    getStorageUsedBytes(),
+    getStorageDiskSpace(),
+  ])
   return {
     maxVersions: row.maxVersions,
     archiveDeprecatedDays: row.archiveDeprecatedDays,
-    storageQuotaBytes: row.storageQuotaBytes,
-    storageUsedBytes,
+    artifactStorageBytes,
+    diskTotalBytes: diskSpace?.totalBytes ?? null,
+    diskUsedBytes: diskSpace?.usedBytes ?? null,
+    diskFreeBytes: diskSpace?.freeBytes ?? null,
+    measuredAt: new Date().toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }
 }

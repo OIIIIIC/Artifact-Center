@@ -1,8 +1,8 @@
-import { desc, ilike, or, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '../db/client.js'
-import { applications, artifacts } from '../db/schema.js'
+import { applicationMembers, applications, artifacts } from '../db/schema.js'
 import { jsonError } from '../lib/errors.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 
@@ -26,30 +26,58 @@ searchRoutes.get('/', async (c) => {
   }
 
   const pattern = `%${q.replace(/[%_\\]/g, '\\$&')}%`
+  const user = c.get('user')
+  const appFilter = or(
+    ilike(applications.name, pattern),
+    ilike(applications.packageName, pattern),
+    ilike(applications.description, pattern),
+    ilike(applications.ownerName, pattern),
+    ilike(applications.repository, pattern),
+    ilike(applications.latestVersion, pattern),
+  )
+  const artifactFilter = or(
+    ilike(artifacts.version, pattern),
+    ilike(artifacts.filename, pattern),
+    ilike(artifacts.buildNumber, pattern),
+    ilike(artifacts.uploaderName, pattern),
+    ilike(artifacts.releaseNotes, pattern),
+    ilike(applications.name, pattern),
+    ilike(applications.packageName, pattern),
+  )
 
-  const appRows = await db
-    .select()
-    .from(applications)
-    .where(
-      or(
-        ilike(applications.name, pattern),
-        ilike(applications.packageName, pattern),
-        ilike(applications.description, pattern),
-        ilike(applications.ownerName, pattern),
-        ilike(applications.repository, pattern),
-        ilike(applications.latestVersion, pattern),
-      ),
-    )
-    .orderBy(desc(applications.updatedAt))
-    .limit(appLimit)
+  const appRows =
+    user.role === 'admin'
+      ? await db
+          .select()
+          .from(applications)
+          .where(appFilter)
+          .orderBy(desc(applications.updatedAt))
+          .limit(appLimit)
+      : (
+          await db
+            .select({ application: applications })
+            .from(applications)
+            .innerJoin(
+              applicationMembers,
+              and(
+                eq(applicationMembers.applicationId, applications.id),
+                eq(applicationMembers.userId, user.sub),
+              ),
+            )
+            .where(appFilter)
+            .orderBy(desc(applications.updatedAt))
+            .limit(appLimit)
+        ).map((row) => row.application)
 
-  const artRows = await db
+  const artifactQuery = db
     .select({
       id: artifacts.id,
       applicationId: artifacts.applicationId,
+      releaseId: artifacts.releaseId,
       version: artifacts.version,
       buildNumber: artifacts.buildNumber,
       platform: artifacts.platform,
+      type: artifacts.type,
       channel: artifacts.channel,
       status: artifacts.status,
       filename: artifacts.filename,
@@ -58,25 +86,32 @@ searchRoutes.get('/', async (c) => {
       releaseNotes: artifacts.releaseNotes,
       uploader: artifacts.uploaderName,
       uploadedAt: artifacts.uploadedAt,
+      parsedMeta: artifacts.parsedMeta,
+      buildMeta: artifacts.buildMeta,
       appName: applications.name,
       appPackageName: applications.packageName,
       appPlatform: applications.platform,
     })
     .from(artifacts)
     .innerJoin(applications, sql`${applications.id} = ${artifacts.applicationId}`)
-    .where(
-      or(
-        ilike(artifacts.version, pattern),
-        ilike(artifacts.filename, pattern),
-        ilike(artifacts.buildNumber, pattern),
-        ilike(artifacts.uploaderName, pattern),
-        ilike(artifacts.releaseNotes, pattern),
-        ilike(applications.name, pattern),
-        ilike(applications.packageName, pattern),
-      ),
-    )
-    .orderBy(desc(artifacts.uploadedAt))
-    .limit(artLimit)
+
+  const artRows =
+    user.role === 'admin'
+      ? await artifactQuery
+          .where(artifactFilter)
+          .orderBy(desc(artifacts.uploadedAt))
+          .limit(artLimit)
+      : await artifactQuery
+          .innerJoin(
+            applicationMembers,
+            and(
+              eq(applicationMembers.applicationId, applications.id),
+              eq(applicationMembers.userId, user.sub),
+            ),
+          )
+          .where(artifactFilter)
+          .orderBy(desc(artifacts.uploadedAt))
+          .limit(artLimit)
 
   const applicationsOut = appRows.map((row) => ({
     id: row.id,
@@ -97,9 +132,11 @@ searchRoutes.get('/', async (c) => {
     artifact: {
       id: r.id,
       applicationId: r.applicationId,
+      releaseId: r.releaseId,
       version: r.version,
       buildNumber: r.buildNumber,
       platform: r.platform,
+      type: r.type,
       channel: r.channel,
       status: r.status,
       filename: r.filename,
@@ -108,6 +145,8 @@ searchRoutes.get('/', async (c) => {
       releaseNotes: r.releaseNotes,
       uploader: r.uploader,
       uploadedAt: r.uploadedAt.toISOString(),
+      parsedMeta: r.parsedMeta,
+      buildMeta: r.buildMeta,
     },
     application: {
       id: r.applicationId,

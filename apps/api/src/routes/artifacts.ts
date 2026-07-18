@@ -1,16 +1,16 @@
-import { and, eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { Readable } from 'node:stream'
 import { z } from 'zod'
 
 import { db } from '../db/client.js'
-import { applications, artifacts } from '../db/schema.js'
+import { applications, artifacts, releases } from '../db/schema.js'
 import {
-  demoteLatestInApp,
   refreshApplicationArtifactStats,
   statusFromChannel,
 } from '../lib/artifact-helpers.js'
 import { writeAudit } from '../lib/audit.js'
+import { attachmentDisposition } from '../lib/download-response.js'
 import { enforceRetentionAfterUpload } from '../lib/retention.js'
 import { jsonError } from '../lib/errors.js'
 import {
@@ -21,6 +21,10 @@ import {
   storageKeyFor,
 } from '../lib/storage.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
+import {
+  hasApplicationRole,
+  requireApplicationRole,
+} from '../middleware/application-access.js'
 import { requireMinRole } from '../middleware/require-role.js'
 
 /** Max artifact size — keep in sync with frontend UPLOAD_MAX_BYTES */
@@ -29,6 +33,7 @@ const MAX_UPLOAD_BYTES = 512 * 1024 * 1024 // 512 MB
 const channelEnum = z.enum(['stable', 'beta', 'internal', 'deprecated'])
 const platformEnum = z.enum(['android', 'windows', 'zip'])
 const statusEnum = z.enum(['latest', 'stable', 'beta', 'deprecated', 'archived'])
+type ArtifactType = 'apk' | 'aab' | 'exe' | 'zip'
 
 const patchSchema = z.object({
   channel: channelEnum.optional(),
@@ -42,9 +47,11 @@ function mapArtifact(r: typeof artifacts.$inferSelect) {
   return {
     id: r.id,
     applicationId: r.applicationId,
+    releaseId: r.releaseId,
     version: r.version,
     buildNumber: r.buildNumber,
     platform: r.platform,
+    type: r.type,
     channel: r.channel,
     status: r.status,
     filename: r.filename,
@@ -53,7 +60,31 @@ function mapArtifact(r: typeof artifacts.$inferSelect) {
     releaseNotes: r.releaseNotes,
     uploader: r.uploaderName,
     uploadedAt: r.uploadedAt.toISOString(),
+    parsedMeta: r.parsedMeta,
+    buildMeta: r.buildMeta,
   }
+}
+
+function resolveArtifactType(filename: string): ArtifactType | null {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  if (ext === 'apk' || ext === 'aab' || ext === 'exe' || ext === 'zip') return ext
+  if (ext === 'msi') return 'exe'
+  return null
+}
+
+function platformForArtifactType(type: ArtifactType) {
+  if (type === 'apk' || type === 'aab') return 'android' as const
+  if (type === 'exe') return 'windows' as const
+  return 'zip' as const
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === '23505'
+  )
 }
 
 export const artifactRoutes = new Hono<{ Variables: AuthVariables }>()
@@ -63,6 +94,7 @@ artifactRoutes.post(
   '/applications/:appId/artifacts',
   requireAuth,
   requireMinRole('maintainer'),
+  requireApplicationRole('appId', 'maintainer'),
   async (c) => {
     const appId = c.req.param('appId')
     const user = c.get('user')
@@ -73,6 +105,9 @@ artifactRoutes.post(
       .where(eq(applications.id, appId))
       .limit(1)
     if (!app) return jsonError(c, 404, 'not_found', 'Application not found')
+    if (app.status === 'archived') {
+      return jsonError(c, 409, 'archived_application', 'Application is archived')
+    }
 
     const body = await c.req.parseBody()
     const file = body['file']
@@ -84,6 +119,11 @@ artifactRoutes.post(
     }
     if (file.size > MAX_UPLOAD_BYTES) {
       return jsonError(c, 400, 'too_large', `Max size is ${MAX_UPLOAD_BYTES} bytes`)
+    }
+
+    const artifactType = resolveArtifactType(file.name)
+    if (!artifactType) {
+      return jsonError(c, 400, 'unsupported_file_type', 'Unsupported artifact file type')
     }
 
     const version = String(body['version'] ?? '').trim()
@@ -102,13 +142,22 @@ artifactRoutes.post(
       return jsonError(c, 400, 'invalid_body', 'Invalid channel or platform')
     }
 
-    const [dup] = await db
-      .select({ id: artifacts.id })
-      .from(artifacts)
-      .where(and(eq(artifacts.applicationId, appId), eq(artifacts.version, version)))
-      .limit(1)
-    if (dup) {
-      return jsonError(c, 409, 'duplicate_version', `Version ${version} already exists`)
+    const platform = platformParsed.data
+    if (platform !== platformForArtifactType(artifactType)) {
+      return jsonError(
+        c,
+        400,
+        'platform_mismatch',
+        'File type does not match application platform',
+      )
+    }
+    if (platform !== app.platform) {
+      return jsonError(
+        c,
+        400,
+        'platform_mismatch',
+        'File type does not match application platform',
+      )
     }
 
     ensureStorageRoot()
@@ -117,7 +166,6 @@ artifactRoutes.post(
     const { sizeBytes, sha256 } = await saveUploadBuffer(storageKey, buffer)
 
     const channel = channelParsed.data
-    const platform = platformParsed.data
     const status = markLatest
       ? ('latest' as const)
       : channel === 'beta'
@@ -126,38 +174,82 @@ artifactRoutes.post(
           ? ('deprecated' as const)
           : ('stable' as const)
 
-    if (markLatest) {
-      await demoteLatestInApp(appId)
-    }
-
     const isDeprecated = status === 'deprecated' || channel === 'deprecated'
+    let row: typeof artifacts.$inferSelect
+    try {
+      row = await db.transaction(async (tx) => {
+        const now = new Date()
+        const [release] = await tx
+          .insert(releases)
+          .values({
+            applicationId: appId,
+            version,
+            releaseNotes,
+            createdById: user.sub,
+            createdByName: user.name,
+            publishedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [releases.applicationId, releases.version],
+            set: { releaseNotes, updatedAt: now },
+          })
+          .returning()
 
-    const [row] = await db
-      .insert(artifacts)
-      .values({
-        applicationId: appId,
-        version,
-        buildNumber: buildNumber || '1',
-        platform,
-        channel,
-        status,
-        filename: file.name,
-        sizeBytes,
-        sha256,
-        storageKey,
-        releaseNotes,
-        uploaderId: user.sub,
-        uploaderName: user.name,
-        deprecatedAt: isDeprecated ? new Date() : null,
+        if (markLatest) {
+          await tx.execute(sql`
+          UPDATE artifacts
+          SET status = CASE channel
+            WHEN 'beta' THEN 'beta'::artifact_status
+            WHEN 'deprecated' THEN 'deprecated'::artifact_status
+            ELSE 'stable'::artifact_status
+          END,
+          updated_at = now()
+          WHERE application_id = ${appId} AND status = 'latest'
+          `)
+        }
+
+        const [created] = await tx
+          .insert(artifacts)
+          .values({
+            applicationId: appId,
+            releaseId: release.id,
+            version,
+            buildNumber: buildNumber || '1',
+            platform,
+            type: artifactType,
+            channel,
+            status,
+            filename: file.name,
+            sizeBytes,
+            sha256,
+            storageKey,
+            releaseNotes,
+            uploaderId: user.sub,
+            uploaderName: user.name,
+            deprecatedAt: isDeprecated ? now : null,
+          })
+          .returning()
+
+        if (app.status === 'new') {
+          await tx
+            .update(applications)
+            .set({ status: 'active', updatedAt: now })
+            .where(eq(applications.id, appId))
+        }
+
+        return created
       })
-      .returning()
-
-    await refreshApplicationArtifactStats(appId)
-    if (app.status === 'new') {
-      await db
-        .update(applications)
-        .set({ status: 'active', updatedAt: new Date() })
-        .where(eq(applications.id, appId))
+    } catch (error) {
+      await deleteStorageFile(storageKey)
+      if (isUniqueViolation(error)) {
+        return jsonError(
+          c,
+          409,
+          'duplicate_artifact',
+          'Artifact version and build already exist',
+        )
+      }
+      throw error
     }
 
     // Enforce max-versions after upload
@@ -194,6 +286,9 @@ artifactRoutes.get('/artifacts/:id', requireAuth, async (c) => {
   const id = c.req.param('id')
   const [row] = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
   if (!row) return jsonError(c, 404, 'not_found', 'Artifact not found')
+  if (!(await hasApplicationRole(c.get('user'), row.applicationId, 'viewer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
   return c.json({ artifact: mapArtifact(row) })
 })
 
@@ -202,16 +297,16 @@ artifactRoutes.get('/artifacts/:id/download', requireAuth, async (c) => {
   const id = c.req.param('id')
   const [row] = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
   if (!row) return jsonError(c, 404, 'not_found', 'Artifact not found')
+  if (!(await hasApplicationRole(c.get('user'), row.applicationId, 'viewer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
 
   const stream = openDownloadStream(row.storageKey)
   if (!stream) {
     return jsonError(c, 404, 'file_missing', 'File missing from storage')
   }
 
-  c.header(
-    'Content-Disposition',
-    `attachment; filename="${row.filename.replace(/"/g, '')}"`,
-  )
+  c.header('Content-Disposition', attachmentDisposition(row.filename))
   c.header('Content-Type', 'application/octet-stream')
   c.header('Content-Length', String(row.sizeBytes))
 
@@ -252,6 +347,17 @@ artifactRoutes.patch(
       .where(eq(artifacts.id, id))
       .limit(1)
     if (!current) return jsonError(c, 404, 'not_found', 'Artifact not found')
+    if (!(await hasApplicationRole(c.get('user'), current.applicationId, 'maintainer'))) {
+      return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+    }
+    const [currentApp] = await db
+      .select({ status: applications.status })
+      .from(applications)
+      .where(eq(applications.id, current.applicationId))
+      .limit(1)
+    if (currentApp?.status === 'archived') {
+      return jsonError(c, 409, 'archived_application', 'Application is archived')
+    }
 
     const data = parsed.data
     if (
@@ -267,7 +373,6 @@ artifactRoutes.patch(
     let nextStatus = current.status
 
     if (data.markLatest === true || data.status === 'latest') {
-      await demoteLatestInApp(current.applicationId)
       nextStatus = 'latest'
     } else if (data.status !== undefined) {
       nextStatus = data.status
@@ -286,18 +391,44 @@ artifactRoutes.patch(
       deprecatedAt = null
     }
 
-    const [row] = await db
-      .update(artifacts)
-      .set({
-        channel: nextChannel,
-        status: nextStatus,
-        deprecatedAt,
-        ...(data.releaseNotes !== undefined ? { releaseNotes: data.releaseNotes } : {}),
-      })
-      .where(eq(artifacts.id, id))
-      .returning()
+    const row = await db.transaction(async (tx) => {
+      const now = new Date()
+      if (data.markLatest === true || data.status === 'latest') {
+        await tx.execute(sql`
+          UPDATE artifacts
+          SET status = CASE channel
+            WHEN 'beta' THEN 'beta'::artifact_status
+            WHEN 'deprecated' THEN 'deprecated'::artifact_status
+            ELSE 'stable'::artifact_status
+          END,
+          updated_at = now()
+          WHERE application_id = ${current.applicationId} AND status = 'latest'
+        `)
+      }
 
-    await refreshApplicationArtifactStats(current.applicationId)
+      if (data.releaseNotes !== undefined) {
+        await tx
+          .update(releases)
+          .set({ releaseNotes: data.releaseNotes, updatedAt: now })
+          .where(eq(releases.id, current.releaseId))
+        await tx
+          .update(artifacts)
+          .set({ releaseNotes: data.releaseNotes, updatedAt: now })
+          .where(eq(artifacts.releaseId, current.releaseId))
+      }
+
+      const [updated] = await tx
+        .update(artifacts)
+        .set({
+          channel: nextChannel,
+          status: nextStatus,
+          deprecatedAt,
+          updatedAt: now,
+        })
+        .where(eq(artifacts.id, id))
+        .returning()
+      return updated
+    })
 
     await writeAudit(c, {
       action: 'artifact.update',
@@ -330,6 +461,17 @@ artifactRoutes.delete(
       .where(eq(artifacts.id, id))
       .limit(1)
     if (!current) return jsonError(c, 404, 'not_found', 'Artifact not found')
+    if (!(await hasApplicationRole(c.get('user'), current.applicationId, 'maintainer'))) {
+      return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+    }
+    const [currentApp] = await db
+      .select({ status: applications.status })
+      .from(applications)
+      .where(eq(applications.id, current.applicationId))
+      .limit(1)
+    if (currentApp?.status === 'archived') {
+      return jsonError(c, 409, 'archived_application', 'Application is archived')
+    }
 
     await db.delete(artifacts).where(eq(artifacts.id, id))
     await deleteStorageFile(current.storageKey)

@@ -14,12 +14,6 @@ import { requireRoles } from '../middleware/require-role.js'
 const patchSchema = z.object({
   maxVersions: z.number().int().min(1).max(999).optional(),
   archiveDeprecatedDays: z.number().int().min(1).max(3650).optional(),
-  storageQuotaBytes: z
-    .number()
-    .int()
-    .min(1024 * 1024 * 100)
-    .max(1024 ** 5)
-    .optional(),
 })
 
 export const settingsRoutes = new Hono<{ Variables: AuthVariables }>()
@@ -47,8 +41,7 @@ settingsRoutes.patch('/retention', requireRoles('admin'), async (c) => {
   }
   if (
     parsed.data.maxVersions === undefined &&
-    parsed.data.archiveDeprecatedDays === undefined &&
-    parsed.data.storageQuotaBytes === undefined
+    parsed.data.archiveDeprecatedDays === undefined
   ) {
     return jsonError(c, 400, 'invalid_body', 'No fields to update')
   }
@@ -63,7 +56,6 @@ settingsRoutes.patch('/retention', requireRoles('admin'), async (c) => {
     meta: {
       maxVersions: policy.maxVersions,
       archiveDeprecatedDays: policy.archiveDeprecatedDays,
-      storageQuotaBytes: policy.storageQuotaBytes,
     },
   })
 

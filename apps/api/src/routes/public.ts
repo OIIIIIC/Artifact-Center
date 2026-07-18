@@ -5,6 +5,7 @@ import { Readable } from 'node:stream'
 import { db } from '../db/client.js'
 import { applications, artifacts, shareLinks } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
+import { attachmentDisposition } from '../lib/download-response.js'
 import { jsonError } from '../lib/errors.js'
 import { openDownloadStream } from '../lib/storage.js'
 
@@ -186,10 +187,7 @@ publicRoutes.get('/shares/:token/download', async (c) => {
     .set({ downloadCount: sql`${shareLinks.downloadCount} + 1` })
     .where(eq(shareLinks.id, share.id))
 
-  c.header(
-    'Content-Disposition',
-    `attachment; filename="${art.filename.replace(/"/g, '')}"`,
-  )
+  c.header('Content-Disposition', attachmentDisposition(art.filename))
   c.header('Content-Type', 'application/octet-stream')
   c.header('Content-Length', String(art.sizeBytes))
 
@@ -201,66 +199,6 @@ publicRoutes.get('/shares/:token/download', async (c) => {
     summary: `分享下载 ${art.filename} (v${art.version})`,
     meta: { via: 'share_token', shareId: share.id, version: art.version },
     actorName: share.createdByName || 'Share link',
-  })
-
-  return c.body(Readable.toWeb(stream) as ReadableStream)
-})
-
-/** Legacy open endpoints (kept for older client tokens / tooling) */
-publicRoutes.get('/applications/:id', async (c) => {
-  const id = c.req.param('id')
-  const [row] = await db
-    .select()
-    .from(applications)
-    .where(eq(applications.id, id))
-    .limit(1)
-  if (!row) return jsonError(c, 404, 'not_found', 'Application not found')
-  return c.json({ application: mapApp(row) })
-})
-
-publicRoutes.get('/applications/:id/artifacts', async (c) => {
-  const id = c.req.param('id')
-  const [app] = await db
-    .select({ id: applications.id })
-    .from(applications)
-    .where(eq(applications.id, id))
-    .limit(1)
-  if (!app) return jsonError(c, 404, 'not_found', 'Application not found')
-
-  const rows = await db
-    .select()
-    .from(artifacts)
-    .where(eq(artifacts.applicationId, id))
-    .orderBy(desc(artifacts.uploadedAt))
-
-  return c.json({ items: rows.map(mapArt) })
-})
-
-publicRoutes.get('/artifacts/:id/download', async (c) => {
-  const id = c.req.param('id')
-  const [row] = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
-  if (!row) return jsonError(c, 404, 'not_found', 'Artifact not found')
-
-  const stream = openDownloadStream(row.storageKey)
-  if (!stream) {
-    return jsonError(c, 404, 'file_missing', 'File missing from storage')
-  }
-
-  c.header(
-    'Content-Disposition',
-    `attachment; filename="${row.filename.replace(/"/g, '')}"`,
-  )
-  c.header('Content-Type', 'application/octet-stream')
-  c.header('Content-Length', String(row.sizeBytes))
-
-  void writeAudit(c, {
-    action: 'artifact.download',
-    objectType: 'artifact',
-    objectId: row.id,
-    applicationId: row.applicationId,
-    summary: `公开下载 ${row.filename} (v${row.version})`,
-    meta: { via: 'public_artifact', version: row.version },
-    actorName: 'Public',
   })
 
   return c.body(Readable.toWeb(stream) as ReadableStream)

@@ -8,6 +8,10 @@ import { applications, artifacts, shareLinks } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
 import { jsonError } from '../lib/errors.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
+import {
+  hasApplicationRole,
+  requireApplicationRole,
+} from '../middleware/application-access.js'
 import { requireMinRole } from '../middleware/require-role.js'
 
 const createSchema = z.object({
@@ -44,6 +48,7 @@ shareRoutes.post(
   '/applications/:appId/shares',
   requireAuth,
   requireMinRole('maintainer'),
+  requireApplicationRole('appId', 'maintainer'),
   async (c) => {
     const appId = c.req.param('appId')
     const user = c.get('user')
@@ -60,11 +65,18 @@ shareRoutes.post(
     }
 
     const [app] = await db
-      .select({ id: applications.id, name: applications.name })
+      .select({
+        id: applications.id,
+        name: applications.name,
+        status: applications.status,
+      })
       .from(applications)
       .where(eq(applications.id, appId))
       .limit(1)
     if (!app) return jsonError(c, 404, 'not_found', 'Application not found')
+    if (app.status === 'archived') {
+      return jsonError(c, 409, 'archived_application', 'Application is archived')
+    }
 
     const mode = parsed.data.mode
     let artifactId: string | null = null
@@ -74,12 +86,24 @@ shareRoutes.post(
         return jsonError(c, 400, 'invalid_body', 'artifactId required for pinned share')
       }
       const [art] = await db
-        .select({ id: artifacts.id, applicationId: artifacts.applicationId })
+        .select({
+          id: artifacts.id,
+          applicationId: artifacts.applicationId,
+          status: artifacts.status,
+        })
         .from(artifacts)
         .where(eq(artifacts.id, parsed.data.artifactId))
         .limit(1)
       if (!art || art.applicationId !== appId) {
         return jsonError(c, 404, 'not_found', 'Artifact not found for this application')
+      }
+      if (art.status === 'archived') {
+        return jsonError(
+          c,
+          409,
+          'archived_artifact',
+          'Archived artifacts cannot create pinned shares',
+        )
       }
       artifactId = art.id
     }
@@ -119,6 +143,7 @@ shareRoutes.get(
   '/applications/:appId/shares',
   requireAuth,
   requireMinRole('maintainer'),
+  requireApplicationRole('appId', 'maintainer'),
   async (c) => {
     const appId = c.req.param('appId')
     const [app] = await db
@@ -150,6 +175,9 @@ shareRoutes.delete(
 
     const [row] = await db.select().from(shareLinks).where(eq(shareLinks.id, id)).limit(1)
     if (!row) return jsonError(c, 404, 'not_found', 'Share not found')
+    if (!(await hasApplicationRole(user, row.applicationId, 'maintainer'))) {
+      return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+    }
     if (row.revokedAt) {
       return c.json({ share: mapShare(row) })
     }
