@@ -1,7 +1,8 @@
 # Artifact Center — 待办与后续
 
 > 前端产品壳与核心页面已基本闭环。  
-> 下列项在 **后端就绪后** 优先落地，勿在纯 Mock 阶段硬做完整审计。
+> 后端 API 脚手架已就绪（`apps/api`）。  
+> 下列项在 **后端对接 / 可用后** 优先落地。
 
 ---
 
@@ -14,25 +15,26 @@
 
 ---
 
-## 前端后续增强
+## 已完成（后端脚手架）
 
-### 分享页展示版本更新备注（发布说明）
+- [x] Docker Compose PostgreSQL
+- [x] Hono API：`/auth`、`/applications`、上传 / 下载
+- [x] Drizzle schema + migrate + seed（`demo@enterprise.local`）
+- [x] 本地文件存储 `data/files`
 
-**优先级：中（体验增强，可前端先行）**
+---
 
-**一句话：**  
-下载落地页除版本/文件信息外，展示本版本的 **发布说明 / 更新备注**，让下载者知道改了什么。
+## 后端对接
 
-**建议：**
-
-- 数据来源：制品 `releaseNotes`（上传时填写）
-- 固定版本分享：写入 token 快照时一并带上 `releaseNotes`（与版本号等同理）
-- 始终最新版：解析当前 latest 后展示其 `releaseNotes`
-- 为空时：不占位、不显示空白块（与详情概览一致）
-- 展示位置：信息卡下方或独立「本版更新」弱文案区；克制，勿做成 changelog 长文墙
-- 注意：长文本可 `line-clamp` + 展开，或截断到合理行数
-
-**入口：** `/d/:token` 分享下载页
+- [x] 前端 API client + Vite `/api` 代理
+- [x] 登录对接 `POST /auth/login` + JWT 持久化 / bootstrap
+- [x] 应用 CRUD / 列表对接（React Query）
+- [x] 上传 multipart + 下载流对接
+- [x] 分享页公开解析 / 下载（`/public/*`）
+- [x] 全局搜索 `GET /search`（应用 + 制品）
+- [x] 管理员创建用户 / 列表 / 改角色 / 删除 / 重置密码（`/users`）
+- [x] 设置页本人改密 / 改资料 / 头像（`PATCH /auth/me`、`POST /auth/change-password`）
+- [x] 分享页展示发布说明（token 快照 + 落地页）
 
 ---
 
@@ -81,11 +83,13 @@
 
 ## 其它后端相关后续（备忘）
 
-- [ ] 真实上传 / 对象存储 / 哈希校验
-- [ ] 包名唯一、版本冲突策略（服务端）
-- [ ] 角色真正约束 UI 与接口（Admin / Maintainer / Viewer）
-- [ ] 分享链接服务端签发与吊销（替代纯前端 token）
-- [ ] 保留策略与清理任务落地
+- [x] 真实上传 + SHA-256（本地 `data/files`；对象存储可后续替换）
+- [x] 包名唯一、版本冲突（服务端 409）
+- [x] 角色写权限约束（API + 关键按钮/Tab）
+- [x] 操作审计日志（`audit_logs` + 应用详情「活动」Tab）
+- [x] 制品生命周期：标最新 / 弃用 / 删除版本（PATCH/DELETE `/artifacts/:id`）
+- [x] 分享链接服务端签发 / 列表 / 吊销 / 公开解析与下载
+- [x] 保留策略与清理任务（配置 API、上传后清理、定时任务、设置页）
 
 ---
 

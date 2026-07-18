@@ -25,10 +25,12 @@
 ## 当前阶段
 
 - **前端 Mock 壳**：核心页面与主路径已基本完成（见 `TODO.md` 已完成项）。
-- **下一阶段**：后端与真实存储；后端可用后优先做 **操作记录（审计）**（见 `TODO.md`）。
+- **后端脚手架**：`apps/api`（Hono + PostgreSQL + 本地文件），见 [apps/api/README.md](../apps/api/README.md)。
+- **下一步**：前端对接真实 API；后端可用后优先做 **操作记录（审计）**（见 `TODO.md`）。
 
 相关目录：
 
+- `../apps/api/` — 后端 API
 - `../prompts/` — AI 提示词（待补充）
 - `../references/` — 参考资料
 - `../assets/` — 品牌与设计资源
