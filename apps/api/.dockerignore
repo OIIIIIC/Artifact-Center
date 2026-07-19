@@ -3,3 +3,6 @@ dist
 .env
 *.log
 drizzle.config.ts
+src/__tests__
+*.test.ts
+*.spec.ts
