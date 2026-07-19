@@ -14,7 +14,7 @@
 | [07-UI-PRINCIPLES.md](./07-UI-PRINCIPLES.md)               | UI 决策原则          |
 | [10-DATABASE.md](./10-DATABASE.md)                         | 数据库模型与迁移规范 |
 | [11-DEPLOYMENT.md](./11-DEPLOYMENT.md)                     | Ubuntu 生产部署      |
-| [TODO.md](./TODO.md)                                       | 待办与后端后优先项   |
+| [12-INTRANET-DEPLOYMENT.md](./12-INTRANET-DEPLOYMENT.md)   | 内网离线部署指南     |
 
 ## 阅读顺序（新人 / AI）
 
@@ -23,13 +23,12 @@
 3. Architecture → Roadmap
 4. Coding Standard → Component Guidelines
 5. **Database**（表结构、约束与迁移规范）
-6. **TODO**（前端收口与后续能力）
 
 ## 当前阶段
 
-- **前端 Mock 壳**：核心页面与主路径已基本完成（见 `TODO.md` 已完成项）。
-- **后端脚手架**：`apps/api`（Hono + PostgreSQL + 本地文件），见 [apps/api/README.md](../apps/api/README.md)。
-- **下一步**：前端对接真实 API；后端可用后优先做 **操作记录（审计）**（见 `TODO.md`）。
+- **前端产品壳**：核心页面与主路径已基本完成。
+- **后端 API**：`apps/api`（Hono + PostgreSQL + 本地文件），见 [apps/api/README.md](../apps/api/README.md)。
+- **下一步**：按 [04-ROADMAP.md](./04-ROADMAP.md) 推进 MVP 收口与后续能力。
 
 相关目录：
 

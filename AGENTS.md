@@ -567,3 +567,13 @@ Every page should answer one question:
 If the answer is unclear,
 
 the navigation is probably wrong.
+
+## Agent skills
+
+### Issue tracker
+
+本仓库使用 GitHub Issues 跟踪需求、规格和工程任务。见 `docs/agents/issue-tracker.md`。
+
+### Domain docs
+
+本仓库使用单上下文领域文档：根目录 `CONTEXT.md` + `docs/adr/`。见 `docs/agents/domain.md`。
