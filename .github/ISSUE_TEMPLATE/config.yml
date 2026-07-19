@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: 查看文档
+    url: https://github.com/geekbino/artifact-center/tree/main/docs
+    about: 在提交 Issue 前，请先查阅项目文档（产品规范、架构设计等）
+  - name: 讨论区
+    url: https://github.com/geekbino/artifact-center/discussions
+    about: 一般性问题、想法或建议请到讨论区交流
