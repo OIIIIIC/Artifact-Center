@@ -35,6 +35,7 @@ services:
       DATABASE_URL: postgres://artifact:${POSTGRES_PASSWORD}@postgres:5432/artifact_center
       JWT_SECRET: ${JWT_SECRET:?请在 deploy/.env 中设置 JWT_SECRET}
       BOOTSTRAP_ADMIN_NAME: ${ADMIN_NAME:-}
+      BOOTSTRAP_ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       STORAGE_PATH: /data/artifacts

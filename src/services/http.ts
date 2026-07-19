@@ -145,16 +145,16 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     throw error
   }
 
-  if (res.status === 204) {
-    return undefined as T
-  }
-
   const ct = res.headers.get('content-type') ?? ''
   if (ct.includes('application/json')) {
     return (await res.json()) as T
   }
 
-  return undefined as T
+  throw new ApiError({
+    status: res.status,
+    code: 'invalid_response',
+    message: 'Expected a JSON response body',
+  })
 }
 
 export async function requestBlob(

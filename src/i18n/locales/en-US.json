@@ -116,8 +116,7 @@
     "errorWrongPassword": "Incorrect email or password.",
     "errorWeakPassword": "Password is too weak: min 8 chars, letters + digits, not a common password.",
     "errorInvalidEmail": "Enter a valid email address.",
-    "errorNetwork": "Artifact Center could not be reached. Please try again shortly.",
-    "demoHint": "Demo: demo@enterprise.local / Demo@2026 (new accounts must set a policy-compliant password)"
+    "errorNetwork": "Artifact Center could not be reached. Please try again shortly."
   },
   "password": {
     "strength": {
@@ -562,10 +561,10 @@
     "dropHere": "Drop artifact here",
     "dropHint": "or click to browse · APK / AAB / EXE / ZIP",
     "dropTarget": " · target {{platform}}",
-    "uploading": "Uploading…",
-    "verifying": "Verifying…",
-    "hashing": "Calculating hash…",
-    "mockPipeline": "Demo pipeline — files are not uploaded for real",
+    "uploading": "Checking file…",
+    "verifying": "Verifying artifact information…",
+    "hashing": "Calculating file digest…",
+    "mockPipeline": "The file will be uploaded to the server after you confirm publication.",
     "progressAria": "Upload progress",
     "sha256": "SHA-256",
     "detectedVersion": "Detected version",

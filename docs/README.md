@@ -13,6 +13,7 @@
 | [06-COMPONENT-GUIDELINES.md](./06-COMPONENT-GUIDELINES.md) | 组件分层与清单       |
 | [07-UI-PRINCIPLES.md](./07-UI-PRINCIPLES.md)               | UI 决策原则          |
 | [10-DATABASE.md](./10-DATABASE.md)                         | 数据库模型与迁移规范 |
+| [11-DEPLOYMENT.md](./11-DEPLOYMENT.md)                     | Ubuntu 生产部署      |
 | [TODO.md](./TODO.md)                                       | 待办与后端后优先项   |
 
 ## 阅读顺序（新人 / AI）

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
@@ -21,7 +21,7 @@ import {
   UserRound,
 } from 'lucide-react'
 
-import { AppLayout, FormStack, PageContainer, PageHeader } from '@/components/layout'
+import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,10 +35,11 @@ import {
   ModalTitle,
 } from '@/components/ui/modal'
 import { AvatarUpload } from '@/features/settings/avatar-upload'
+import { RetentionSettingsPanel } from '@/features/settings/retention-settings-panel'
+import { SettingsPanel } from '@/features/settings/settings-panel'
 import { FormError } from '@/components/feedback'
 import { MEMBER_ROLES, type MemberRole } from '@/features/settings/mock-members'
 import { PasswordField, PasswordPolicyHints } from '@/features/settings/password-field'
-import { formatFileSize } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
 import { checkPassword } from '@/lib/password'
@@ -49,11 +50,8 @@ import {
   apiAdminResetPassword,
   apiCreateUser,
   apiDeleteUser,
-  apiGetRetention,
   apiListApplications,
   apiListUsers,
-  apiRunRetentionCleanup,
-  apiUpdateRetention,
   apiUpdateUser,
   apiUpsertApplicationMember,
 } from '@/services/api'
@@ -105,27 +103,15 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
   })
   const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data])
 
-  const retentionQuery = useQuery({
-    queryKey: ['settings', 'retention'],
-    queryFn: apiGetRetention,
-    enabled: standalone !== 'members',
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
-  })
-  const retention = retentionQuery.data
-
   const [section, setSection] = useState<SettingsSection>(
     standalone === 'members' ? 'members' : 'general',
   )
-  const [retentionSaving, setRetentionSaving] = useState(false)
-  const [cleanupRunning, setCleanupRunning] = useState(false)
 
   // Profile — seed from user on first paint
   const [profileName, setProfileName] = useState(() => user?.name ?? '')
   const [profileEmail, setProfileEmail] = useState(() => user?.email ?? '')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
-  const [profileSeedId, setProfileSeedId] = useState(user?.id)
 
   // Password
   const [currentPassword, setCurrentPassword] = useState('')
@@ -165,42 +151,6 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
   const [resetConfirm, setResetConfirm] = useState('')
   const [resetError, setResetError] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
-
-  // Retention fields (local draft)
-  const [maxVersions, setMaxVersions] = useState('20')
-  const [archiveDays, setArchiveDays] = useState('90')
-  const [retentionHydrated, setRetentionHydrated] = useState(false)
-
-  // Sync when user identity changes (login switch) — adjust during render
-  if (user?.id && user.id !== profileSeedId) {
-    setProfileSeedId(user.id)
-    setProfileName(user.name)
-    setProfileEmail(user.email)
-  }
-
-  if (retention && !retentionHydrated) {
-    setMaxVersions(String(retention.maxVersions))
-    setArchiveDays(String(retention.archiveDeprecatedDays))
-    setRetentionHydrated(true)
-  }
-  if (!retention && retentionHydrated) {
-    setRetentionHydrated(false)
-  }
-
-  const storagePct = useMemo(() => {
-    if (
-      !retention ||
-      retention.diskTotalBytes == null ||
-      retention.diskUsedBytes == null ||
-      retention.diskTotalBytes <= 0
-    ) {
-      return 0
-    }
-    return Math.min(
-      100,
-      Math.round((retention.diskUsedBytes / retention.diskTotalBytes) * 100),
-    )
-  }, [retention])
 
   const assignableApplications = useMemo(() => {
     const query = applicationSearch.trim().toLowerCase()
@@ -371,76 +321,6 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
     }
   }
 
-  const saveRetention = async () => {
-    if (!isAdmin) {
-      toast.error(t('settings.retentionAdminOnly'))
-      return
-    }
-    const max = Number.parseInt(maxVersions, 10)
-    const days = Number.parseInt(archiveDays, 10)
-    if (
-      !Number.isFinite(max) ||
-      max < 1 ||
-      max > 999 ||
-      !Number.isFinite(days) ||
-      days < 1 ||
-      days > 3650
-    ) {
-      toast.error(t('settings.retentionInvalid'))
-      return
-    }
-    setRetentionSaving(true)
-    try {
-      await apiUpdateRetention({
-        maxVersions: max,
-        archiveDeprecatedDays: days,
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ['settings', 'retention'],
-      })
-      setRetentionHydrated(false)
-      toast.success(t('settings.retentionSaved'))
-    } catch (err) {
-      toast.error(
-        getRequestErrorMessage(err, {
-          offline: t('common.requestFailedOffline'),
-          unavailable: t('common.requestFailedUnavailable'),
-          fallback: t('settings.retentionSaveFailed'),
-        }),
-      )
-    } finally {
-      setRetentionSaving(false)
-    }
-  }
-
-  const runCleanup = async () => {
-    if (!isAdmin) return
-    setCleanupRunning(true)
-    try {
-      const { report } = await apiRunRetentionCleanup()
-      await queryClient.invalidateQueries({
-        queryKey: ['settings', 'retention'],
-      })
-      setRetentionHydrated(false)
-      toast.success(t('settings.cleanupDone'), {
-        description: t('settings.cleanupDoneDesc', {
-          deleted: report.deletedVersions,
-          archived: report.archivedDeprecated,
-        }),
-      })
-    } catch (err) {
-      toast.error(
-        getRequestErrorMessage(err, {
-          offline: t('common.requestFailedOffline'),
-          unavailable: t('common.requestFailedUnavailable'),
-          fallback: t('settings.cleanupFailed'),
-        }),
-      )
-    } finally {
-      setCleanupRunning(false)
-    }
-  }
-
   const onAddMember = async () => {
     setAddError(null)
     const name = newName.trim()
@@ -552,13 +432,6 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
         : 'bg-muted/40 text-muted-foreground hover:text-foreground',
     )
 
-  const fieldClass = cn(
-    'h-10 w-full rounded-lg bg-muted/30 px-3 text-[0.875rem] outline-none',
-    'ring-1 ring-border/60 transition-[box-shadow,background-color] duration-[var(--duration-hover)]',
-    'placeholder:text-muted-foreground/60',
-    'focus-visible:bg-card focus-visible:ring-[3px] focus-visible:ring-ring/30',
-  )
-
   const standaloneMembers = standalone === 'members'
 
   return (
@@ -616,7 +489,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
           <div className="min-w-0 flex-1">
             {section === 'general' ? (
               <div className="space-y-8">
-                <Panel
+                <SettingsPanel
                   title={t('settings.generalTitle')}
                   description={t('settings.generalDesc')}
                 >
@@ -689,9 +562,9 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                       </Button>
                     </div>
                   </div>
-                </Panel>
+                </SettingsPanel>
 
-                <Panel
+                <SettingsPanel
                   title={t('settings.passwordTitle')}
                   description={t('settings.passwordDesc')}
                 >
@@ -777,12 +650,12 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                       </div>
                     </div>
                   </div>
-                </Panel>
+                </SettingsPanel>
               </div>
             ) : null}
 
             {section === 'appearance' ? (
-              <Panel
+              <SettingsPanel
                 title={t('settings.appearanceTitle')}
                 description={t('settings.appearanceDesc')}
               >
@@ -839,11 +712,11 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                     </div>
                   </div>
                 </div>
-              </Panel>
+              </SettingsPanel>
             ) : null}
 
             {section === 'members' ? (
-              <Panel
+              <SettingsPanel
                 title={t('settings.membersTitle')}
                 description={t('settings.membersDesc')}
                 wide
@@ -1446,184 +1319,15 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
                     </p>
                   </>
                 )}
-              </Panel>
+              </SettingsPanel>
             ) : null}
 
             {section === 'retention' ? (
-              <Panel
-                title={t('settings.retentionTitle')}
-                description={t('settings.retentionDesc')}
-              >
-                {retentionQuery.isLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
-                    <span className="text-[0.8125rem]">{t('common.loading')}</span>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div
-                      className={cn(
-                        'space-y-3 rounded-2xl bg-card/60 p-5 ring-1 ring-border/70',
-                        'dark:bg-card/40',
-                      )}
-                    >
-                      <div className="flex flex-wrap items-baseline justify-between gap-3">
-                        <span className="text-[0.8125rem] font-medium text-foreground">
-                          {t('settings.storageUsage')}
-                        </span>
-                        <span className="text-[0.75rem] tabular-nums text-muted-foreground">
-                          {retention?.diskUsedBytes != null &&
-                          retention.diskTotalBytes != null
-                            ? `${formatFileSize(retention.diskUsedBytes)} / ${formatFileSize(retention.diskTotalBytes)} (${storagePct}%)`
-                            : t('settings.diskSpaceUnavailable')}
-                        </span>
-                      </div>
-                      {retention?.diskTotalBytes != null ? (
-                        <div
-                          className="h-2 overflow-hidden rounded-full bg-muted/60"
-                          role="progressbar"
-                          aria-valuenow={storagePct}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-label={t('settings.storageUsage')}
-                        >
-                          <div
-                            className="h-full rounded-full bg-foreground/80 transition-[width] duration-300"
-                            style={{ width: `${storagePct}%` }}
-                          />
-                        </div>
-                      ) : null}
-                      <dl className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-lg bg-muted/25 px-3 py-2.5">
-                          <dt className="text-[0.6875rem] text-muted-foreground">
-                            {t('settings.diskAvailable')}
-                          </dt>
-                          <dd className="mt-0.5 text-[0.875rem] font-medium tabular-nums text-foreground">
-                            {retention?.diskFreeBytes != null
-                              ? formatFileSize(retention.diskFreeBytes)
-                              : '—'}
-                          </dd>
-                        </div>
-                        <div className="rounded-lg bg-muted/25 px-3 py-2.5">
-                          <dt className="text-[0.6875rem] text-muted-foreground">
-                            {t('settings.artifactStorage')}
-                          </dt>
-                          <dd className="mt-0.5 text-[0.875rem] font-medium tabular-nums text-foreground">
-                            {formatFileSize(retention?.artifactStorageBytes ?? 0)}
-                          </dd>
-                        </div>
-                      </dl>
-                      <p className="text-[0.75rem] text-muted-foreground">
-                        {t('settings.storageHint')}
-                      </p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <label className="block space-y-1.5">
-                        <span className="text-[0.8125rem] font-medium text-foreground">
-                          {t('settings.maxVersions')}
-                        </span>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={999}
-                          value={maxVersions}
-                          onChange={(e) => setMaxVersions(e.target.value)}
-                          disabled={!isAdmin || retentionSaving}
-                          className={cn(fieldClass, 'h-10')}
-                        />
-                        <span className="block text-[0.75rem] text-muted-foreground">
-                          {t('settings.maxVersionsHint')}
-                        </span>
-                      </label>
-                      <label className="block space-y-1.5">
-                        <span className="text-[0.8125rem] font-medium text-foreground">
-                          {t('settings.archiveDays')}
-                        </span>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={3650}
-                          value={archiveDays}
-                          onChange={(e) => setArchiveDays(e.target.value)}
-                          disabled={!isAdmin || retentionSaving}
-                          className={cn(fieldClass, 'h-10')}
-                        />
-                        <span className="block text-[0.75rem] text-muted-foreground">
-                          {t('settings.archiveDaysHint')}
-                        </span>
-                      </label>
-                    </div>
-
-                    {!isAdmin ? (
-                      <p className="text-[0.8125rem] text-muted-foreground">
-                        {t('settings.retentionAdminOnly')}
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <Button
-                          type="button"
-                          size="lg"
-                          variant="outline"
-                          className="border-0 bg-muted/40 ring-1 ring-border/60"
-                          disabled={cleanupRunning || retentionSaving}
-                          onClick={() => void runCleanup()}
-                        >
-                          {cleanupRunning
-                            ? t('settings.cleanupRunning')
-                            : t('settings.runCleanup')}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="lg"
-                          className="min-w-[6.5rem]"
-                          disabled={retentionSaving || cleanupRunning}
-                          onClick={() => void saveRetention()}
-                        >
-                          {retentionSaving
-                            ? t('settings.saving')
-                            : t('settings.saveRetention')}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Panel>
+              <RetentionSettingsPanel isAdmin={isAdmin} />
             ) : null}
           </div>
         </div>
       </PageContainer>
     </AppLayout>
-  )
-}
-
-function Panel({
-  title,
-  description,
-  children,
-  /** Forms stay form-max; lists (members) can use the full settings column. */
-  wide = false,
-  hideHeader = false,
-}: {
-  title: string
-  description: string
-  children: ReactNode
-  wide?: boolean
-  hideHeader?: boolean
-}) {
-  return (
-    <section className="w-full space-y-5">
-      {!hideHeader ? (
-        <div className="space-y-1">
-          <h2 className="text-[1.0625rem] font-semibold tracking-tight text-foreground">
-            {title}
-          </h2>
-          <p className="max-w-2xl text-[0.8125rem] leading-relaxed text-muted-foreground">
-            {description}
-          </p>
-        </div>
-      ) : null}
-      {wide ? children : <FormStack>{children}</FormStack>}
-    </section>
   )
 }

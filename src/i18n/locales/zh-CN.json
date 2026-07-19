@@ -116,8 +116,7 @@
     "errorWrongPassword": "邮箱或密码不正确。",
     "errorWeakPassword": "密码强度不足：至少 8 位，含字母与数字，且不能是常见弱密码。",
     "errorInvalidEmail": "请输入有效的邮箱地址。",
-    "errorNetwork": "无法连接到 Artifact Center 服务，请稍后重试。",
-    "demoHint": "演示：demo@enterprise.local / Demo@2026（新账号首次登录须设置符合策略的密码）"
+    "errorNetwork": "无法连接到 Artifact Center 服务，请稍后重试。"
   },
   "password": {
     "strength": {
@@ -562,10 +561,10 @@
     "dropHere": "将制品拖到此处",
     "dropHint": "或点击选择 · APK / AAB / EXE / ZIP",
     "dropTarget": " · 目标 {{platform}}",
-    "uploading": "上传中…",
-    "verifying": "校验中…",
-    "hashing": "计算哈希…",
-    "mockPipeline": "演示流程 — 不会真实上传文件",
+    "uploading": "正在检查文件…",
+    "verifying": "正在校验制品信息…",
+    "hashing": "正在计算文件摘要…",
+    "mockPipeline": "文件将在确认发布后上传到服务器。",
     "progressAria": "上传进度",
     "sha256": "SHA-256",
     "detectedVersion": "识别版本",

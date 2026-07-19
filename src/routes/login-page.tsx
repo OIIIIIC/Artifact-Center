@@ -143,10 +143,6 @@ export function LoginPage() {
             <Button type="submit" size="lg" className="w-full" disabled={loading}>
               {loading ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
-
-            <p className="text-center text-[0.75rem] leading-relaxed text-muted-foreground/80">
-              {t('auth.demoHint')}
-            </p>
           </form>
         </div>
       </div>
