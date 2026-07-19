@@ -106,14 +106,11 @@ export function ProfileSecurityPanel() {
               onChange={onAvatarChange}
               disabled={profileSaving}
             />
-            <div className="space-y-2 sm:text-right">
+            <div className="sm:text-right">
               <Badge variant="secondary" className="gap-1 rounded-md font-normal">
                 <Shield className="size-3 opacity-70" strokeWidth={1.75} />
                 {user && MEMBER_ROLES.includes(user.role) ? roleLabel(user.role) : '—'}
               </Badge>
-              <p className="text-[0.75rem] text-muted-foreground">
-                {t('settings.accountHint')}
-              </p>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

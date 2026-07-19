@@ -32,9 +32,7 @@ export function SettingsPage({ standalone }: { standalone?: 'members' }) {
       <PageContainer rhythm="product">
         <PageHeader
           title={standaloneMembers ? t('settings.membersTitle') : t('settings.title')}
-          description={
-            standaloneMembers ? t('settings.membersDesc') : t('settings.description')
-          }
+          description={standaloneMembers ? t('settings.membersDesc') : undefined}
         />
 
         <div

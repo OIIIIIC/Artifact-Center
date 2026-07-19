@@ -35,7 +35,6 @@ export function ApplicationsPage() {
         <div className="space-y-6 sm:space-y-7">
           <PageHeader
             title={t('applications.title')}
-            description={t('applications.description')}
             action={
               canWrite ? (
                 <div className="flex flex-wrap items-center gap-2">

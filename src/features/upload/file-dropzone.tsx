@@ -148,7 +148,7 @@ export function FileDropzone({
             <div className="space-y-1">
               <p className="text-[0.9375rem] font-medium text-foreground">{phaseLabel}</p>
               <p className="text-[0.75rem] text-muted-foreground">
-                {t('upload.mockPipeline')}
+                {t('upload.publishHint')}
               </p>
             </div>
             <div className="mt-2 flex w-48 gap-1">

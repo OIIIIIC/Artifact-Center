@@ -11,10 +11,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
-/**
- * Login — minimal, brand-first (not ERP).
- * Mock: any non-empty email + password; demo@enterprise.local recommended.
- */
+/** 登录页保持最小化，并且不预填任何凭据。 */
 export function LoginPage() {
   const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
@@ -27,8 +24,8 @@ export function LoginPage() {
       ? (location.state as { from: string }).from
       : '/'
 
-  const [identifier, setIdentifier] = useState('demo')
-  const [password, setPassword] = useState('Demo@2026')
+  const [identifier, setIdentifier] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 

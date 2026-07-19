@@ -173,9 +173,6 @@ export function RetentionSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
                 </dd>
               </div>
             </dl>
-            <p className="text-[0.75rem] text-muted-foreground">
-              {t('settings.storageHint')}
-            </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-1.5">

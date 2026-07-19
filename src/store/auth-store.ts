@@ -47,10 +47,6 @@ function applySession(token: string, user: AuthUser) {
   return { token, user }
 }
 
-/** Seed demo credentials shown on login form only */
-const DEMO_EMAIL = 'demo@enterprise.local'
-const DEMO_PASSWORD = 'Demo@2026'
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -209,5 +205,3 @@ export const useAuthStore = create<AuthState>()(
 setUnauthorizedHandler(() => {
   useAuthStore.getState().logout()
 })
-
-export { DEMO_EMAIL, DEMO_PASSWORD }
