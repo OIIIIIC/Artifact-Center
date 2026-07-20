@@ -9,6 +9,7 @@ export type HttpError = {
   code: string
   message: string
   details?: unknown
+  requestId?: string
 }
 
 export type ConnectivityStatus = 'offline' | 'unavailable' | null
@@ -20,13 +21,17 @@ export class ApiError extends Error {
   status: number
   code: string
   details?: unknown
+  requestId?: string
 
   constructor(err: HttpError) {
-    super(err.message)
+    const supportSuffix =
+      err.status >= 500 && err.requestId ? `（请求 ID：${err.requestId}）` : ''
+    super(`${err.message}${supportSuffix}`)
     this.name = 'ApiError'
     this.status = err.status
     this.code = err.code
     this.details = err.details
+    this.requestId = err.requestId
   }
 }
 
@@ -71,6 +76,8 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   rawBody?: BodyInit | null
 }
 
+export type UploadProgress = (progress: number) => void
+
 /** Called on 401 so auth-store can clear session without circular imports */
 let onUnauthorized: (() => void) | null = null
 
@@ -94,7 +101,13 @@ async function parseError(res: Response): Promise<ApiError> {
   } catch {
     // ignore non-JSON
   }
-  return new ApiError({ status: res.status, code, message, details })
+  return new ApiError({
+    status: res.status,
+    code,
+    message,
+    details,
+    requestId: res.headers.get('x-request-id') ?? undefined,
+  })
 }
 
 async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -154,6 +167,82 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     status: res.status,
     code: 'invalid_response',
     message: 'Expected a JSON response body',
+    requestId: res.headers.get('x-request-id') ?? undefined,
+  })
+}
+
+/** 使用原生 XHR 获取上传进度；请求生命周期由调用方的全局管理器持有。 */
+export async function requestMultipart<T>(
+  path: string,
+  body: FormData,
+  onProgress?: UploadProgress,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${API_BASE_URL}${path}`)
+
+    const token = getAccessToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable)
+        onProgress?.(Math.round((event.loaded / event.total) * 100))
+    }
+
+    xhr.onerror = () => {
+      reject(
+        new ApiError({
+          status: 0,
+          code: 'network_error',
+          message: 'Network request failed',
+        }),
+      )
+    }
+
+    xhr.onload = () => {
+      if (xhr.status === 401) {
+        setAccessToken(null)
+        onUnauthorized?.()
+      }
+
+      let data: {
+        artifact?: T
+        error?: { code?: string; message?: string; details?: unknown }
+      }
+      try {
+        data = JSON.parse(xhr.responseText) as typeof data
+      } catch {
+        data = {}
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(
+          new ApiError({
+            status: xhr.status,
+            code: data.error?.code ?? 'http_error',
+            message: data.error?.message ?? `HTTP ${xhr.status}`,
+            details: data.error?.details,
+            requestId: xhr.getResponseHeader('x-request-id') ?? undefined,
+          }),
+        )
+        return
+      }
+
+      if (!data.artifact) {
+        reject(
+          new ApiError({
+            status: xhr.status,
+            code: 'invalid_response',
+            message: 'Expected a JSON response body',
+            requestId: xhr.getResponseHeader('x-request-id') ?? undefined,
+          }),
+        )
+        return
+      }
+      resolve(data.artifact)
+    }
+
+    xhr.send(body)
   })
 }
 

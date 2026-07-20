@@ -9,7 +9,25 @@ export type UploadPhase =
 
 export type UploadFileError = 'too_large' | 'wrong_platform' | 'unsupported' | 'empty'
 
-export type PublishError = 'duplicate_artifact' | 'upload_failed' | null
+export type PublishError =
+  'duplicate_artifact' | 'archived_application' | 'upload_failed' | null
+
+export type UploadTaskStatus = 'uploading' | 'completed' | 'failed'
+
+/** 全局上传任务；File 仅在当前页面会话内保留，不做持久化。 */
+export interface UploadTask {
+  taskId: string
+  fileName: string
+  fileSize: number
+  applicationId: string
+  applicationName: string
+  version: string
+  buildNumber: string
+  channel: UploadChannel
+  status: UploadTaskStatus
+  progress: number
+  error: PublishError
+}
 
 export type FileKind =
   'apk' | 'aab' | 'exe' | 'zip' | 'ipa' | 'firmware' | 'docker' | 'unknown'

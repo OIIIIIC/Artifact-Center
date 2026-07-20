@@ -2,10 +2,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalDescription,
+  ModalFooter,
+  ModalHeader,
+  ModalTitle,
+} from '@/components/ui/modal'
 import { formatFileSize } from '@/lib/format'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
@@ -37,6 +46,7 @@ export function RetentionSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
   const [archiveDays, setArchiveDays] = useState('90')
   const [saving, setSaving] = useState(false)
   const [cleanupRunning, setCleanupRunning] = useState(false)
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false)
   const hydrated = useRef(false)
 
   useEffect(() => {
@@ -53,6 +63,12 @@ export function RetentionSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
       Math.round((retention.diskUsedBytes / retention.diskTotalBytes) * 100),
     )
   }, [retention])
+
+  const policyDirty = Boolean(
+    retention &&
+    (maxVersions !== String(retention.maxVersions) ||
+      archiveDays !== String(retention.archiveDeprecatedDays)),
+  )
 
   const refresh = async () => {
     hydrated.current = false
@@ -102,6 +118,7 @@ export function RetentionSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
           archived: report.archivedDeprecated,
         }),
       })
+      setCleanupDialogOpen(false)
     } catch (error) {
       toast.error(
         getRequestErrorMessage(error, {
@@ -216,16 +233,23 @@ export function RetentionSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
             </p>
           ) : (
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button
-                type="button"
-                size="lg"
-                variant="outline"
-                className="border-0 bg-muted/40 ring-1 ring-border/60"
-                disabled={cleanupRunning || saving}
-                onClick={() => void cleanup()}
-              >
-                {cleanupRunning ? t('settings.cleanupRunning') : t('settings.runCleanup')}
-              </Button>
+              <div className="mr-auto min-w-0">
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="destructive"
+                  disabled={cleanupRunning || saving || policyDirty}
+                  onClick={() => setCleanupDialogOpen(true)}
+                >
+                  <Trash2 className="size-3.5" />
+                  {t('settings.runCleanup')}
+                </Button>
+                {policyDirty ? (
+                  <p className="mt-1.5 text-[0.75rem] text-muted-foreground">
+                    {t('settings.cleanupSaveFirst')}
+                  </p>
+                ) : null}
+              </div>
               <Button
                 type="button"
                 size="lg"
@@ -239,6 +263,80 @@ export function RetentionSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
           )}
         </div>
       )}
+
+      <Modal
+        open={cleanupDialogOpen}
+        onOpenChange={(open) => {
+          if (!cleanupRunning) setCleanupDialogOpen(open)
+        }}
+      >
+        <ModalContent className="w-[min(34rem,calc(100vw-2rem))]">
+          <ModalHeader>
+            <ModalTitle>{t('settings.cleanupConfirmTitle')}</ModalTitle>
+            <ModalDescription>{t('settings.cleanupConfirmDesc')}</ModalDescription>
+          </ModalHeader>
+          <ModalBody>
+            <div className="flex gap-3 rounded-xl bg-destructive/[0.06] p-4 ring-1 ring-destructive/20">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-destructive"
+                strokeWidth={1.8}
+              />
+              <div className="min-w-0">
+                <p className="text-[0.8125rem] font-medium text-foreground">
+                  {t('settings.cleanupIrreversibleTitle')}
+                </p>
+                <p className="mt-1 text-[0.75rem] leading-relaxed text-muted-foreground">
+                  {t('settings.cleanupIrreversibleDesc')}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <div className="rounded-lg bg-muted/30 px-3.5 py-3">
+                <p className="text-[0.8125rem] font-medium text-foreground">
+                  {t('settings.cleanupDeleteRuleTitle')}
+                </p>
+                <p className="mt-1 text-[0.75rem] leading-relaxed text-muted-foreground">
+                  {t('settings.cleanupDeleteRuleDesc', {
+                    count: retention?.maxVersions ?? maxVersions,
+                  })}
+                </p>
+              </div>
+              <div className="rounded-lg bg-muted/30 px-3.5 py-3">
+                <p className="text-[0.8125rem] font-medium text-foreground">
+                  {t('settings.cleanupArchiveRuleTitle')}
+                </p>
+                <p className="mt-1 text-[0.75rem] leading-relaxed text-muted-foreground">
+                  {t('settings.cleanupArchiveRuleDesc', {
+                    days: retention?.archiveDeprecatedDays ?? archiveDays,
+                  })}
+                </p>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={cleanupRunning}
+              onClick={() => setCleanupDialogOpen(false)}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={cleanupRunning}
+              onClick={() => void cleanup()}
+            >
+              {cleanupRunning ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              {cleanupRunning
+                ? t('settings.cleanupRunning')
+                : t('settings.cleanupConfirmAction')}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </SettingsPanel>
   )
 }

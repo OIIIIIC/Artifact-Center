@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -8,9 +7,6 @@ import {
   isEnabledKind,
   mockParseFile,
 } from '@/features/upload/mock-parse'
-import { queryKeys } from '@/lib/query-keys'
-import { ApiError } from '@/services/http'
-import { apiUploadArtifact } from '@/services/api'
 import type { Application, ApplicationPlatform } from '@/types/application'
 import type {
   ParsedArtifactFile,
@@ -22,6 +18,7 @@ import type {
   VersionDraft,
 } from '@/types/upload'
 import { UPLOAD_MAX_BYTES } from '@/types/upload'
+import { useUploadManager } from './upload-manager'
 
 function emptyVersion(): VersionDraft {
   return {
@@ -38,7 +35,7 @@ function emptyVersion(): VersionDraft {
 export function useUploadFlow() {
   const [params] = useSearchParams()
   const presetApp = params.get('app') ?? ''
-  const queryClient = useQueryClient()
+  const { tasks, startUpload } = useUploadManager()
   const { catalog, loading: catalogLoading } = useApplicationCatalog()
 
   /** Deep-link from detail (?app=) skips application pick when id is known. */
@@ -50,7 +47,7 @@ export function useUploadFlow() {
   const [version, setVersion] = useState<VersionDraft>(emptyVersion())
   const [publishError, setPublishError] = useState<PublishError>(null)
   const [publishing, setPublishing] = useState(false)
-  const [done, setDone] = useState(false)
+  const [taskId, setTaskId] = useState<string | null>(null)
   const timers = useRef<number[]>([])
   /** Keep real File for multipart upload */
   const fileRef = useRef<File | null>(null)
@@ -160,7 +157,7 @@ export function useUploadFlow() {
   }, [])
 
   const canNext = useMemo(() => {
-    if (step === 1) return Boolean(applicationId)
+    if (step === 1) return Boolean(applicationId) && application?.status !== 'archived'
     if (step === 2) return phase === 'ready' && parsed && !fileError
     if (step === 3) {
       return (
@@ -170,7 +167,7 @@ export function useUploadFlow() {
       )
     }
     return true
-  }, [step, applicationId, phase, parsed, fileError, version])
+  }, [step, applicationId, application?.status, phase, parsed, fileError, version])
 
   const goNext = useCallback(async () => {
     if (!canNext) return
@@ -193,6 +190,11 @@ export function useUploadFlow() {
 
   const publish = useCallback(async () => {
     if (!application || !parsed || !fileRef.current) return
+    if (publishing) return
+    if (application.status === 'archived') {
+      setPublishError('archived_application')
+      return
+    }
     setPublishing(true)
     setPublishError(null)
 
@@ -200,37 +202,13 @@ export function useUploadFlow() {
       parsed.platform ||
       application.platform) as ApplicationPlatform
 
-    try {
-      await apiUploadArtifact(application.id, fileRef.current, {
-        version: version.version.trim(),
-        buildNumber: version.buildNumber.trim(),
-        platform,
-        channel: version.channel,
-        releaseNotes: version.releaseNotes,
-        markLatest: version.markLatest,
-      })
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.applications.all }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.artifacts.byApp(application.id),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.applications.detail(application.id),
-        }),
-      ])
-
-      setDone(true)
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'duplicate_artifact') {
-        setPublishError('duplicate_artifact')
-      } else {
-        setPublishError('upload_failed')
-      }
-    } finally {
-      setPublishing(false)
-    }
-  }, [application, parsed, version, queryClient])
+    const task = startUpload({
+      application,
+      file: fileRef.current,
+      version: { ...version, platform },
+    })
+    setTaskId(task.taskId)
+  }, [application, parsed, publishing, startUpload, version])
 
   const resetAll = useCallback(() => {
     clearTimers()
@@ -242,9 +220,11 @@ export function useUploadFlow() {
     setVersion(emptyVersion())
     setPublishError(null)
     setPublishing(false)
-    setDone(false)
+    setTaskId(null)
     fileRef.current = null
   }, [])
+
+  const currentTask = taskId ? tasks.find((task) => task.taskId === taskId) : undefined
 
   return {
     step,
@@ -264,9 +244,9 @@ export function useUploadFlow() {
     goNext,
     goBack,
     publish,
-    publishing,
-    publishError,
-    done,
+    publishing: publishing && currentTask?.status === 'uploading',
+    publishError: currentTask?.status === 'failed' ? currentTask.error : publishError,
+    done: currentTask?.status === 'completed',
     resetAll,
     catalogLoading,
   }

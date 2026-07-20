@@ -58,6 +58,11 @@ export function StepReview({
           })}
         </p>
       ) : null}
+      {publishError === 'archived_application' ? (
+        <p className="text-[0.8125rem] text-muted-foreground" role="alert">
+          {t('upload.archivedApplication')}
+        </p>
+      ) : null}
       {publishError === 'duplicate_artifact' ? (
         <div
           className={cn(
