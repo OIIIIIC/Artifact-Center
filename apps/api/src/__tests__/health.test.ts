@@ -31,7 +31,7 @@ describe('GET /health', () => {
     const res = await app.request('/health')
     expect(res.status).toBe(200)
 
-    const body = await res.json()
+    const body = (await res.json()) as { time: string }
     expect(body).toHaveProperty('ok', true)
     expect(body).toHaveProperty('service', 'artifact-center-api')
     expect(body).toHaveProperty('time')
@@ -39,7 +39,7 @@ describe('GET /health', () => {
 
   it('returns valid ISO-8601 timestamp', async () => {
     const res = await app.request('/health')
-    const body = await res.json()
+    const body = (await res.json()) as { time: string }
     const parsed = Date.parse(body.time)
     expect(Number.isNaN(parsed)).toBe(false)
   })
@@ -52,7 +52,7 @@ describe('GET /health', () => {
 
   it('returns ok: true', async () => {
     const res = await app.request('/health')
-    const body = await res.json()
+    const body = (await res.json()) as { ok: boolean }
     expect(body.ok).toBe(true)
   })
 })
