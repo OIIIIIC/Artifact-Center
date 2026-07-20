@@ -67,6 +67,7 @@ export function useServerSearch(
         description: '',
         packageName: row.application.packageName,
         platform: row.application.platform,
+        region: row.application.region,
         repository: '',
         status: 'active' as const,
         owner: '',

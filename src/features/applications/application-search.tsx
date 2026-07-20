@@ -28,7 +28,9 @@ export function ApplicationSearch({
         aria-hidden
       />
       <input
-        type="search"
+        type="text"
+        inputMode="search"
+        enterKeyHint="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={t('applications.searchPlaceholder')}

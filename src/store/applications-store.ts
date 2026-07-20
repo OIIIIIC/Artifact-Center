@@ -13,6 +13,7 @@ export type CreateApplicationInput = {
   description: string
   packageName: string
   platform: ApplicationPlatform
+  region: Application['region']
   repository?: string
   owner?: string
 }
@@ -91,6 +92,7 @@ export const useApplicationsStore = create<ApplicationsState>()(
           description: input.description.trim(),
           packageName: input.packageName.trim(),
           platform: input.platform,
+          region: input.region,
           repository: input.repository?.trim() || `git.enterprise.local/${base}`,
           /** Empty until first artifact is published */
           latestVersion: '',

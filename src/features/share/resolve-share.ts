@@ -1,86 +1,56 @@
 import { apiResolveShare } from '@/services/api'
 import { ApiError } from '@/services/http'
-import type { Application } from '@/types/application'
-import type { Artifact } from '@/types/artifact'
-import type { ShareLink } from '@/types/share'
+import type { Region } from '@/types/application'
+import type { ResolvedShareItem, ShareKind } from '@/types/share'
 
 export type ShareResolveOk = {
   ok: true
-  link: ShareLink
-  application: Application
-  artifact: Artifact
+  link: {
+    id: string
+    token: string
+    kind: ShareKind
+    title: string
+    regionId: string | null
+    createdAt: string
+    expiresAt: string | null
+    downloadCount: number
+  }
+  region: Region | null
+  items: ResolvedShareItem[]
   sharedBy: string | null
-  /** Prefer share-token download when set */
-  serverToken?: string
+  serverToken: string
 }
 
 export type ShareResolveFail = {
   ok: false
-  reason: 'not_found' | 'expired' | 'revoked' | 'app_missing' | 'artifact_missing'
+  reason: 'not_found' | 'expired' | 'revoked'
   sharedBy: string | null
-  applicationName: string | null
 }
 
 export type ShareResolveResult = ShareResolveOk | ShareResolveFail
 
-/** Resolve server-issued opaque share token. */
+/** 解析服务端签发的单项链接或 Share Collection。 */
 export async function resolveShareToken(token: string): Promise<ShareResolveResult> {
-  if (!token?.trim()) {
-    return { ok: false, reason: 'not_found', sharedBy: null, applicationName: null }
-  }
+  if (!token?.trim()) return { ok: false, reason: 'not_found', sharedBy: null }
 
-  // 1) Server share
   try {
     const data = await apiResolveShare(token.trim())
     return {
       ok: true,
-      link: {
-        id: data.share.id,
-        token: data.share.token,
-        applicationId: data.application.id,
-        mode: data.share.mode,
-        createdAt: data.share.createdAt,
-        expiresAt: data.share.expiresAt,
-        createdBy: data.share.createdBy,
-      },
-      application: data.application,
-      artifact: data.artifact,
+      link: data.share,
+      region: data.region,
+      items: data.items,
       sharedBy: data.share.createdBy?.trim() || null,
       serverToken: data.share.token,
     }
-  } catch (err) {
-    if (err instanceof ApiError) {
-      if (err.code === 'expired' || err.status === 410) {
-        if (err.code === 'revoked') {
-          return {
-            ok: false,
-            reason: 'revoked',
-            sharedBy: null,
-            applicationName: null,
-          }
-        }
-        // 410 can be expired or revoked
-        const reason =
-          err.code === 'revoked' || /revok/i.test(err.message) ? 'revoked' : 'expired'
-        return { ok: false, reason, sharedBy: null, applicationName: null }
-      }
-      if (err.code === 'app_missing') {
-        return {
-          ok: false,
-          reason: 'app_missing',
-          sharedBy: null,
-          applicationName: null,
-        }
-      }
-      if (err.code === 'artifact_missing') {
-        return {
-          ok: false,
-          reason: 'artifact_missing',
-          sharedBy: null,
-          applicationName: null,
-        }
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 410) {
+      return {
+        ok: false,
+        reason: error.code === 'revoked' ? 'revoked' : 'expired',
+        sharedBy: null,
       }
     }
-    return { ok: false, reason: 'not_found', sharedBy: null, applicationName: null }
+    return { ok: false, reason: 'not_found', sharedBy: null }
   }
 }

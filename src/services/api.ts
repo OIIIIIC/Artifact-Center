@@ -3,11 +3,13 @@ import type {
   Application,
   ApplicationPlatform,
   ApplicationStatus,
+  Region,
 } from '@/types/application'
 import type { Artifact, ArtifactStatus } from '@/types/artifact'
 import type { Release } from '@/types/release'
 import type { AuthUser, LoginCredentials } from '@/types/auth'
 import type { UploadChannel } from '@/types/upload'
+import { requestMultipart, type UploadProgress } from '@/services/http'
 
 /* ── Auth ─────────────────────────────────────────────── */
 
@@ -115,7 +117,7 @@ export type SearchApiResult = {
   applications: Application[]
   artifacts: Array<{
     artifact: Artifact
-    application: Pick<Application, 'id' | 'name' | 'packageName' | 'platform'>
+    application: Pick<Application, 'id' | 'name' | 'packageName' | 'platform' | 'region'>
   }>
   total: number
 }
@@ -202,6 +204,7 @@ type ApiApplication = {
   description: string
   packageName: string
   platform: ApplicationPlatform
+  region: Region
   repository: string
   status: ApplicationStatus
   owner: string
@@ -218,6 +221,7 @@ function mapApp(a: ApiApplication): Application {
     description: a.description,
     packageName: a.packageName,
     platform: a.platform,
+    region: a.region,
     repository: a.repository,
     status: a.status,
     owner: a.owner,
@@ -260,6 +264,7 @@ export type CreateApplicationBody = {
   description: string
   packageName: string
   platform: ApplicationPlatform
+  regionId: string
   repository?: string
 }
 
@@ -278,6 +283,7 @@ export type UpdateApplicationBody = {
   description?: string
   packageName?: string
   platform?: ApplicationPlatform
+  regionId?: string
   repository?: string
   status?: ApplicationStatus
   ownerName?: string
@@ -296,6 +302,43 @@ export async function apiUpdateApplication(
 
 export async function apiDeleteApplication(id: string): Promise<void> {
   await request<{ ok: true }>(`/applications/${id}`, { method: 'DELETE' })
+}
+
+/* ── Regions ──────────────────────────────────────────── */
+
+export async function apiListRegions(): Promise<Region[]> {
+  const data = await request<{ items: Region[]; total: number }>('/settings/regions')
+  return data.items
+}
+
+export type RegionMutationBody = {
+  code: string
+  name: string
+  sortOrder: number
+  enabled?: boolean
+}
+
+export async function apiCreateRegion(body: RegionMutationBody): Promise<Region> {
+  const data = await request<{ region: Region }>('/settings/regions', {
+    method: 'POST',
+    body,
+  })
+  return data.region
+}
+
+export async function apiUpdateRegion(
+  id: string,
+  body: Partial<RegionMutationBody>,
+): Promise<Region> {
+  const data = await request<{ region: Region }>(`/settings/regions/${id}`, {
+    method: 'PATCH',
+    body,
+  })
+  return data.region
+}
+
+export async function apiDeleteRegion(id: string): Promise<void> {
+  await request<{ ok: true }>(`/settings/regions/${id}`, { method: 'DELETE' })
 }
 
 export type ApplicationMemberDto = {
@@ -449,6 +492,7 @@ export async function apiUploadArtifact(
   appId: string,
   file: File,
   fields: UploadArtifactFields,
+  onProgress?: UploadProgress,
 ): Promise<Artifact> {
   const form = new FormData()
   form.append('file', file)
@@ -459,11 +503,12 @@ export async function apiUploadArtifact(
   if (fields.releaseNotes != null) form.append('releaseNotes', fields.releaseNotes)
   form.append('markLatest', fields.markLatest === false ? 'false' : 'true')
 
-  const data = await request<{ artifact: ApiArtifact }>(
+  const artifact = await requestMultipart<ApiArtifact>(
     `/applications/${appId}/artifacts`,
-    { method: 'POST', rawBody: form },
+    form,
+    onProgress,
   )
-  return mapArtifact(data.artifact)
+  return mapArtifact(artifact)
 }
 
 export async function apiDownloadArtifact(
@@ -514,20 +559,60 @@ export async function apiRunRetentionCleanup(): Promise<{
   return request('/settings/retention/run', { method: 'POST' })
 }
 
+/* ── Diagnostics / settings ───────────────────────────── */
+
+export type DiagnosticReportInput = {
+  sinceMinutes: 15 | 30 | 60
+  requestId?: string
+  operation?: string
+  expected?: string
+  actual?: string
+  occurredAt?: string
+  client?: {
+    page?: string
+    browser?: string
+    timezone?: string
+  }
+}
+
+export type DiagnosticReportDto = {
+  generatedAt: string
+  eventCount: number
+  markdown: string
+}
+
+export async function apiGenerateDiagnosticReport(
+  body: DiagnosticReportInput,
+): Promise<DiagnosticReportDto> {
+  const data = await request<{ report: DiagnosticReportDto }>(
+    '/settings/diagnostics/report',
+    { method: 'POST', body },
+  )
+  return data.report
+}
+
 /* ── Shares (server-issued) ───────────────────────────── */
 
 export type ShareLinkDto = {
   id: string
   token: string
+  kind: 'single' | 'collection'
+  title: string
+  regionId: string | null
   applicationId: string
   mode: 'latest' | 'artifact'
   artifactId: string | null
+  /** 当前应用在该分享条目中的模式；集合分享可能与根记录不同。 */
+  itemMode: 'latest' | 'artifact'
+  /** 固定版本对应的可读版本号。 */
+  artifactVersion: string | null
   createdBy: string
   createdById?: string | null
   createdAt: string
   expiresAt: string | null
   revokedAt?: string | null
   downloadCount?: number
+  itemCount: number
 }
 
 export async function apiCreateShare(
@@ -542,6 +627,23 @@ export async function apiCreateShare(
     `/applications/${applicationId}/shares`,
     { method: 'POST', body },
   )
+  return data.share
+}
+
+export async function apiCreateShareCollection(body: {
+  title: string
+  regionId: string
+  items: Array<{
+    applicationId: string
+    mode: 'latest' | 'artifact'
+    artifactId?: string
+  }>
+  expiresInDays?: number
+}): Promise<ShareLinkDto> {
+  const data = await request<{ share: ShareLinkDto }>('/shares', {
+    method: 'POST',
+    body,
+  })
   return data.share
 }
 
@@ -564,13 +666,24 @@ export type PublicShareResolve = {
   share: {
     id: string
     token: string
-    mode: 'latest' | 'artifact'
+    kind: 'single' | 'collection'
+    title: string
+    regionId: string | null
     createdBy: string
     expiresAt: string | null
     createdAt: string
+    downloadCount: number
   }
-  application: Application
-  artifact: Artifact
+  region: Region | null
+  items: Array<{
+    id: string
+    mode: 'latest' | 'artifact'
+    downloadCount: number
+    available: boolean
+    unavailableReason: 'artifact_missing' | null
+    application: Application
+    artifact: Artifact | null
+  }>
 }
 
 export async function apiResolveShare(token: string): Promise<PublicShareResolve> {
@@ -581,8 +694,10 @@ export async function apiResolveShare(token: string): Promise<PublicShareResolve
 
 export async function apiDownloadShare(
   token: string,
+  itemId?: string,
 ): Promise<{ blob: Blob; filename?: string }> {
-  return requestBlob(`/public/shares/${encodeURIComponent(token)}/download`, {
+  const itemPath = itemId ? `/items/${encodeURIComponent(itemId)}` : ''
+  return requestBlob(`/public/shares/${encodeURIComponent(token)}${itemPath}/download`, {
     public: true,
   })
 }

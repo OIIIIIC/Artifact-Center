@@ -100,7 +100,18 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
         >
           <div className="min-w-0">
             <p className="text-[0.8125rem] font-medium text-foreground">
-              {s.mode === 'latest' ? t('share.modeLatest') : t('share.modePinnedShort')}
+              {s.kind === 'collection'
+                ? t('share.collectionLinkLabel', {
+                    title: s.title || t('share.collectionFallbackTitle'),
+                    count: s.itemCount,
+                  })
+                : s.mode === 'latest'
+                  ? t('share.modeLatest')
+                  : s.artifactVersion
+                    ? t('share.modePinnedVersion', {
+                        version: s.artifactVersion,
+                      })
+                    : t('share.modePinnedShort')}
               <span className="ml-2 font-normal text-muted-foreground">
                 · {s.createdBy}
               </span>
@@ -130,7 +141,7 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
               type="button"
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:text-destructive"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/25"
               onClick={() => void onRevoke(s.id)}
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />

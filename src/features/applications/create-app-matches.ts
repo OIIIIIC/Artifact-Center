@@ -47,29 +47,30 @@ export function findSimilarByName(
 }
 
 export type PackageMatchResult = {
-  /** Exact package identity collision — should block create */
-  exact: Application | null
-  /** Near matches for reference (excludes exact) */
+  /** 同包名应用，仅作为创建时的参考信息。 */
+  exact: Application[]
+  /** 相近包名应用（不包含同包名应用）。 */
   similar: Application[]
 }
 
-/** Package match — exact is hard conflict; similar is soft reference. */
+/** 包名匹配仅用于展示参考应用，不影响创建。 */
 export function findPackageMatches(
   catalog: Application[],
   query: string,
   limit: number = LIMIT,
 ): PackageMatchResult {
   const q = normalize(query)
-  if (!q) return { exact: null, similar: [] }
+  if (!q) return { exact: [], similar: [] }
 
-  const exact = catalog.find((a) => normalize(a.packageName) === q) ?? null
+  const exact = catalog.filter((a) => normalize(a.packageName) === q)
 
-  if (q.length < PACKAGE_MIN && !exact) {
-    return { exact: null, similar: [] }
+  if (q.length < PACKAGE_MIN && exact.length === 0) {
+    return { exact: [], similar: [] }
   }
 
+  const exactIds = new Set(exact.map((app) => app.id))
   const similar = catalog
-    .filter((a) => a.id !== exact?.id)
+    .filter((a) => !exactIds.has(a.id))
     .map((app) => ({ app, score: packageScore(query, app.packageName) }))
     .filter((x) => x.score > 0 && x.score < 100)
     .sort(

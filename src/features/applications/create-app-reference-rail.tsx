@@ -15,102 +15,63 @@ function initialsOf(name: string) {
     .slice(0, 2)
 }
 
-const railSurface = cn(
-  'rounded-2xl bg-muted/25 ring-1 ring-border/60',
-  'dark:bg-muted/15 dark:ring-border/80',
-)
-
 /**
- * Right-rail (lg+) / below-form companion for create page.
- * Naming & package reference only — not a help doc or second form.
+ * 创建表单中的轻量命名参考，只在出现相似应用时展示。
  */
 export function CreateAppReferenceRail({
   apps,
-  conflictId,
   className,
 }: {
   apps: Application[]
-  /** Package exact collision — highlight that row */
-  conflictId?: string | null
   className?: string
 }) {
   const { t } = useTranslation()
-  const hasQueryResults = apps.length > 0
+  if (apps.length === 0) return null
 
   return (
     <aside
-      className={cn(railSurface, 'flex flex-col', className)}
+      className={cn(
+        'rounded-xl bg-muted/25 px-3.5 py-3 ring-1 ring-border/55 dark:bg-muted/15',
+        className,
+      )}
       aria-label={t('createApp.referenceTitle')}
     >
-      <div className="border-b border-border/50 px-4 py-3.5 sm:px-5">
-        <h2 className="text-[0.8125rem] font-semibold tracking-tight text-foreground">
-          {t('createApp.referenceTitle')}
-        </h2>
-        <p className="mt-0.5 text-[0.75rem] leading-relaxed text-muted-foreground">
-          {hasQueryResults
-            ? t('createApp.referenceHintActive')
-            : t('createApp.referenceHintIdle')}
-        </p>
-      </div>
-
-      <div className="min-h-0 flex-1 px-2 py-2 sm:px-2.5 sm:py-2.5">
-        {!hasQueryResults ? (
-          <p className="px-2.5 py-8 text-center text-[0.8125rem] leading-relaxed text-muted-foreground/80">
-            {t('createApp.referenceEmpty')}
-          </p>
-        ) : (
-          <ul className="space-y-0.5">
-            {apps.map((app) => {
-              const Icon = PLATFORM_ICON[app.platform]
-              const isConflict = conflictId != null && app.id === conflictId
-              return (
-                <li key={app.id}>
-                  <Link
-                    to={`/applications/${app.id}`}
-                    className={cn(
-                      'flex min-w-0 items-center gap-2.5 rounded-xl px-2.5 py-2',
-                      'transition-colors duration-[var(--duration-hover)]',
-                      'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
-                      isConflict && 'bg-muted/45 ring-1 ring-border/70 dark:bg-muted/30',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'flex size-8 shrink-0 items-center justify-center rounded-lg',
-                        'bg-muted/70 text-[10px] font-semibold tracking-tight text-muted-foreground',
-                      )}
-                      aria-hidden
-                    >
-                      {initialsOf(app.name)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate text-[0.8125rem] font-medium text-foreground">
-                          {app.name}
-                        </span>
-                        {isConflict ? (
-                          <span className="shrink-0 text-[0.625rem] font-medium tracking-wide text-muted-foreground uppercase">
-                            {t('createApp.referenceConflictBadge')}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span
-                        className="mt-0.5 block truncate font-mono text-[0.6875rem] text-muted-foreground"
-                        title={app.packageName}
-                      >
-                        {app.packageName}
-                      </span>
-                    </span>
-                    <span className="inline-flex shrink-0 items-center gap-1 text-[0.6875rem] text-muted-foreground">
-                      <Icon className="size-3 opacity-70" strokeWidth={1.75} />
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
+      <p className="text-[0.75rem] leading-relaxed text-muted-foreground">
+        {t('createApp.referenceHintActive')}
+      </p>
+      <ul className="mt-2 flex flex-wrap gap-1.5">
+        {apps.map((app) => {
+          const Icon = PLATFORM_ICON[app.platform]
+          return (
+            <li key={app.id}>
+              <Link
+                to={`/applications/${app.id}`}
+                className={cn(
+                  'inline-flex max-w-[16rem] items-center gap-1.5 rounded-lg bg-background/70 px-2 py-1.5',
+                  'text-[0.75rem] ring-1 ring-border/55 transition-colors',
+                  'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+                )}
+              >
+                <span
+                  className="flex size-4 shrink-0 items-center justify-center rounded text-[8px] font-semibold text-muted-foreground"
+                  aria-hidden
+                >
+                  {initialsOf(app.name)}
+                </span>
+                <span className="truncate font-medium text-foreground">{app.name}</span>
+                <span className="text-muted-foreground/45" aria-hidden>
+                  ·
+                </span>
+                <span className="shrink-0 text-muted-foreground">{app.region.name}</span>
+                <Icon
+                  className="size-3 shrink-0 text-muted-foreground/70"
+                  strokeWidth={1.75}
+                />
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
     </aside>
   )
 }

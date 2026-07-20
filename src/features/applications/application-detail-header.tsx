@@ -1,4 +1,4 @@
-import { Download, Loader2, Share2, Upload } from 'lucide-react'
+import { Download, Loader2, MapPin, Share2, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -175,6 +175,10 @@ export function ApplicationDetailHeader({
                 {appStatusBadge.label}
               </StatusBadge>
             ) : null}
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-muted/45 px-2 py-0.5 text-muted-foreground dark:bg-muted/30">
+              <MapPin className="size-3.5 opacity-70" strokeWidth={1.75} />
+              {application.region.name}
+            </span>
             <span className="inline-flex items-center gap-1.5 rounded-md bg-muted/45 px-2 py-0.5 text-muted-foreground dark:bg-muted/30">
               <PlatformIcon className="size-3.5 opacity-70" strokeWidth={1.75} />
               {t(`platform.${application.platform}`)}

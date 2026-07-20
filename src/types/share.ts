@@ -8,12 +8,16 @@ import type { Artifact } from '@/types/artifact'
  * `artifact` pins a specific version forever (until expiry/revoke).
  */
 export type ShareMode = 'latest' | 'artifact'
+export type ShareKind = 'single' | 'collection'
 
 export interface ShareLink {
   id: string
   /** Public path segment — unguessable enough for demo */
   token: string
   applicationId: string
+  kind?: ShareKind
+  title?: string
+  regionId?: string | null
   mode: ShareMode
   /** Required when mode === 'artifact' */
   artifactId?: string
@@ -21,6 +25,16 @@ export interface ShareLink {
   /** ISO expiry; null = does not expire */
   expiresAt: string | null
   createdBy: string
+}
+
+export interface ResolvedShareItem {
+  id: string
+  mode: ShareMode
+  downloadCount: number
+  available: boolean
+  unavailableReason: 'artifact_missing' | null
+  application: import('@/types/application').Application
+  artifact: Artifact | null
 }
 
 export type CreateShareInput = {

@@ -23,6 +23,10 @@ export const queryKeys = {
     all: ['users'] as const,
     list: ['users', 'list'] as const,
   },
+  regions: {
+    all: ['regions'] as const,
+    list: ['regions', 'list'] as const,
+  },
   audit: {
     all: ['audit'] as const,
     byApp: (appId: string) => ['audit', 'app', appId] as const,

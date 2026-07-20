@@ -10,6 +10,7 @@ import { FormError } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ApplicationMembersPanel } from '@/features/applications/application-members-panel'
+import { useRegions } from '@/features/regions/use-regions'
 import { APPLICATION_STATUS_CHIP } from '@/features/applications/application-status-meta'
 import {
   APPLICATION_FIELD_LIMITS,
@@ -20,12 +21,12 @@ import { getRequestErrorMessage } from '@/lib/request-error'
 import { canDeleteApplication } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { apiDeleteApplication, apiUpdateApplication } from '@/services/api'
-import { ApiError } from '@/services/http'
 import { useAuthStore } from '@/store/auth-store'
 import type {
   Application,
   ApplicationPlatform,
   ApplicationStatus,
+  Region,
 } from '@/types/application'
 
 type SettingsView = 'basic' | 'members' | 'danger'
@@ -48,6 +49,7 @@ export function ApplicationSettingsPanel({
   const queryClient = useQueryClient()
   const platformRole = useAuthStore((state) => state.user?.role)
   const canDelete = canDeleteApplication(platformRole)
+  const { regions } = useRegions()
 
   const [view, setView] = useState<SettingsView>(autoOpenMembers ? 'members' : 'basic')
   const [editing, setEditing] = useState(false)
@@ -55,6 +57,7 @@ export function ApplicationSettingsPanel({
   const [description, setDescription] = useState(application.description)
   const [packageName, setPackageName] = useState(application.packageName)
   const [platform, setPlatform] = useState(application.platform)
+  const [regionId, setRegionId] = useState(application.region.id)
   const [repository, setRepository] = useState(application.repository)
   const [status, setStatus] = useState<ApplicationStatus>(application.status)
   const [saving, setSaving] = useState(false)
@@ -71,6 +74,7 @@ export function ApplicationSettingsPanel({
     description.trim() !== application.description ||
     packageName.trim() !== application.packageName ||
     platform !== application.platform ||
+    regionId !== application.region.id ||
     repository.trim() !== application.repository
   const statusDirty = status !== application.status
   const dirty = infoDirty || statusDirty
@@ -81,6 +85,7 @@ export function ApplicationSettingsPanel({
     setDescription(application.description)
     setPackageName(application.packageName)
     setPlatform(application.platform)
+    setRegionId(application.region.id)
     setRepository(application.repository)
     setStatus(application.status)
     setError(null)
@@ -146,6 +151,7 @@ export function ApplicationSettingsPanel({
         description: description.trim(),
         packageName: packageName.trim(),
         platform,
+        regionId,
         repository: repository.trim(),
         status,
       })
@@ -154,19 +160,13 @@ export function ApplicationSettingsPanel({
       setEditing(false)
       toast.success(t('appSettings.saved'))
     } catch (caught) {
-      if (caught instanceof ApiError && caught.code === 'package_taken') {
-        const message = t('appSettings.packageTaken')
-        setFieldErrors((current) => ({ ...current, packageName: message }))
-        setError(message)
-      } else {
-        setError(
-          getRequestErrorMessage(caught, {
-            offline: t('common.requestFailedOffline'),
-            unavailable: t('common.requestFailedUnavailable'),
-            fallback: t('appSettings.errorGeneric'),
-          }),
-        )
-      }
+      setError(
+        getRequestErrorMessage(caught, {
+          offline: t('common.requestFailedOffline'),
+          unavailable: t('common.requestFailedUnavailable'),
+          fallback: t('appSettings.errorGeneric'),
+        }),
+      )
     } finally {
       setSaving(false)
     }
@@ -248,7 +248,16 @@ export function ApplicationSettingsPanel({
             dirty={dirty}
             error={error}
             fieldErrors={fieldErrors}
-            values={{ name, description, packageName, platform, repository, status }}
+            values={{
+              name,
+              description,
+              packageName,
+              platform,
+              regionId,
+              repository,
+              status,
+            }}
+            regions={regions}
             onEdit={() => setEditing(true)}
             onCancel={() => {
               resetDraft()
@@ -264,6 +273,7 @@ export function ApplicationSettingsPanel({
               updateField(field, value, setters[field])
             }}
             onPlatformChange={setPlatform}
+            onRegionChange={setRegionId}
             onStatusChange={setStatus}
             onSave={() => void save()}
           />
@@ -304,11 +314,13 @@ function BasicSettings({
   dirty,
   error,
   fieldErrors,
+  regions,
   values,
   onEdit,
   onCancel,
   onFieldChange,
   onPlatformChange,
+  onRegionChange,
   onStatusChange,
   onSave,
 }: {
@@ -318,11 +330,13 @@ function BasicSettings({
   dirty: boolean
   error: string | null
   fieldErrors: Partial<Record<EditableField, string>>
+  regions: Region[]
   values: {
     name: string
     description: string
     packageName: string
     platform: ApplicationPlatform
+    regionId: string
     repository: string
     status: ApplicationStatus
   }
@@ -330,6 +344,7 @@ function BasicSettings({
   onCancel: () => void
   onFieldChange: (field: EditableField, value: string) => void
   onPlatformChange: (platform: ApplicationPlatform) => void
+  onRegionChange: (regionId: string) => void
   onStatusChange: (status: ApplicationStatus) => void
   onSave: () => void
 }) {
@@ -375,6 +390,9 @@ function BasicSettings({
           </InfoCell>
           <InfoCell label={t('createApp.fieldPlatform')}>
             {t(`platform.${application.platform}`)}
+          </InfoCell>
+          <InfoCell label={t('createApp.fieldRegion')}>
+            {application.region.name}
           </InfoCell>
           <InfoCell label={t('createApp.fieldRepository')} mono>
             {application.repository || t('appSettings.emptyValue')}
@@ -434,6 +452,27 @@ function BasicSettings({
               ))}
             </div>
           </div>
+          <label className="space-y-1.5">
+            <span className="text-[0.8125rem] font-medium text-foreground">
+              {t('createApp.fieldRegion')}
+            </span>
+            <select
+              value={values.regionId}
+              onChange={(event) => onRegionChange(event.target.value)}
+              className="h-8 w-full rounded-lg bg-muted/30 px-2.5 text-[0.8125rem] outline-none ring-1 ring-border/60 focus-visible:ring-[3px] focus-visible:ring-ring/30"
+            >
+              {regions.map((region) => (
+                <option
+                  key={region.id}
+                  value={region.id}
+                  disabled={!region.enabled && region.id !== application.region.id}
+                >
+                  {region.name}
+                  {!region.enabled ? ` · ${t('settings.regionInactive')}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
           <TextField
             field="repository"
             label={t('createApp.fieldRepository')}

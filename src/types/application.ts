@@ -8,12 +8,23 @@ export type ApplicationStatus = 'active' | 'new' | 'beta' | 'deprecated' | 'arch
 
 export type ApplicationSort = 'updated' | 'name' | 'created'
 
+export interface Region {
+  id: string
+  code: string
+  name: string
+  sortOrder: number
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Application {
   id: string
   name: string
   description: string
   packageName: string
   platform: ApplicationPlatform
+  region: Region
   latestVersion: string
   updatedAt: string
   createdAt: string

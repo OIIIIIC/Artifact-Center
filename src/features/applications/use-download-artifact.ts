@@ -17,6 +17,8 @@ export type DownloadTarget = {
   sizeBytes?: number
   /** Server share token — preferred for /d/:token landing */
   shareToken?: string
+  /** Share Collection 中的具体分享项。 */
+  shareItemId?: string
   /** 弃用或归档制品需要用户再次确认。 */
   riskStatus?: ArtifactOperationRiskStatus | null
   /** Force failure for demo */
@@ -57,7 +59,7 @@ export function useDownloadArtifact() {
         }
 
         const { blob, filename: serverName } = target.shareToken
-          ? await apiDownloadShare(target.shareToken)
+          ? await apiDownloadShare(target.shareToken, target.shareItemId)
           : await apiDownloadArtifact(artifactId)
 
         const url = URL.createObjectURL(blob)

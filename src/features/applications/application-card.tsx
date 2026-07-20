@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { APPLICATION_STATUS_LABEL, StatusBadge } from '@/components/common/status-badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   PLATFORM_ICON,
   PLATFORM_LABEL,
@@ -33,13 +32,6 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
     .join('')
     .toUpperCase()
     .slice(0, 2)
-
-  const ownerInitial = application.owner
-    .split(/\s+/)
-    .map((p) => p[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
 
   const sKey = statusKey(application.status)
   const statusVariant =
@@ -105,13 +97,16 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
               </StatusBadge>
             ) : null}
           </div>
-          <p className="mt-1 line-clamp-2 text-[0.8125rem] leading-relaxed font-normal text-muted-foreground">
+          <p className="mt-1 line-clamp-1 text-[0.8125rem] leading-relaxed font-normal text-muted-foreground">
             {application.description}
           </p>
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex h-5 items-center rounded-md bg-muted/55 px-1.5 text-[11px] font-medium text-foreground/75 dark:bg-muted/45">
+          {application.region.name}
+        </span>
         <span className="inline-flex h-5 items-center gap-1 rounded-md bg-muted/50 px-1.5 text-[11px] text-muted-foreground dark:bg-muted/40">
           <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} aria-hidden />
           {t(`platform.${application.platform}`)}
@@ -123,24 +118,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         ) : null}
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
-        <Avatar size="sm" className="size-5">
-          <AvatarFallback className="text-[9px]">{ownerInitial}</AvatarFallback>
-        </Avatar>
-        <span className="truncate text-[0.75rem] text-muted-foreground">
-          {application.owner}
-        </span>
-        <span className="text-muted-foreground/40" aria-hidden>
-          ·
-        </span>
-        <span className="shrink-0 text-[0.75rem] text-muted-foreground/70">
-          {t('applications.artifactsCount', {
-            count: application.artifactCount,
-          })}
-        </span>
-      </div>
-
-      <div className="mt-auto pt-5">
+      <div className="mt-auto flex items-center justify-between gap-3 pt-5">
         <time
           className="text-[0.75rem] text-muted-foreground/70"
           dateTime={application.updatedAt}
@@ -148,6 +126,9 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         >
           {formatRelativeTime(application.updatedAt)}
         </time>
+        <span className="shrink-0 text-[0.75rem] text-muted-foreground/70">
+          {t('applications.artifactsCount', { count: application.artifactCount })}
+        </span>
       </div>
     </Link>
   )

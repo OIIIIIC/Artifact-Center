@@ -45,7 +45,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         kind: 'application' as const,
         href: `/applications/${h.application.id}`,
         title: h.application.name,
-        subtitle: h.application.packageName,
+        subtitle: `${h.application.region.name} · ${h.application.packageName}`,
         platform: h.application.platform,
       })),
       ...results.artifacts.map((h) => ({
@@ -53,7 +53,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         kind: 'artifact' as const,
         href: `/applications/${h.application.id}`,
         title: `${h.application.name} · v${h.artifact.version}`,
-        subtitle: h.artifact.filename,
+        subtitle: `${h.application.region.name} · ${h.artifact.filename}`,
         platform: h.artifact.platform,
       })),
     ]

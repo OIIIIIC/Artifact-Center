@@ -124,6 +124,8 @@ export function SearchPage() {
                                 />
                               </span>
                               <span className="mt-0.5 block truncate text-[0.75rem] text-muted-foreground">
+                                {app.region.name}
+                                {' · '}
                                 {app.packageName}
                                 {' · '}
                                 {t('search.latestVersion', {

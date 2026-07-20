@@ -64,6 +64,10 @@ function AppRow({
           <span className="text-muted-foreground/40" aria-hidden>
             ·
           </span>
+          <span className="shrink-0">{app.region.name}</span>
+          <span className="text-muted-foreground/40" aria-hidden>
+            ·
+          </span>
           <span
             className="min-w-0 truncate font-mono text-[0.6875rem]"
             title={app.packageName}
@@ -160,11 +164,13 @@ export function ApplicationPicker({
 
   const filtered = (() => {
     const q = query.trim().toLowerCase()
-    if (!q) return catalog
-    return catalog.filter(
+    const writableCatalog = catalog.filter((app) => app.status !== 'archived')
+    if (!q) return writableCatalog
+    return writableCatalog.filter(
       (a) =>
         a.name.toLowerCase().includes(q) ||
         a.packageName.toLowerCase().includes(q) ||
+        a.region.name.toLowerCase().includes(q) ||
         a.owner.toLowerCase().includes(q),
     )
   })()

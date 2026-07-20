@@ -18,7 +18,12 @@ export function useApplications() {
       platform: filters.platform,
       sort: filters.sort,
     }),
-    queryFn: () => apiListApplications(filters),
+    queryFn: () =>
+      apiListApplications({
+        q: filters.query,
+        platform: filters.platform,
+        sort: filters.sort,
+      }),
   })
 
   const applications = useMemo(() => query.data ?? [], [query.data])
@@ -32,9 +37,17 @@ export function useApplications() {
     filtered,
     filters,
     setFilters,
-    isEmptyCatalog: !loading && !query.isError && applications.length === 0,
+    isEmptyCatalog:
+      !loading &&
+      !query.isError &&
+      applications.length === 0 &&
+      !filters.query.trim() &&
+      filters.platform === 'all',
     isSearchEmpty:
-      !loading && !query.isError && applications.length > 0 && filtered.length === 0,
+      !loading &&
+      !query.isError &&
+      applications.length === 0 &&
+      (Boolean(filters.query.trim()) || filters.platform !== 'all'),
     error: query.error,
     refetch: query.refetch,
   }
