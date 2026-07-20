@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   check,
   integer,
   jsonb,
@@ -56,6 +57,8 @@ export const channelEnum = pgEnum('release_channel', [
 
 export const shareModeEnum = pgEnum('share_mode', ['latest', 'artifact'])
 
+export const shareKindEnum = pgEnum('share_kind', ['single', 'collection'])
+
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   username: varchar('username', { length: 64 }).notNull().unique(),
@@ -68,25 +71,43 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const applications = pgTable(
-  'applications',
+/** 地域是管理员维护的应用目录分类，不作为一级产品导航对象。 */
+export const regions = pgTable(
+  'regions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    name: varchar('name', { length: 200 }).notNull(),
-    description: text('description').notNull().default(''),
-    packageName: varchar('package_name', { length: 255 }).notNull(),
-    platform: appPlatformEnum('platform').notNull(),
-    repository: varchar('repository', { length: 500 }).notNull().default(''),
-    status: appStatusEnum('status').notNull().default('new'),
-    ownerId: uuid('owner_id').references(() => users.id),
-    ownerName: varchar('owner_name', { length: 120 }).notNull().default(''),
-    latestVersion: varchar('latest_version', { length: 64 }).notNull().default(''),
-    artifactCount: integer('artifact_count').notNull().default(0),
+    code: varchar('code', { length: 64 }).notNull(),
+    name: varchar('name', { length: 120 }).notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    enabled: boolean('enabled').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('applications_package_name_uidx').on(t.packageName)],
+  (t) => [
+    uniqueIndex('regions_code_uidx').on(t.code),
+    uniqueIndex('regions_name_uidx').on(t.name),
+    index('regions_sort_order_idx').on(t.sortOrder, t.name),
+  ],
 )
+
+export const applications = pgTable('applications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description').notNull().default(''),
+  packageName: varchar('package_name', { length: 255 }).notNull(),
+  platform: appPlatformEnum('platform').notNull(),
+  regionId: uuid('region_id')
+    .notNull()
+    .references(() => regions.id, { onDelete: 'restrict' }),
+  repository: varchar('repository', { length: 500 }).notNull().default(''),
+  status: appStatusEnum('status').notNull().default('new'),
+  ownerId: uuid('owner_id').references(() => users.id),
+  ownerName: varchar('owner_name', { length: 120 }).notNull().default(''),
+  latestVersion: varchar('latest_version', { length: 64 }).notNull().default(''),
+  artifactCount: integer('artifact_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
 
 /** 应用内成员关系；平台管理员不需要显式成员记录。 */
 export const applicationMembers = pgTable(
@@ -209,6 +230,11 @@ export const shareLinks = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     token: varchar('token', { length: 64 }).notNull().unique(),
+    kind: shareKindEnum('kind').notNull().default('single'),
+    title: varchar('title', { length: 200 }).notNull().default(''),
+    regionId: uuid('region_id').references(() => regions.id, {
+      onDelete: 'set null',
+    }),
     applicationId: uuid('application_id')
       .notNull()
       .references(() => applications.id, { onDelete: 'cascade' }),
@@ -232,6 +258,35 @@ export const shareLinks = pgTable(
       'share_links_mode_artifact_check',
       sql`(${t.mode} = 'latest' AND ${t.artifactId} IS NULL) OR (${t.mode} = 'artifact' AND ${t.artifactId} IS NOT NULL)`,
     ),
+  ],
+)
+
+/** Share Collection 中的交付项；单制品分享也是只有一项的清单。 */
+export const shareLinkItems = pgTable(
+  'share_link_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    shareLinkId: uuid('share_link_id')
+      .notNull()
+      .references(() => shareLinks.id, { onDelete: 'cascade' }),
+    applicationId: uuid('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    mode: shareModeEnum('mode').notNull().default('latest'),
+    artifactId: uuid('artifact_id').references(() => artifacts.id, {
+      onDelete: 'set null',
+    }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    downloadCount: integer('download_count').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('share_link_items_share_application_uidx').on(
+      t.shareLinkId,
+      t.applicationId,
+    ),
+    index('share_link_items_share_sort_idx').on(t.shareLinkId, t.sortOrder),
+    index('share_link_items_application_idx').on(t.applicationId),
   ],
 )
 
@@ -267,10 +322,12 @@ export const auditLogs = pgTable(
 )
 
 export type User = typeof users.$inferSelect
+export type Region = typeof regions.$inferSelect
 export type Application = typeof applications.$inferSelect
 export type ApplicationMember = typeof applicationMembers.$inferSelect
 export type Release = typeof releases.$inferSelect
 export type Artifact = typeof artifacts.$inferSelect
 export type ShareLink = typeof shareLinks.$inferSelect
+export type ShareLinkItem = typeof shareLinkItems.$inferSelect
 export type AuditLog = typeof auditLogs.$inferSelect
 export type RetentionSettings = typeof retentionSettings.$inferSelect

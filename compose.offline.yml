@@ -39,6 +39,7 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       STORAGE_PATH: /data/artifacts
       CORS_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+      SLOW_REQUEST_MS: ${SLOW_REQUEST_MS:-500}
     volumes:
       - artifact_files:/data/artifacts
     depends_on:

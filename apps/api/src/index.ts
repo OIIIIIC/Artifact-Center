@@ -1,11 +1,14 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { logger } from 'hono/logger'
 
 import { env } from './env.js'
 import { ensureRetentionSettings, runRetentionCleanup } from './lib/retention.js'
 import { ensureStorageRoot } from './lib/storage.js'
+import {
+  createRequestObservability,
+  logUnhandledError,
+} from './middleware/observability.js'
 import { applicationRoutes } from './routes/applications.js'
 import { artifactRoutes } from './routes/artifacts.js'
 import { auditRoutes } from './routes/audit.js'
@@ -36,14 +39,14 @@ setInterval(() => {
 
 const app = new Hono()
 
-app.use('*', logger())
+app.use('*', createRequestObservability({ slowRequestMs: env.slowRequestMs }))
 app.use(
   '*',
   cors({
     origin: env.corsOrigin,
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    exposeHeaders: ['Content-Disposition', 'Content-Length'],
+    exposeHeaders: ['Content-Disposition', 'Content-Length', 'X-Request-ID'],
   }),
 )
 
@@ -64,7 +67,7 @@ app.notFound((c) =>
 )
 
 app.onError((err, c) => {
-  console.error(err)
+  logUnhandledError(c, err)
   return c.json(
     { error: { code: 'internal_error', message: '服务器处理请求时发生错误' } },
     500,

@@ -2,7 +2,7 @@ import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '../db/client.js'
-import { applicationMembers, applications, artifacts } from '../db/schema.js'
+import { applicationMembers, applications, artifacts, regions } from '../db/schema.js'
 import { jsonError } from '../lib/errors.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 
@@ -91,9 +91,17 @@ searchRoutes.get('/', async (c) => {
       appName: applications.name,
       appPackageName: applications.packageName,
       appPlatform: applications.platform,
+      regionId: regions.id,
+      regionCode: regions.code,
+      regionName: regions.name,
+      regionSortOrder: regions.sortOrder,
+      regionEnabled: regions.enabled,
+      regionCreatedAt: regions.createdAt,
+      regionUpdatedAt: regions.updatedAt,
     })
     .from(artifacts)
     .innerJoin(applications, sql`${applications.id} = ${artifacts.applicationId}`)
+    .innerJoin(regions, eq(regions.id, applications.regionId))
 
   const artRows =
     user.role === 'admin'
@@ -113,12 +121,27 @@ searchRoutes.get('/', async (c) => {
           .orderBy(desc(artifacts.uploadedAt))
           .limit(artLimit)
 
+  const regionRows = await db.select().from(regions)
+  const regionById = new Map(regionRows.map((region) => [region.id, region]))
+
   const applicationsOut = appRows.map((row) => ({
     id: row.id,
     name: row.name,
     description: row.description,
     packageName: row.packageName,
     platform: row.platform,
+    region: (() => {
+      const region = regionById.get(row.regionId)!
+      return {
+        id: region.id,
+        code: region.code,
+        name: region.name,
+        sortOrder: region.sortOrder,
+        enabled: region.enabled,
+        createdAt: region.createdAt.toISOString(),
+        updatedAt: region.updatedAt.toISOString(),
+      }
+    })(),
     repository: row.repository,
     status: row.status,
     owner: row.ownerName,
@@ -153,6 +176,15 @@ searchRoutes.get('/', async (c) => {
       name: r.appName,
       packageName: r.appPackageName,
       platform: r.appPlatform,
+      region: {
+        id: r.regionId,
+        code: r.regionCode,
+        name: r.regionName,
+        sortOrder: r.regionSortOrder,
+        enabled: r.regionEnabled,
+        createdAt: r.regionCreatedAt.toISOString(),
+        updatedAt: r.regionUpdatedAt.toISOString(),
+      },
     },
   }))
 

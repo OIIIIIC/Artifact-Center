@@ -191,6 +191,42 @@ docker system df
 
 设置页的磁盘容量来自制品卷所在文件系统，并每 30 秒刷新。Docker 命名卷默认位于 Docker 数据目录，因此需要监控该目录所在磁盘。
 
+### 8.1 请求锚点与慢请求
+
+API 会为每次请求返回 `X-Request-ID`，并输出一条 JSON 结构化完成日志。Nginx 将沿用同一个 ID，同时记录以下耗时：
+
+- `requestTime`：客户端到 Nginx 的总耗时
+- `upstreamConnectTime`：Nginx 连接 API 的耗时
+- `upstreamHeaderTime`：API 返回响应头前的耗时
+- `upstreamResponseTime`：API 完整响应耗时
+
+API 请求达到 `SLOW_REQUEST_MS` 后会以 `warn` 级别记录，默认阈值为 500ms。服务器发生 5xx 错误时，Web 界面会在错误消息后显示请求 ID，用户反馈问题时应一并提供该 ID。
+
+日志只记录 URL 路径，不记录查询字符串、请求体、Authorization 或文件内容。领域审计日志仍用于回答“谁操作了什么”，运行日志用于回答“请求为什么失败或变慢”，两者不要混用。
+
+### 8.2 生成 AI 诊断包
+
+管理员可在 Web 的「设置 → 系统诊断」中填写问题现象和请求 ID，选择最近 15/30/60 分钟后生成应用级诊断包。页面会先显示完整 Markdown 预览，确认后可一键复制或下载。
+
+应用级诊断包来自 API 进程内的最近 500 条非健康检查请求；API 重启后历史会清空。它适合定位请求状态、API 总耗时、进程内存和存储空间问题，但不包含 Nginx、PostgreSQL 或宿主机日志。
+
+如果页面诊断信息不足，再在生产仓库目录运行完整服务器采集脚本：
+
+```bash
+chmod +x deploy/collect-diagnostics.sh
+./deploy/collect-diagnostics.sh --since 30m --request-id 用户提供的请求ID
+```
+
+如果没有请求 ID，可以只按时间范围采集：
+
+```bash
+./deploy/collect-diagnostics.sh --since 15m
+```
+
+脚本会在 `.diagnostics/` 生成一个 Markdown 文件，包含项目容器状态、CPU/内存快照、磁盘状态和指定时间范围内的日志，并提供现象填写模板。它不会读取 `deploy/.env` 内容、请求体或数据库数据，也只采集当前 Compose 项目的容器。
+
+将现象模板填写完整后，可以把该 Markdown 文件直接发送给 AI 或运维人员。分享给外部服务前仍应人工复核其中的应用名称、文件路径和错误堆栈是否属于可披露信息。
+
 ## 9. 停止与删除
 
 停止服务但保留数据：

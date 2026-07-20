@@ -7,6 +7,7 @@ import {
   applicationMembers,
   applications,
   artifacts,
+  regions,
   releases,
   users,
 } from '../db/schema.js'
@@ -26,6 +27,7 @@ const createSchema = z.object({
   description: z.string().min(1).max(4000),
   packageName: z.string().min(1).max(255),
   platform: platformEnum,
+  regionId: z.string().uuid(),
   repository: z.string().max(500).optional(),
 })
 
@@ -34,18 +36,35 @@ const updateSchema = z.object({
   description: z.string().min(1).max(4000).optional(),
   packageName: z.string().min(1).max(255).optional(),
   platform: platformEnum.optional(),
+  regionId: z.string().uuid().optional(),
   repository: z.string().max(500).optional(),
   status: statusEnum.optional(),
   ownerName: z.string().max(120).optional(),
 })
 
-function mapApp(row: typeof applications.$inferSelect) {
+function mapRegion(row: typeof regions.$inferSelect) {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    sortOrder: row.sortOrder,
+    enabled: row.enabled,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  }
+}
+
+function mapApp(
+  row: typeof applications.$inferSelect,
+  region: typeof regions.$inferSelect,
+) {
   return {
     id: row.id,
     name: row.name,
     description: row.description,
     packageName: row.packageName,
     platform: row.platform,
+    region: mapRegion(region),
     repository: row.repository,
     status: row.status,
     owner: row.ownerName,
@@ -109,7 +128,13 @@ applicationRoutes.get('/', async (c) => {
             .orderBy(order)
         ).map((row) => row.application)
 
-  return c.json({ items: rows.map(mapApp), total: rows.length })
+  const regionRows = await db.select().from(regions)
+  const regionById = new Map(regionRows.map((region) => [region.id, region]))
+
+  return c.json({
+    items: rows.map((row) => mapApp(row, regionById.get(row.regionId)!)),
+    total: rows.length,
+  })
 })
 
 applicationRoutes.get('/:id', requireApplicationRole('id', 'viewer'), async (c) => {
@@ -120,7 +145,12 @@ applicationRoutes.get('/:id', requireApplicationRole('id', 'viewer'), async (c) 
     .where(eq(applications.id, id))
     .limit(1)
   if (!row) return jsonError(c, 404, 'not_found', 'Application not found')
-  return c.json({ application: mapApp(row) })
+  const [region] = await db
+    .select()
+    .from(regions)
+    .where(eq(regions.id, row.regionId))
+    .limit(1)
+  return c.json({ application: mapApp(row, region) })
 })
 
 applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
@@ -140,13 +170,13 @@ applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
   const data = parsed.data
   const packageName = data.packageName.trim()
 
-  const [dup] = await db
-    .select({ id: applications.id })
-    .from(applications)
-    .where(eq(applications.packageName, packageName))
+  const [region] = await db
+    .select()
+    .from(regions)
+    .where(and(eq(regions.id, data.regionId), eq(regions.enabled, true)))
     .limit(1)
-  if (dup) {
-    return jsonError(c, 409, 'package_taken', 'Package name already in use')
+  if (!region) {
+    return jsonError(c, 400, 'region_unavailable', 'Region is unavailable')
   }
 
   const row = await db.transaction(async (tx) => {
@@ -157,6 +187,7 @@ applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
         description: data.description.trim(),
         packageName,
         platform: data.platform,
+        regionId: data.regionId,
         repository: data.repository?.trim() || '',
         status: 'new',
         ownerId: user.sub,
@@ -184,7 +215,7 @@ applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
     meta: { packageName: row.packageName, platform: row.platform },
   })
 
-  return c.json({ application: mapApp(row) }, 201)
+  return c.json({ application: mapApp(row, region) }, 201)
 })
 
 applicationRoutes.patch(
@@ -213,15 +244,25 @@ applicationRoutes.patch(
     if (!current) return jsonError(c, 404, 'not_found', 'Application not found')
 
     const data = parsed.data
-    if (data.packageName && data.packageName !== current.packageName) {
-      const [dup] = await db
-        .select({ id: applications.id })
-        .from(applications)
-        .where(eq(applications.packageName, data.packageName.trim()))
+
+    let targetRegion: typeof regions.$inferSelect | undefined
+    if (data.regionId !== undefined) {
+      const [region] = await db
+        .select()
+        .from(regions)
+        .where(and(eq(regions.id, data.regionId), eq(regions.enabled, true)))
         .limit(1)
-      if (dup) {
-        return jsonError(c, 409, 'package_taken', 'Package name already in use')
+      if (!region) {
+        return jsonError(c, 400, 'region_unavailable', 'Region is unavailable')
       }
+      targetRegion = region
+    } else {
+      const [region] = await db
+        .select()
+        .from(regions)
+        .where(eq(regions.id, current.regionId))
+        .limit(1)
+      targetRegion = region
     }
 
     const [row] = await db
@@ -235,6 +276,7 @@ applicationRoutes.patch(
           ? { packageName: data.packageName.trim() }
           : {}),
         ...(data.platform !== undefined ? { platform: data.platform } : {}),
+        ...(data.regionId !== undefined ? { regionId: data.regionId } : {}),
         ...(data.repository !== undefined ? { repository: data.repository.trim() } : {}),
         ...(data.status !== undefined ? { status: data.status } : {}),
         ...(data.ownerName !== undefined ? { ownerName: data.ownerName.trim() } : {}),
@@ -252,7 +294,7 @@ applicationRoutes.patch(
       meta: { fields: Object.keys(data) },
     })
 
-    return c.json({ application: mapApp(row) })
+    return c.json({ application: mapApp(row, targetRegion!) })
   },
 )
 

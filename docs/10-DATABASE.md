@@ -3,7 +3,7 @@
 > 数据库：PostgreSQL 16  
 > ORM：Drizzle ORM  
 > 迁移目录：`apps/api/drizzle/`  
-> 最后更新：2026-07-18
+> 最后更新：2026-07-20
 
 ## 1. 设计目标
 
@@ -12,6 +12,7 @@
 设计原则：
 
 - Application 是用户进入制品管理流程的顶层对象。
+- Region 是管理员维护的应用目录分类；每个 Application 必须绑定一个 Region。
 - Release 表达一次可读的发布，可关联多个不同类型的 Artifact。
 - Artifact 是不可变的具体构建文件；状态、渠道和哈希均落在制品层。
 - 用户的应用访问权限通过关联表表达，平台管理员保留全局访问能力。
@@ -20,6 +21,8 @@
 ## 2. 实体关系
 
 ```text
+regions ─────< applications
+                    │
 users ────────< application_members >──────── applications
   │                                                  │
   │                                                  ├──< releases ───< artifacts
@@ -31,6 +34,7 @@ users ────────< application_members >──────── ap
 | 表                    | 职责                                |
 | --------------------- | ----------------------------------- |
 | `users`               | 平台用户、全局角色、登录资料        |
+| `regions`             | 可维护的地域基础资料与目录顺序      |
 | `applications`        | 应用基础资料与列表页缓存字段        |
 | `application_members` | 应用内成员与角色                    |
 | `releases`            | 应用内版本的发布说明与发布上下文    |
@@ -53,7 +57,13 @@ users ────────< application_members >──────── ap
 
 当前迁移已完成所有者成员回填，后端会在创建应用时写入成员关系，并在应用、制品、分享、搜索和按应用查询审计记录时执行应用级授权。成员管理接口已提供；成员管理界面可在后续迭代继续完善。
 
-### 3.2 发布与制品
+### 3.2 地域与应用
+
+`regions` 保存稳定编码、展示名称、排序值和启停状态。`applications.region_id` 为必填外键，并使用 `ON DELETE RESTRICT` 保留历史归属。地域停用后仍可展示已有应用，但不能再用于新建应用或修改绑定。
+
+迁移会创建“默认地域”并回填既有应用，确保旧数据升级后仍满足非空约束。Region 不进入一级导航，只在设置中维护，并在应用目录、搜索、上传选择器和应用详情中用于识别交付范围。
+
+### 3.3 发布与制品
 
 `releases` 使用 `(application_id, version)` 唯一约束。当前上传接口会按该组合创建或复用 Release，这使同一版本可关联 APK 与 AAB 等多个制品。
 
@@ -67,7 +77,7 @@ users ────────< application_members >──────── ap
 
 `release_notes` 暂同时保存在 Release 与 Artifact：Release 是权威来源；Artifact 字段是为兼容当前前端 DTO 保留的展示快照。后端更新发布说明时会同步同一 Release 下的制品记录。
 
-### 3.3 最新版本
+### 3.4 最新版本
 
 `artifacts.status = 'latest'` 表示当前应用最新制品。数据库通过部分唯一索引保证每个应用最多一条最新制品：
 
@@ -79,7 +89,7 @@ WHERE status = 'latest';
 
 `applications.latest_version` 和 `applications.artifact_count` 是列表优化缓存，不是独立事实来源。数据库触发器会在制品新增、更新、删除后自动重算，业务代码不得单独修改这两个字段。
 
-### 3.4 分享与审计
+### 3.5 分享与审计
 
 `share_links` 有两种模式：
 
@@ -94,7 +104,9 @@ WHERE status = 'latest';
 
 | 对象                  | 约束或索引                              | 原因                               |
 | --------------------- | --------------------------------------- | ---------------------------------- |
-| `applications`        | `package_name` 唯一                     | 防止应用标识重复                   |
+| `applications`        | `package_name` 普通字段                 | 同一软件的不同分支可使用相同包名   |
+| `regions`             | `code`、`name` 分别唯一                 | 保持稳定标识并避免目录重名         |
+| `applications`        | `region_id` 非空、删除受限              | 每个应用必须有地域且保留历史归属   |
 | `application_members` | `(application_id, user_id)` 唯一        | 防止重复成员关系                   |
 | `releases`            | `(application_id, version)` 唯一        | 同一应用同版本只对应一个发布上下文 |
 | `artifacts`           | `(release_id, type, build_number)` 唯一 | 防止同一发布重复录入相同构建       |

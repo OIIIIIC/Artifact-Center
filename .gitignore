@@ -21,6 +21,7 @@ coverage/
 *.log
 .turbo/
 .cache/
+.diagnostics/
 *.tsbuildinfo
 
 # Local artifact storage & runtime data

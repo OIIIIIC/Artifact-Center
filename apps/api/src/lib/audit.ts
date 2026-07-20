@@ -17,6 +17,10 @@ export type AuditAction =
   | 'share.download'
   | 'settings.retention_update'
   | 'settings.retention_run'
+  | 'settings.diagnostics_export'
+  | 'settings.region_create'
+  | 'settings.region_update'
+  | 'settings.region_delete'
   | 'user.create'
   | 'user.update'
   | 'user.delete'
@@ -25,7 +29,8 @@ export type AuditAction =
   | 'auth.change_password'
   | 'auth.profile_update'
 
-export type AuditObjectType = 'application' | 'artifact' | 'user' | 'session' | 'system'
+export type AuditObjectType =
+  'application' | 'artifact' | 'region' | 'user' | 'session' | 'system'
 
 export type WriteAuditInput = {
   action: AuditAction

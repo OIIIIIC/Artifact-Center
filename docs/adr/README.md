@@ -12,20 +12,23 @@ ADR (Architecture Decision Record) 是一种轻量级的架构决策文档，由
 
 ## 索引
 
-| 编号                                          | 标题                                         | 状态     |
-| --------------------------------------------- | -------------------------------------------- | -------- |
-| [0001](0001-record-architecture-decisions.md) | 采用 ADR 记录架构决策                        | accepted |
-| [0002](0002-modular-monolith.md)              | Modular Monolith 架构                        | accepted |
-| [0003](0003-storage-separation.md)            | 元数据与二进制分离存储                       | accepted |
-| [0004](0004-object-navigation.md)             | 基于对象的导航模型                           | accepted |
-| [0005](0005-rest-api.md)                      | REST API 风格与统一错误结构                  | accepted |
-| [0006](0006-search-evolution.md)              | 搜索能力渐进演进策略                         | accepted |
-| [0007](0007-single-tenant-mvp.md)             | MVP 单租户架构                               | accepted |
-| [0008](0008-drizzle-migration.md)             | Drizzle ORM + 迁移文件为唯一 Schema 变更入口 | accepted |
-| [0009](0009-type-registry.md)                 | Type Registry 制品类型可插拔扩展             | accepted |
-| [0010](0010-application-top-object.md)        | Application 作为顶层对象                     | accepted |
-| [0011](0011-role-permission.md)               | 项目级角色权限模型                           | accepted |
-| [0012](0012-presigned-download.md)            | 下载链接安全策略 (预签名 URL)                | proposed |
+| 编号                                              | 标题                                         | 状态     |
+| ------------------------------------------------- | -------------------------------------------- | -------- |
+| [0001](0001-record-architecture-decisions.md)     | 采用 ADR 记录架构决策                        | accepted |
+| [0002](0002-modular-monolith.md)                  | Modular Monolith 架构                        | accepted |
+| [0003](0003-storage-separation.md)                | 元数据与二进制分离存储                       | accepted |
+| [0004](0004-object-navigation.md)                 | 基于对象的导航模型                           | accepted |
+| [0005](0005-rest-api.md)                          | REST API 风格与统一错误结构                  | accepted |
+| [0006](0006-search-evolution.md)                  | 搜索能力渐进演进策略                         | accepted |
+| [0007](0007-single-tenant-mvp.md)                 | MVP 单租户架构                               | accepted |
+| [0008](0008-drizzle-migration.md)                 | Drizzle ORM + 迁移文件为唯一 Schema 变更入口 | accepted |
+| [0009](0009-type-registry.md)                     | Type Registry 制品类型可插拔扩展             | accepted |
+| [0010](0010-application-top-object.md)            | Application 作为顶层对象                     | accepted |
+| [0011](0011-role-permission.md)                   | 项目级角色权限模型                           | accepted |
+| [0012](0012-presigned-download.md)                | 下载链接安全策略 (预签名 URL)                | proposed |
+| [0013](0013-testing-strategy.md)                  | 测试策略                                     | accepted |
+| [0014](0014-region-application-classification.md) | Region 作为 Application 的可维护分类         | accepted |
+| [0015](0015-share-collection.md)                  | Share Collection 承载同地域多制品交付        | accepted |
 
 ## 状态标记
 
