@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
+import { copyText } from '@/lib/clipboard'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { apiCreateShare } from '@/services/api'
@@ -72,11 +73,10 @@ export function ShareDialog({
         expiresInDays: expiry === 0 ? 0 : expiry,
       })
       const url = shareUrlForToken(share.token)
-      try {
-        await navigator.clipboard.writeText(url)
+      if (await copyText(url)) {
         setCopiedUrl(url)
         toast.success(t('share.copied'), { description: applicationName })
-      } catch {
+      } else {
         setCopiedUrl(url)
         toast.error(t('share.copyFailed'))
       }
@@ -95,10 +95,9 @@ export function ShareDialog({
 
   const onCopyAgain = async () => {
     if (!copiedUrl) return
-    try {
-      await navigator.clipboard.writeText(copiedUrl)
+    if (await copyText(copiedUrl)) {
       toast.success(t('share.copied'))
-    } catch {
+    } else {
       toast.error(t('share.copyFailed'))
     }
   }

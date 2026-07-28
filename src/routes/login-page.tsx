@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 
 import { BlankLayout } from '@/components/layout'
 import { FormError } from '@/components/feedback'
@@ -17,12 +17,6 @@ export function LoginPage() {
   const user = useAuthStore((s) => s.user)
   const login = useAuthStore((s) => s.login)
   const navigate = useNavigate()
-  const location = useLocation()
-  const from =
-    (location.state as { from?: string } | null)?.from &&
-    (location.state as { from: string }).from !== '/login'
-      ? (location.state as { from: string }).from
-      : '/'
 
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -30,7 +24,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   if (user) {
-    return <Navigate to={from} replace />
+    return <Navigate to="/" replace />
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -52,7 +46,7 @@ export function LoginPage() {
       }
       return
     }
-    navigate(from, { replace: true })
+    navigate('/', { replace: true })
   }
 
   return (
@@ -91,7 +85,7 @@ export function LoginPage() {
           >
             <div className="space-y-1.5">
               <label
-                htmlFor="login-email"
+                htmlFor="login-identifier"
                 className="text-[0.8125rem] font-medium text-foreground"
               >
                 {t('auth.identifier')}

@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { EmptyState } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
+import { copyText } from '@/lib/clipboard'
 import { formatRelativeTime } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
 import { getRequestErrorMessage } from '@/lib/request-error'
@@ -39,10 +40,9 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
   })
 
   const onCopy = async (token: string) => {
-    try {
-      await navigator.clipboard.writeText(shareUrlForToken(token))
+    if (await copyText(shareUrlForToken(token))) {
       toast.success(t('share.copied'))
-    } catch {
+    } else {
       toast.error(t('share.copyFailed'))
     }
   }

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { copyText } from '@/lib/clipboard'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { apiCreateShareCollection } from '@/services/api'
@@ -95,10 +96,9 @@ export function ShareCollectionDialog({
           queryClient.invalidateQueries({ queryKey: ['shares', applicationId] }),
         ),
       )
-      try {
-        await navigator.clipboard.writeText(url)
+      if (await copyText(url)) {
         toast.success(t('share.collectionCreated'))
-      } catch {
+      } else {
         toast.error(t('share.copyFailed'))
       }
     } catch (error) {
@@ -116,10 +116,9 @@ export function ShareCollectionDialog({
 
   const copyAgain = async () => {
     if (!copiedUrl) return
-    try {
-      await navigator.clipboard.writeText(copiedUrl)
+    if (await copyText(copiedUrl)) {
       toast.success(t('share.copied'))
-    } catch {
+    } else {
       toast.error(t('share.copyFailed'))
     }
   }
