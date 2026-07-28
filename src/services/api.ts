@@ -1,4 +1,4 @@
-import { request, requestBlob } from '@/services/http'
+import { API_BASE_URL, request, requestBlob } from '@/services/http'
 import type {
   Application,
   ApplicationPlatform,
@@ -511,10 +511,11 @@ export async function apiUploadArtifact(
   return mapArtifact(artifact)
 }
 
-export async function apiDownloadArtifact(
-  id: string,
-): Promise<{ blob: Blob; filename?: string }> {
-  return requestBlob(`/artifacts/${id}/download`)
+export async function apiCreateArtifactDownloadUrl(id: string): Promise<string> {
+  const data = await request<{ url: string }>(`/artifacts/${id}/download-ticket`, {
+    method: 'POST',
+  })
+  return `${API_BASE_URL}${data.url}`
 }
 
 /* ── Retention / settings ─────────────────────────────── */
@@ -700,4 +701,9 @@ export async function apiDownloadShare(
   return requestBlob(`/public/shares/${encodeURIComponent(token)}${itemPath}/download`, {
     public: true,
   })
+}
+
+export function apiShareDownloadUrl(token: string, itemId?: string): string {
+  const itemPath = itemId ? `/items/${encodeURIComponent(itemId)}` : ''
+  return `${API_BASE_URL}/public/shares/${encodeURIComponent(token)}${itemPath}/download`
 }

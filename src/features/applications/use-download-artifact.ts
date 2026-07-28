@@ -2,7 +2,7 @@ import { createElement, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { apiDownloadArtifact, apiDownloadShare } from '@/services/api'
+import { apiCreateArtifactDownloadUrl, apiShareDownloadUrl } from '@/services/api'
 import { ArtifactDownloadConfirmDialog } from '@/features/applications/artifact-risk-warning'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import type { ArtifactOperationRiskStatus } from '@/types/artifact'
@@ -26,8 +26,7 @@ export type DownloadTarget = {
 }
 
 /**
- * Download artifact via API: button loading → toast success / error.
- * No dedicated download page.
+ * 先申请短时下载地址，再交给浏览器原生下载管理器处理文件流。
  */
 export function useDownloadArtifact() {
   const { t } = useTranslation()
@@ -58,18 +57,14 @@ export function useDownloadArtifact() {
           throw new Error('force-fail')
         }
 
-        const { blob, filename: serverName } = target.shareToken
-          ? await apiDownloadShare(target.shareToken, target.shareItemId)
-          : await apiDownloadArtifact(artifactId)
-
-        const url = URL.createObjectURL(blob)
+        const url = target.shareToken
+          ? apiShareDownloadUrl(target.shareToken, target.shareItemId)
+          : await apiCreateArtifactDownloadUrl(artifactId)
         const a = document.createElement('a')
         a.href = url
-        a.download = serverName || target.filename
         document.body.appendChild(a)
         a.click()
         a.remove()
-        URL.revokeObjectURL(url)
 
         toast.success(t('download.started'), {
           id: toastId,

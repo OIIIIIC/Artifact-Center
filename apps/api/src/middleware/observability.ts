@@ -42,7 +42,9 @@ function resolveRequestId(c: Context, createRequestId: () => string): string {
 }
 
 function safeRequestPath(url: string): string {
-  return new URL(url).pathname.replace(/^(\/public\/shares\/)[^/]+/, '$1:token')
+  return new URL(url).pathname
+    .replace(/^(\/public\/shares\/)[^/]+/, '$1:token')
+    .replace(/^(\/downloads\/)[^/]+/, '$1:ticket')
 }
 
 /**

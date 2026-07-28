@@ -14,6 +14,11 @@ import { attachmentDisposition } from '../lib/download-response.js'
 import { enforceRetentionAfterUpload } from '../lib/retention.js'
 import { jsonError } from '../lib/errors.js'
 import {
+  signDownloadTicket,
+  verifyDownloadTicket,
+  type DownloadTicketPayload,
+} from '../lib/jwt.js'
+import {
   deleteStorageFile,
   ensureStorageRoot,
   openDownloadStream,
@@ -317,6 +322,61 @@ artifactRoutes.get('/artifacts/:id/download', requireAuth, async (c) => {
     applicationId: row.applicationId,
     summary: `下载 ${row.filename} (v${row.version})`,
     meta: { version: row.version, sizeBytes: row.sizeBytes },
+  })
+
+  return c.body(Readable.toWeb(stream) as ReadableStream)
+})
+
+/** POST /artifacts/:id/download-ticket — issue a short-lived native-download URL. */
+artifactRoutes.post('/artifacts/:id/download-ticket', requireAuth, async (c) => {
+  const id = c.req.param('id')
+  const [row] = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
+  if (!row) return jsonError(c, 404, 'not_found', 'Artifact not found')
+
+  const user = c.get('user')
+  if (!(await hasApplicationRole(user, row.applicationId, 'viewer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
+
+  const ticket = await signDownloadTicket({ ...user, artifactId: row.id })
+  return c.json({ url: `/downloads/${ticket}` })
+})
+
+/** GET /downloads/:ticket — browser-native streaming download with a short-lived ticket. */
+artifactRoutes.get('/downloads/:ticket', async (c) => {
+  let ticket: DownloadTicketPayload
+  try {
+    ticket = await verifyDownloadTicket(c.req.param('ticket'))
+  } catch {
+    return jsonError(c, 401, 'unauthorized', 'Invalid or expired download ticket')
+  }
+
+  const [row] = await db
+    .select()
+    .from(artifacts)
+    .where(eq(artifacts.id, ticket.artifactId))
+    .limit(1)
+  if (!row) return jsonError(c, 404, 'not_found', 'Artifact not found')
+  if (!(await hasApplicationRole(ticket, row.applicationId, 'viewer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
+
+  const stream = openDownloadStream(row.storageKey)
+  if (!stream) return jsonError(c, 404, 'file_missing', 'File missing from storage')
+
+  c.header('Content-Disposition', attachmentDisposition(row.filename))
+  c.header('Content-Type', 'application/octet-stream')
+  c.header('Content-Length', String(row.sizeBytes))
+
+  void writeAudit(c, {
+    action: 'artifact.download',
+    objectType: 'artifact',
+    objectId: row.id,
+    applicationId: row.applicationId,
+    summary: `下载 ${row.filename} (v${row.version})`,
+    meta: { version: row.version, sizeBytes: row.sizeBytes, via: 'download_ticket' },
+    actorId: ticket.sub,
+    actorName: ticket.name,
   })
 
   return c.body(Readable.toWeb(stream) as ReadableStream)
