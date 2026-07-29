@@ -543,7 +543,20 @@
     "referenceEmpty": "开始输入名称或包名即可对照。"
   },
   "applications": {
+    "managersLabel": "可管理此应用的成员",
     "title": "应用",
+    "description": "统一管理和分发您的移动应用。",
+    "stats": {
+      "aria": "应用概览",
+      "total": "全部应用",
+      "android": "Android 应用",
+      "platforms": "平台数量",
+      "members": "成员数量",
+      "coverage": "已收录",
+      "androidShare": "占全部应用 {{percent}}%",
+      "platformCoverage": "已启用的平台",
+      "membersAvailable": "可管理应用的成员"
+    },
     "uploadArtifact": "上传制品",
     "newApplication": "新建应用",
     "searchPlaceholder": "按名称、包名或负责人搜索…",

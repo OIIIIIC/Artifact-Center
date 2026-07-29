@@ -543,7 +543,20 @@
     "referenceEmpty": "Start typing a name or package to compare."
   },
   "applications": {
+    "managersLabel": "People who can manage this application",
     "title": "Applications",
+    "description": "Manage and distribute your mobile applications in one place.",
+    "stats": {
+      "aria": "Application overview",
+      "total": "All applications",
+      "android": "Android applications",
+      "platforms": "Platforms",
+      "members": "Members",
+      "coverage": "Tracked",
+      "androidShare": "{{percent}}% of all applications",
+      "platformCoverage": "Enabled platforms",
+      "membersAvailable": "Members with application access"
+    },
     "uploadArtifact": "Upload Artifact",
     "newApplication": "New application",
     "searchPlaceholder": "Search by name, package, or owner…",
