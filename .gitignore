@@ -30,3 +30,6 @@ data/
 # Tooling
 .eslintcache
 .prettiercache
+
+# Local temp / design scratch
+tmp/
