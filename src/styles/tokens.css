@@ -48,12 +48,10 @@
 
   /* ——— Typography ——— */
   /*
-   * English → JetBrains Mono (first font that has Latin glyphs)
-   * Chinese → Alibaba PuHuiTi (CJK fallback when Mono has no glyph)
+   * 正文优先使用易读的界面字体；等宽字体仅用于版本、哈希和文件名。
    */
-  --font-sans: 'JetBrains Mono', 'Alibaba PuHuiTi', ui-sans-serif, system-ui, sans-serif;
-  --font-heading:
-    'JetBrains Mono', 'Alibaba PuHuiTi', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Alibaba PuHuiTi', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-heading: 'Alibaba PuHuiTi', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
   --font-mono:
     'JetBrains Mono', 'Alibaba PuHuiTi', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
     monospace;
