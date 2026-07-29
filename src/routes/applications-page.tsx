@@ -79,19 +79,6 @@ export function ApplicationsPage() {
     [filtered, resolvedRegionScope],
   )
 
-  const regionGroups = useMemo(
-    () =>
-      browseRegions
-        .map((region) => ({
-          region,
-          applications: filtered.filter(
-            (application) => application.region.id === region.id,
-          ),
-        }))
-        .filter((group) => group.applications.length > 0),
-    [browseRegions, filtered],
-  )
-
   const hasNoVisibleMatches =
     !loading && !error && !isEmptyCatalog && visibleApplications.length === 0
   const shareRegion = regions.find((region) => region.id === shareRegionId)
@@ -99,78 +86,85 @@ export function ApplicationsPage() {
   return (
     <AppLayout breadcrumbs={[{ label: t('nav.applications') }]}>
       <PageContainer rhythm="product">
-        <div className="space-y-6 sm:space-y-7">
-          <PageHeader
-            title={t('applications.title')}
-            action={
-              canWrite ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {resolvedRegionScope !== 'all' && resolvedRegionScope ? (
+        <section className="border-b border-border/60 pb-7 sm:pb-8">
+          <div className="flex min-h-[11rem] flex-col lg:min-h-[12rem]">
+            <PageHeader
+              title={t('applications.title')}
+              description={t('applications.description')}
+              action={
+                canWrite ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {resolvedRegionScope !== 'all' && resolvedRegionScope ? (
+                      <Button
+                        type="button"
+                        size="lg"
+                        variant="outline"
+                        onClick={() => setShareRegionId(resolvedRegionScope)}
+                      >
+                        <Share2 className="size-3.5" strokeWidth={1.75} />
+                        {t('share.collectionAction')}
+                      </Button>
+                    ) : null}
+                    <Button asChild size="lg">
+                      <Link to="/applications/new">
+                        <Plus className="size-3.5" strokeWidth={1.75} />
+                        {t('applications.newApplication')}
+                      </Link>
+                    </Button>
                     <Button
-                      type="button"
+                      asChild
                       size="lg"
                       variant="outline"
-                      onClick={() => setShareRegionId(resolvedRegionScope)}
+                      className={cn(
+                        'border-0 bg-muted/40 font-medium text-muted-foreground',
+                        'ring-1 ring-border/60',
+                        'hover:bg-muted/55 hover:text-foreground hover:ring-border',
+                        'dark:bg-muted/25 dark:hover:bg-muted/35',
+                      )}
                     >
-                      <Share2 className="size-3.5" strokeWidth={1.75} />
-                      {t('share.collectionAction')}
+                      <Link to="/upload">
+                        <Upload className="size-3.5" strokeWidth={1.75} />
+                        {t('applications.uploadArtifact')}
+                      </Link>
                     </Button>
-                  ) : null}
-                  <Button asChild size="lg">
-                    <Link to="/applications/new">
-                      <Plus className="size-3.5" strokeWidth={1.75} />
-                      {t('applications.newApplication')}
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    size="lg"
-                    variant="outline"
-                    className={cn(
-                      'border-0 bg-muted/40 font-medium text-muted-foreground',
-                      'ring-1 ring-border/60',
-                      'hover:bg-muted/55 hover:text-foreground hover:ring-border',
-                      'dark:bg-muted/25 dark:hover:bg-muted/35',
-                    )}
-                  >
-                    <Link to="/upload">
-                      <Upload className="size-3.5" strokeWidth={1.75} />
-                      {t('applications.uploadArtifact')}
-                    </Link>
-                  </Button>
-                </div>
-              ) : undefined
-            }
-          />
-
-          <ApplicationSearch
-            value={filters.query}
-            onChange={(query) => setFilters({ ...filters, query })}
-            className="min-w-0 w-full"
-          />
-        </div>
-
-        <div className="mt-8 space-y-5 sm:mt-9">
-          <ApplicationFiltersBar
-            filters={filters}
-            onChange={setFilters}
-            meta={
-              !loading && !isEmptyCatalog && !isSearchEmpty
-                ? t('applications.count', { count: visibleApplications.length })
-                : !loading && isSearchEmpty
-                  ? t('applications.count', { count: 0 })
-                  : undefined
-            }
-          />
-
-          {!loading && !error && browseRegions.length > 0 ? (
-            <RegionSwitcher
-              regions={browseRegions}
-              selected={resolvedRegionScope}
-              counts={regionCounts}
-              onChange={changeRegionScope}
+                  </div>
+                ) : undefined
+              }
             />
-          ) : null}
+
+            <ApplicationSearch
+              value={filters.query}
+              onChange={(query) => setFilters({ ...filters, query })}
+              className="mt-auto w-full max-w-[40rem]"
+            />
+          </div>
+        </section>
+
+        <div className="mt-7 space-y-6 sm:mt-8">
+          <div className="space-y-3 rounded-xl bg-card p-3 ring-1 ring-border/60">
+            <ApplicationFiltersBar
+              filters={filters}
+              onChange={setFilters}
+              meta={
+                !loading && !isEmptyCatalog && !isSearchEmpty
+                  ? t('applications.count', { count: visibleApplications.length })
+                  : !loading && isSearchEmpty
+                    ? t('applications.count', { count: 0 })
+                    : undefined
+              }
+            />
+
+            {!loading && !error && browseRegions.length > 0 ? (
+              <div className="border-t border-border/60 pt-3">
+                <RegionSwitcher
+                  regions={browseRegions}
+                  selected={resolvedRegionScope}
+                  counts={regionCounts}
+                  onChange={changeRegionScope}
+                />
+              </div>
+            ) : null}
+          </div>
 
           {loading ? (
             <div aria-busy="true" aria-live="polite">
@@ -237,47 +231,7 @@ export function ApplicationsPage() {
           ) : null}
 
           {!loading && !isEmptyCatalog && !isSearchEmpty && !hasNoVisibleMatches ? (
-            resolvedRegionScope === 'all' ? (
-              <div className="space-y-10">
-                {regionGroups.map((group) => (
-                  <section key={group.region.id} className="space-y-4">
-                    <div className="flex items-baseline justify-between gap-4">
-                      <div>
-                        <h2 className="text-[1.0625rem] font-semibold tracking-tight">
-                          {group.region.name}
-                        </h2>
-                        <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
-                          {t('applications.regionApplications', {
-                            count: group.applications.length,
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {canWrite ? (
-                          <button
-                            type="button"
-                            onClick={() => setShareRegionId(group.region.id)}
-                            className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-muted-foreground hover:text-foreground"
-                          >
-                            <Share2 className="size-3" /> {t('share.collectionAction')}
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => changeRegionScope(group.region.id)}
-                          className="text-[0.75rem] font-medium text-muted-foreground hover:text-foreground"
-                        >
-                          {t('applications.focusRegion')}
-                        </button>
-                      </div>
-                    </div>
-                    <ApplicationGrid applications={group.applications} />
-                  </section>
-                ))}
-              </div>
-            ) : (
-              <ApplicationGrid applications={visibleApplications} />
-            )
+            <ApplicationGrid applications={visibleApplications} />
           ) : null}
         </div>
       </PageContainer>
