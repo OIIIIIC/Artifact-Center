@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom'
 
 import { APPLICATION_STATUS_LABEL, StatusBadge } from '@/components/common/status-badge'
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+  AvatarImage,
+} from '@/components/ui/avatar'
+import {
   PLATFORM_ICON,
   PLATFORM_LABEL,
   PLATFORM_TONE,
@@ -34,6 +41,14 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
     .slice(0, 2)
 
   const sKey = statusKey(application.status)
+  const managers = application.managers ?? [
+    {
+      id: `owner-${application.id}`,
+      name: application.owner,
+      avatarUrl: null,
+    },
+  ]
+  const visibleManagers = managers.slice(0, 3)
   const statusVariant =
     application.status === 'new'
       ? 'new'
@@ -54,11 +69,11 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
     <Link
       to={`/applications/${application.id}`}
       className={cn(
-        'group/card relative flex h-full flex-col rounded-2xl bg-card/80 p-5',
+        'group/card relative flex h-full flex-col rounded-xl bg-card p-5',
         'ring-1 ring-border/70',
-        'transition-[border-color,background-color,transform,box-shadow,ring-color] duration-[var(--duration-page)] ease-standard',
-        'hover:-translate-y-0.5 hover:bg-card hover:ring-border-strong/80',
-        'dark:bg-card/60 dark:ring-border dark:hover:bg-card dark:hover:ring-border-strong',
+        'transition-[background-color,ring-color] duration-[var(--duration-hover)] ease-standard',
+        'hover:bg-muted/25 hover:ring-border-strong/80',
+        'dark:ring-border dark:hover:bg-muted/20 dark:hover:ring-border-strong',
         'outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
         className,
       )}
@@ -66,7 +81,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
       <div className="flex items-start gap-3.5">
         <div
           className={cn(
-            'flex size-12 shrink-0 items-center justify-center rounded-[14px]',
+            'flex size-12 shrink-0 items-center justify-center rounded-xl',
             'text-[0.8125rem] font-semibold tracking-tight',
             PLATFORM_TONE[application.platform],
           )}
@@ -103,7 +118,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-1.5">
+      <div className="mt-5 flex flex-wrap items-center gap-1.5 border-t border-border/55 pt-3.5">
         <span className="inline-flex h-5 items-center rounded-md bg-muted/55 px-1.5 text-[11px] font-medium text-foreground/75 dark:bg-muted/45">
           {application.region.name}
         </span>
@@ -119,13 +134,32 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
       </div>
 
       <div className="mt-auto flex items-center justify-between gap-3 pt-5">
-        <time
-          className="text-[0.75rem] text-muted-foreground/70"
-          dateTime={application.updatedAt}
-          title={application.updatedAt}
-        >
-          {formatRelativeTime(application.updatedAt)}
-        </time>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <AvatarGroup aria-label={t('applications.managersLabel')}>
+            {visibleManagers.map((manager) => (
+              <Avatar key={manager.id} size="sm" title={manager.name}>
+                {manager.avatarUrl ? (
+                  <AvatarImage src={manager.avatarUrl} alt="" />
+                ) : null}
+                <AvatarFallback className="text-[0.625rem] font-medium">
+                  {manager.name.slice(0, 1).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+            {managers.length > visibleManagers.length ? (
+              <AvatarGroupCount className="text-[0.625rem] font-medium">
+                +{managers.length - visibleManagers.length}
+              </AvatarGroupCount>
+            ) : null}
+          </AvatarGroup>
+          <time
+            className="truncate text-[0.75rem] text-muted-foreground/70"
+            dateTime={application.updatedAt}
+            title={application.updatedAt}
+          >
+            {formatRelativeTime(application.updatedAt)}
+          </time>
+        </div>
         <span className="shrink-0 text-[0.75rem] text-muted-foreground/70">
           {t('applications.artifactsCount', { count: application.artifactCount })}
         </span>

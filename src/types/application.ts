@@ -29,6 +29,12 @@ export interface Application {
   updatedAt: string
   createdAt: string
   owner: string
+  /** 应用列表中的维护者预览，用于快速识别可管理该应用的人员。 */
+  managers?: Array<{
+    id: string
+    name: string
+    avatarUrl: string | null
+  }>
   artifactCount: number
   status: ApplicationStatus
   /** Mock git-style remote for detail summary */

@@ -208,6 +208,11 @@ type ApiApplication = {
   repository: string
   status: ApplicationStatus
   owner: string
+  managers?: Array<{
+    id: string
+    name: string
+    avatarUrl: string | null
+  }>
   latestVersion: string
   artifactCount: number
   createdAt: string
@@ -225,6 +230,7 @@ function mapApp(a: ApiApplication): Application {
     repository: a.repository,
     status: a.status,
     owner: a.owner,
+    managers: a.managers,
     latestVersion: a.latestVersion,
     artifactCount: a.artifactCount,
     createdAt: a.createdAt,
