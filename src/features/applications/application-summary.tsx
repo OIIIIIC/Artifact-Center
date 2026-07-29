@@ -39,7 +39,7 @@ export function ApplicationSummary({
   return (
     <section
       className={cn(
-        'rounded-2xl bg-muted/25 ring-1 ring-border/60 dark:bg-muted/15 dark:ring-border/80',
+        'rounded-xl bg-card ring-1 ring-border/60 dark:ring-border/80',
         className,
       )}
     >

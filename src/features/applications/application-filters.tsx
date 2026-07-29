@@ -55,8 +55,8 @@ function SegmentButton({
         'rounded-md px-3 py-1.5 text-[0.8125rem] font-medium',
         'transition-[color,background-color,box-shadow] duration-[var(--duration-hover)] ease-standard',
         active
-          ? 'bg-background text-foreground shadow-[var(--shadow-xs)] dark:bg-card dark:shadow-none dark:ring-1 dark:ring-border/80'
-          : 'text-muted-foreground hover:text-foreground',
+          ? 'bg-primary text-primary-foreground shadow-[var(--shadow-xs)] ring-1 ring-primary/20'
+          : 'text-muted-foreground hover:bg-background/70 hover:text-foreground dark:hover:bg-card/70',
       )}
       aria-pressed={active}
     >

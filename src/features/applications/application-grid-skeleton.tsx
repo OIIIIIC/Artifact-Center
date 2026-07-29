@@ -22,10 +22,10 @@ export function ApplicationGridSkeleton({
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex h-full flex-col rounded-2xl bg-card/80 p-5 ring-1 ring-border/70 dark:bg-card/60"
+          className="flex h-full flex-col rounded-xl bg-card p-5 ring-1 ring-border/70"
         >
           <div className="flex items-start gap-3.5">
-            <Skeleton className="size-12 shrink-0 rounded-[14px]" />
+            <Skeleton className="size-12 shrink-0 rounded-xl" />
             <div className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-4 w-3/5" />
               <Skeleton className="h-3 w-full" />

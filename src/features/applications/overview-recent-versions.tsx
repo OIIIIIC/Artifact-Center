@@ -79,14 +79,14 @@ export function OverviewRecentVersions({
                 'sm:flex-row sm:items-start sm:justify-between sm:gap-6',
                 isLead
                   ? cn(
-                      'bg-card/80 ring-border/70',
-                      'hover:bg-card hover:ring-border',
-                      'dark:bg-card/55 dark:hover:bg-card/75',
+                      'bg-card ring-border/70',
+                      'hover:bg-muted/25 hover:ring-border-strong/80',
+                      'dark:hover:bg-muted/20',
                     )
                   : cn(
-                      'bg-card/60 ring-border/60',
-                      'hover:bg-card hover:ring-border',
-                      'dark:bg-card/40 dark:hover:bg-card/70',
+                      'bg-card ring-border/60',
+                      'hover:bg-muted/25 hover:ring-border-strong/80',
+                      'dark:hover:bg-muted/20',
                     ),
               )}
             >
