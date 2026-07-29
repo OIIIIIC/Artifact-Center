@@ -231,7 +231,10 @@ export function ApplicationsPage() {
           ) : null}
 
           {!loading && !isEmptyCatalog && !isSearchEmpty && !hasNoVisibleMatches ? (
-            <ApplicationGrid applications={visibleApplications} />
+            <ApplicationGrid
+              applications={visibleApplications}
+              transitionKey={`${filters.platform}:${resolvedRegionScope}:${filters.sort}`}
+            />
           ) : null}
         </div>
       </PageContainer>

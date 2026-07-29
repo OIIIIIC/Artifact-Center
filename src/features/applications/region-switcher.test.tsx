@@ -70,6 +70,9 @@ describe('地域切换器', () => {
       />,
     )
 
-    expect(screen.getByRole('button', { name: '北京1' })).toHaveClass('ring-inset')
+    const regionButton = screen.getByRole('button', { name: '北京1' })
+    // 选中 pill 使用 ring-inset，并位于横向滚动容器内
+    expect(regionButton.querySelector('.ring-inset')).not.toBeNull()
+    expect(regionButton.closest('[data-slot="region-scroll"]')).not.toBeNull()
   })
 })

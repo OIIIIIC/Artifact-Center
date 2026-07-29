@@ -1,8 +1,10 @@
+import { LayoutGroup, motion, useReducedMotion } from 'framer-motion'
 import { Layers3, MapPin } from 'lucide-react'
 import { useRef } from 'react'
 import type {
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
+  ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -14,6 +16,50 @@ interface RegionSwitcherProps {
   selected: string
   counts: Record<string, number>
   onChange: (regionId: string) => void
+}
+
+const easeOut = [0.2, 0, 0, 1] as const
+
+function RegionChip({
+  active,
+  onClick,
+  children,
+  className,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+  className?: string
+}) {
+  const reduceMotion = useReducedMotion()
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        'relative inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3',
+        'text-[0.8125rem] font-medium transition-colors duration-200',
+        'ease-[cubic-bezier(0.2,0,0,1)]',
+        active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+        className,
+      )}
+    >
+      {active ? (
+        <motion.span
+          layoutId={reduceMotion ? undefined : 'region-filter-pill'}
+          className={cn(
+            'absolute inset-0 rounded-lg bg-background shadow-[var(--shadow-xs)]',
+            'ring-1 ring-inset ring-border/60 dark:bg-card',
+          )}
+          transition={{ duration: 0.22, ease: easeOut }}
+          aria-hidden
+        />
+      ) : null}
+      <span className="relative z-[1] inline-flex items-center gap-2">{children}</span>
+    </button>
+  )
 }
 
 export function RegionSwitcher({
@@ -69,55 +115,40 @@ export function RegionSwitcher({
   }
 
   return (
-    <div
-      className="flex w-full max-w-full items-center gap-1 overflow-hidden rounded-xl bg-muted/30 p-1"
-      role="group"
-      aria-label={t('applications.regionFilter')}
-    >
-      <button
-        type="button"
-        onClick={() => onChange('all')}
-        aria-pressed={selected === 'all'}
-        className={cn(
-          'inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors',
-          selected === 'all'
-            ? 'bg-background text-foreground shadow-[var(--shadow-xs)] ring-1 ring-inset ring-border/60 dark:bg-card'
-            : 'text-muted-foreground hover:text-foreground',
-        )}
-      >
-        <Layers3 className="size-3.5 opacity-65" strokeWidth={1.75} />
-        {t('applications.allRegions')}
-      </button>
+    <LayoutGroup id="application-region-filter">
       <div
-        data-slot="region-scroll"
-        className="flex min-w-0 flex-1 cursor-grab touch-pan-x select-none items-center gap-1 overflow-x-auto overscroll-x-contain active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endPointerDrag}
-        onPointerCancel={endPointerDrag}
-        onClickCapture={onClickCapture}
+        className="flex w-full max-w-full items-center gap-1 overflow-hidden rounded-xl bg-muted/30 p-1"
+        role="group"
+        aria-label={t('applications.regionFilter')}
       >
-        {regions.map((region) => (
-          <button
-            key={region.id}
-            type="button"
-            onClick={() => onChange(region.id)}
-            aria-pressed={selected === region.id}
-            className={cn(
-              'inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors',
-              selected === region.id
-                ? 'bg-background text-foreground shadow-[var(--shadow-xs)] ring-1 ring-inset ring-border/60 dark:bg-card'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <MapPin className="size-3.5 opacity-65" strokeWidth={1.75} />
-            {region.name}
-            <span className="text-[0.6875rem] tabular-nums text-muted-foreground/70">
-              {counts[region.id] ?? 0}
-            </span>
-          </button>
-        ))}
+        <RegionChip active={selected === 'all'} onClick={() => onChange('all')}>
+          <Layers3 className="size-3.5 opacity-65" strokeWidth={1.75} />
+          {t('applications.allRegions')}
+        </RegionChip>
+        <div
+          data-slot="region-scroll"
+          className="flex min-w-0 flex-1 cursor-grab touch-pan-x select-none items-center gap-1 overflow-x-auto overscroll-x-contain active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endPointerDrag}
+          onPointerCancel={endPointerDrag}
+          onClickCapture={onClickCapture}
+        >
+          {regions.map((region) => (
+            <RegionChip
+              key={region.id}
+              active={selected === region.id}
+              onClick={() => onChange(region.id)}
+            >
+              <MapPin className="size-3.5 opacity-65" strokeWidth={1.75} />
+              {region.name}
+              <span className="text-[0.6875rem] tabular-nums text-muted-foreground/70">
+                {counts[region.id] ?? 0}
+              </span>
+            </RegionChip>
+          ))}
+        </div>
       </div>
-    </div>
+    </LayoutGroup>
   )
 }
