@@ -15,7 +15,7 @@ interface SidebarProps {
 }
 
 /**
- * Linear / Raycast-like rail — weak groups, restrained active, no admin block.
+ * 浅色导航栏以细微选中态表达当前位置，避免后台模板式的大色块。
  */
 export function Sidebar({
   logo,
@@ -77,7 +77,7 @@ function SidebarGroup({ group }: { group: SidebarNavGroup }) {
 function SidebarItem({ item }: { item: SidebarNavItem }) {
   const Icon = item.icon as LucideIcon | undefined
   const base = cn(
-    'group/nav flex w-full items-center gap-2.5 rounded-md px-2.5 py-[7px]',
+    'group/nav relative flex w-full items-center gap-2.5 rounded-md px-2.5 py-[7px]',
     'text-[13px] transition-[color,background-color] duration-[var(--duration-hover)] ease-standard',
     'outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/35',
     item.disabled && 'pointer-events-none opacity-40',
@@ -88,6 +88,12 @@ function SidebarItem({ item }: { item: SidebarNavItem }) {
 
   const content = (
     <>
+      {item.active ? (
+        <span
+          className="absolute left-0 h-4 w-0.5 rounded-full bg-foreground/65"
+          aria-hidden
+        />
+      ) : null}
       {Icon ? (
         <Icon
           className={cn(
@@ -110,7 +116,7 @@ function SidebarItem({ item }: { item: SidebarNavItem }) {
         className={cn(
           base,
           item.active
-            ? 'bg-foreground/[0.04] dark:bg-white/[0.04]'
+            ? 'bg-foreground/[0.035] dark:bg-white/[0.045]'
             : 'hover:bg-foreground/[0.03] dark:hover:bg-white/[0.03]',
         )}
         aria-current={item.active ? 'page' : undefined}
@@ -128,7 +134,7 @@ function SidebarItem({ item }: { item: SidebarNavItem }) {
         base,
         'text-left',
         item.active
-          ? 'bg-foreground/[0.04] dark:bg-white/[0.04]'
+          ? 'bg-foreground/[0.035] dark:bg-white/[0.045]'
           : 'hover:bg-foreground/[0.03] dark:hover:bg-white/[0.03]',
       )}
       disabled={item.disabled}

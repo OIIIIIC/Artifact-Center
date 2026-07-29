@@ -23,7 +23,7 @@ interface TopbarProps {
 }
 
 /**
- * Minimal chrome: Search · Breadcrumb · Locale · Theme · Avatar.
+ * 顶栏只保留定位、搜索与个人操作，避免与内容区争夺注意力。
  */
 export function Topbar({
   logo,
@@ -42,8 +42,8 @@ export function Topbar({
       data-slot="topbar"
       className={cn(
         'sticky top-0 z-30 flex h-[var(--topbar-height)] shrink-0 items-center gap-3',
-        'border-b border-border/80 bg-background/80 px-[var(--page-padding-x)] backdrop-blur-md',
-        'dark:border-border dark:bg-background/75',
+        'border-b border-border/80 bg-background px-[var(--page-padding-x)]',
+        'dark:border-border dark:bg-background',
         className,
       )}
     >
