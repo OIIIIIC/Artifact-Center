@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, isNull, ne, or } from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -54,9 +54,16 @@ function mapRegion(row: typeof regions.$inferSelect) {
   }
 }
 
+type ApplicationManagerPreview = {
+  id: string
+  name: string
+  avatarUrl: string | null
+}
+
 function mapApp(
   row: typeof applications.$inferSelect,
   region: typeof regions.$inferSelect,
+  managers: ApplicationManagerPreview[] = [],
 ) {
   return {
     id: row.id,
@@ -68,6 +75,7 @@ function mapApp(
     repository: row.repository,
     status: row.status,
     owner: row.ownerName,
+    managers,
     latestVersion: row.latestVersion,
     artifactCount: row.artifactCount,
     createdAt: row.createdAt.toISOString(),
@@ -130,9 +138,40 @@ applicationRoutes.get('/', async (c) => {
 
   const regionRows = await db.select().from(regions)
   const regionById = new Map(regionRows.map((region) => [region.id, region]))
+  const applicationIds = rows.map((row) => row.id)
+  const managerRows = applicationIds.length
+    ? await db
+        .select({
+          applicationId: applicationMembers.applicationId,
+          id: users.id,
+          name: users.name,
+          avatarUrl: users.avatarUrl,
+        })
+        .from(applicationMembers)
+        .innerJoin(users, eq(applicationMembers.userId, users.id))
+        .where(
+          and(
+            inArray(applicationMembers.applicationId, applicationIds),
+            eq(applicationMembers.role, 'maintainer'),
+          ),
+        )
+        .orderBy(asc(users.name))
+    : []
+  const managersByApplication = new Map<string, ApplicationManagerPreview[]>()
+  managerRows.forEach((manager) => {
+    const managers = managersByApplication.get(manager.applicationId) ?? []
+    managers.push({
+      id: manager.id,
+      name: manager.name,
+      avatarUrl: manager.avatarUrl,
+    })
+    managersByApplication.set(manager.applicationId, managers)
+  })
 
   return c.json({
-    items: rows.map((row) => mapApp(row, regionById.get(row.regionId)!)),
+    items: rows.map((row) =>
+      mapApp(row, regionById.get(row.regionId)!, managersByApplication.get(row.id)),
+    ),
     total: rows.length,
   })
 })
