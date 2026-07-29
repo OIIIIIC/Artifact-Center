@@ -32,17 +32,15 @@ export function ApplicationGridSkeleton({
               <Skeleton className="h-3 w-4/5" />
             </div>
           </div>
-          <div className="mt-4 flex gap-1.5">
+          <div className="mt-5 flex gap-1.5">
             <Skeleton className="h-5 w-14 rounded-md" />
             <Skeleton className="h-5 w-12 rounded-md" />
+            <Skeleton className="h-5 w-12 rounded-md" />
           </div>
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-auto flex items-center gap-2 pt-5">
             <Skeleton className="size-5 rounded-full" />
             <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-          <div className="mt-auto pt-5">
-            <Skeleton className="h-3 w-24" />
+            <Skeleton className="ml-auto h-3 w-14" />
           </div>
         </div>
       ))}

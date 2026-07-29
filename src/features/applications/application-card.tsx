@@ -29,16 +29,13 @@ function statusKey(status: ApplicationStatus): string | null {
   return `appSettings.status.${status}`
 }
 
+/**
+ * 列表卡片只负责识别与进入详情；下载 / 分享放在详情页，
+ * 方便用户先看清更新时间与变更内容再操作。
+ */
 export function ApplicationCard({ application, className }: ApplicationCardProps) {
   const { t, i18n } = useTranslation()
   const PlatformIcon = PLATFORM_ICON[application.platform]
-  const initials = application.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
 
   const sKey = statusKey(application.status)
   const managers = application.managers ?? [
@@ -62,6 +59,8 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
               ? 'success'
               : 'default'
 
+  const hasVersion = Boolean(application.latestVersion.trim())
+
   // force re-format when locale changes
   void i18n.language
 
@@ -70,10 +69,10 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
       to={`/applications/${application.id}`}
       className={cn(
         'group/card relative flex h-full flex-col rounded-xl bg-card p-5',
-        'ring-1 ring-border/70',
-        'transition-[background-color,ring-color] duration-[var(--duration-hover)] ease-standard',
-        'hover:bg-muted/25 hover:ring-border-strong/80',
-        'dark:ring-border dark:hover:bg-muted/20 dark:hover:ring-border-strong',
+        'shadow-[var(--shadow-xs)] ring-1 ring-border/60',
+        'transition-[box-shadow,ring-color] duration-200 ease-[cubic-bezier(0.2,0,0,1)]',
+        'hover:shadow-[var(--shadow-md)] hover:ring-border-strong/70',
+        'dark:shadow-none dark:ring-border dark:hover:ring-border-strong',
         'outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
         className,
       )}
@@ -82,12 +81,11 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         <div
           className={cn(
             'flex size-12 shrink-0 items-center justify-center rounded-xl',
-            'text-[0.8125rem] font-semibold tracking-tight',
             PLATFORM_TONE[application.platform],
           )}
           aria-hidden
         >
-          {initials}
+          <PlatformIcon className="size-5" strokeWidth={1.75} />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -118,7 +116,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-1.5 border-t border-border/55 pt-3.5">
+      <div className="mt-5 flex flex-wrap items-center gap-1.5">
         <span className="inline-flex h-5 items-center rounded-md bg-muted/55 px-1.5 text-[11px] font-medium text-foreground/75 dark:bg-muted/45">
           {application.region.name}
         </span>
@@ -126,7 +124,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
           <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} aria-hidden />
           {t(`platform.${application.platform}`)}
         </span>
-        {application.latestVersion.trim() ? (
+        {hasVersion ? (
           <span className="inline-flex h-5 items-center rounded-md bg-muted/40 px-1.5 font-mono text-[11px] text-muted-foreground dark:bg-muted/30">
             v{application.latestVersion}
           </span>
