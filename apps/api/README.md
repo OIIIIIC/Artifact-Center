@@ -47,7 +47,7 @@ npm run dev:api
 
 - API: http://localhost:3001
 - Health: `GET /health`
-- 演示账号: `demo@enterprise.local` / `Demo@2026`
+- 演示账号: `oiiic` / `***REMOVED***`
 
 ## 环境变量
 

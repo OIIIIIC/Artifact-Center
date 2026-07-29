@@ -29,8 +29,9 @@ export const env = {
   ),
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   slowRequestMs: positiveNumber('SLOW_REQUEST_MS', 500),
-  /** Seed demo user (matches frontend mock) */
-  seedEmail: 'demo@enterprise.local',
-  seedPassword: 'Demo@2026',
-  seedName: 'Demo User',
+  /** 本地开发环境的初始化管理员 */
+  seedUsername: 'oiiic',
+  seedEmail: 'oiiic@enterprise.local',
+  seedPassword: '***REMOVED***',
+  seedName: 'oiiic',
 }

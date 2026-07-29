@@ -47,7 +47,7 @@ npm run dev
 ```
 
 打开 [http://localhost:5173](http://localhost:5173)  
-登录：`demo@enterprise.local` / `Demo@2026`
+登录：`oiiic` / `***REMOVED***`
 
 ### 后端
 
@@ -65,7 +65,7 @@ npm run db:setup      # migrate + seed
 npm run dev           # http://localhost:3001
 ```
 
-演示账号：`demo@enterprise.local` / `Demo@2026`
+演示账号：`oiiic` / `***REMOVED***`
 
 根目录也可：`npm run dev:api`、`npm run db:setup`。
 
