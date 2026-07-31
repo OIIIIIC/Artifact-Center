@@ -1,33 +1,17 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { Hono } from 'hono'
+import { describe, expect, it, vi } from 'vitest'
 
-// Recreate the health route inline for testing (avoids env dependency)
-function createTestApp() {
-  const app = new Hono()
-
-  app.get('/health', (c) =>
-    c.json({
-      ok: true,
-      service: 'artifact-center-api',
-      time: new Date().toISOString(),
-    }),
-  )
-
-  return app
-}
+import { createHealthRoutes } from '../routes/health.js'
 
 describe('GET /health', () => {
-  let app: Hono
-
-  beforeAll(() => {
-    app = createTestApp()
-  })
-
-  afterAll(() => {
-    // Cleanup nothing needed for Hono in-memory
-  })
+  const now = new Date('2026-07-30T00:00:00.000Z')
 
   it('returns 200 OK with expected shape', async () => {
+    const app = createHealthRoutes({
+      checkDatabase: vi.fn(),
+      checkStorage: vi.fn(),
+      now: () => now,
+      storagePath: '/data/artifacts',
+    })
     const res = await app.request('/health')
     expect(res.status).toBe(200)
 
@@ -38,6 +22,12 @@ describe('GET /health', () => {
   })
 
   it('returns valid ISO-8601 timestamp', async () => {
+    const app = createHealthRoutes({
+      checkDatabase: vi.fn(),
+      checkStorage: vi.fn(),
+      now: () => now,
+      storagePath: '/data/artifacts',
+    })
     const res = await app.request('/health')
     const body = (await res.json()) as { time: string }
     const parsed = Date.parse(body.time)
@@ -45,14 +35,64 @@ describe('GET /health', () => {
   })
 
   it('returns JSON content-type', async () => {
+    const app = createHealthRoutes({
+      checkDatabase: vi.fn(),
+      checkStorage: vi.fn(),
+      now: () => now,
+      storagePath: '/data/artifacts',
+    })
     const res = await app.request('/health')
     const contentType = res.headers.get('content-type')
     expect(contentType).toContain('application/json')
   })
 
   it('returns ok: true', async () => {
+    const app = createHealthRoutes({
+      checkDatabase: vi.fn(),
+      checkStorage: vi.fn(),
+      now: () => now,
+      storagePath: '/data/artifacts',
+    })
     const res = await app.request('/health')
     const body = (await res.json()) as { ok: boolean }
     expect(body.ok).toBe(true)
+  })
+
+  it('数据库和存储可用时返回 ready', async () => {
+    const app = createHealthRoutes({
+      checkDatabase: vi.fn().mockResolvedValue(undefined),
+      checkStorage: vi.fn().mockResolvedValue(undefined),
+      now: () => now,
+      storagePath: '/data/artifacts',
+    })
+
+    const response = await app.request('/health/ready')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      checks: { database: 'ok', storage: 'ok' },
+    })
+  })
+
+  it.each([
+    ['database', true, false],
+    ['storage', false, true],
+  ])('%s 不可用时返回 503', async (_name, databaseFails, storageFails) => {
+    const app = createHealthRoutes({
+      checkDatabase: databaseFails
+        ? vi.fn().mockRejectedValue(new Error('database unavailable'))
+        : vi.fn().mockResolvedValue(undefined),
+      checkStorage: storageFails
+        ? vi.fn().mockRejectedValue(new Error('storage unavailable'))
+        : vi.fn().mockResolvedValue(undefined),
+      now: () => now,
+      storagePath: '/data/artifacts',
+    })
+
+    const response = await app.request('/health/ready')
+
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toMatchObject({ ok: false })
   })
 })

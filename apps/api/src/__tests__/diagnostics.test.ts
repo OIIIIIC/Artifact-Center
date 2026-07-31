@@ -81,6 +81,9 @@ describe('系统诊断模块', () => {
     diagnostics.record(
       requestLog('2026-07-20T08:20:00.000Z', 'health', { path: '/health' }),
     )
+    diagnostics.record(
+      requestLog('2026-07-20T08:20:30.000Z', 'ready', { path: '/health/ready' }),
+    )
     diagnostics.record(requestLog('2026-07-20T08:21:00.000Z', 'first'))
     diagnostics.record(requestLog('2026-07-20T08:22:00.000Z', 'second'))
     diagnostics.record(requestLog('2026-07-20T08:23:00.000Z', 'third'))
@@ -89,6 +92,7 @@ describe('系统诊断模块', () => {
 
     expect(report.eventCount).toBe(2)
     expect(report.markdown).not.toContain('health')
+    expect(report.markdown).not.toContain('ready')
     expect(report.markdown).not.toContain('first')
     expect(report.markdown).toContain('second')
     expect(report.markdown).toContain('third')
