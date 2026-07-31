@@ -15,7 +15,7 @@ export function detectFileKind(filename: string): FileKind {
   if (ext === 'zip') return 'zip'
   if (ext === 'ipa') return 'ipa'
   if (ext === 'bin' || ext === 'img' || ext === 'hex') return 'firmware'
-  if (ext === 'tar' || filename.includes('docker')) return 'docker'
+  if (ext === 'tar' || filename.toLowerCase().includes('docker')) return 'docker'
   return 'unknown'
 }
 
@@ -38,13 +38,14 @@ export function mockHash(name: string, size: number): string {
   }
   const a = h.toString(16).padStart(8, '0')
   const b = (~h >>> 0).toString(16).padStart(8, '0')
-  const c = (h ^ 0xabcdef01).toString(16).padStart(8, '0')
+  const c = ((h ^ 0xabcdef01) >>> 0).toString(16).padStart(8, '0')
   const d = ((h * 2654435761) >>> 0).toString(16).padStart(8, '0')
   return `${a}${b}${c}${d}${a}${b}${c}${d}`.slice(0, 64)
 }
 
 function bumpPatch(version: string): string {
   const core = version.replace(/-.*$/, '')
+  if (!/^\d+(?:\.\d+){0,2}$/.test(core)) return '1.0.0'
   const parts = core.split('.').map((n) => parseInt(n, 10) || 0)
   while (parts.length < 3) parts.push(0)
   parts[2] += 1

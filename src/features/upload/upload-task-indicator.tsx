@@ -2,9 +2,11 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CircleSlash2,
   Loader2,
   RotateCcw,
   UploadCloud,
+  X,
   XCircle,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -14,11 +16,11 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { formatFileSize } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { useUploadManager } from './upload-manager'
+import { useUploadManager } from './upload-manager-context'
 
 export function UploadTaskIndicator() {
   const { t } = useTranslation()
-  const { tasks, retryUpload } = useUploadManager()
+  const { tasks, retryUpload, cancelUpload } = useUploadManager()
   const [collapsed, setCollapsed] = useState(false)
   const [hiddenCompletedIds, setHiddenCompletedIds] = useState<Set<string>>(
     () => new Set(),
@@ -51,6 +53,8 @@ export function UploadTaskIndicator() {
 
   const activeTasks = visibleTasks.filter((task) => task.status === 'uploading')
   const activeCount = activeTasks.length
+  const allActiveProcessing =
+    activeCount > 0 && activeTasks.every((task) => task.transferStage === 'processing')
   const totalActiveBytes = activeTasks.reduce((sum, task) => sum + task.fileSize, 0)
   const overallProgress = totalActiveBytes
     ? Math.round(
@@ -59,6 +63,11 @@ export function UploadTaskIndicator() {
       )
     : 100
   const hasFailed = visibleTasks.some((task) => task.status === 'failed')
+  const hasCancelled = visibleTasks.some((task) => task.status === 'cancelled')
+  const formatEta = (seconds: number) =>
+    seconds < 60
+      ? t('upload.taskEtaSeconds', { count: Math.max(1, Math.ceil(seconds)) })
+      : t('upload.taskEtaMinutes', { count: Math.ceil(seconds / 60) })
 
   if (collapsed) {
     return (
@@ -76,15 +85,21 @@ export function UploadTaskIndicator() {
           <Loader2 className="size-4 animate-spin text-primary" />
         ) : hasFailed ? (
           <XCircle className="size-4 text-destructive" />
+        ) : hasCancelled ? (
+          <CircleSlash2 className="size-4 text-muted-foreground" />
         ) : (
           <CheckCircle2 className="size-4 text-emerald-600" />
         )}
         <span>
           {activeCount > 0
-            ? t('upload.taskDockedUploading', { progress: overallProgress })
+            ? allActiveProcessing
+              ? t('upload.taskDockedProcessing')
+              : t('upload.taskDockedUploading', { progress: overallProgress })
             : hasFailed
               ? t('upload.taskFailedShort')
-              : t('upload.taskCompletedShort')}
+              : hasCancelled
+                ? t('upload.taskCancelledShort')
+                : t('upload.taskCompletedShort')}
         </span>
         <ChevronLeft className="size-3.5 text-muted-foreground" />
       </button>
@@ -121,6 +136,8 @@ export function UploadTaskIndicator() {
                 <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
               ) : task.status === 'completed' ? (
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+              ) : task.status === 'cancelled' ? (
+                <CircleSlash2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               ) : (
                 <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
               )}
@@ -134,20 +151,56 @@ export function UploadTaskIndicator() {
                   <div
                     className={cn(
                       'h-full rounded-full transition-[width] duration-200',
-                      task.status === 'failed' ? 'bg-destructive' : 'bg-primary',
+                      task.status === 'failed'
+                        ? 'bg-destructive'
+                        : task.status === 'cancelled'
+                          ? 'bg-muted-foreground'
+                          : 'bg-primary',
                     )}
                     style={{ width: `${task.progress}%` }}
                   />
                 </div>
                 <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                   {task.status === 'uploading'
-                    ? t('upload.taskUploading', { progress: task.progress })
+                    ? task.transferStage === 'processing'
+                      ? t('upload.taskProcessing')
+                      : task.isStalled
+                        ? t('upload.taskStalled')
+                        : task.speedBytesPerSecond && task.etaSeconds
+                          ? t('upload.taskTransferStats', {
+                              progress: task.progress,
+                              speed: formatFileSize(task.speedBytesPerSecond),
+                              eta: formatEta(task.etaSeconds),
+                            })
+                          : t('upload.taskUploading', { progress: task.progress })
                     : task.status === 'completed'
                       ? t('upload.taskCompletedShort')
-                      : t('upload.taskFailedShort')}
+                      : task.status === 'cancelled'
+                        ? t('upload.taskCancelledShort')
+                        : t('upload.taskFailedShort')}
                 </p>
+                {task.status === 'uploading' &&
+                task.transferStage === 'transferring' &&
+                task.isStalled ? (
+                  <p
+                    className="mt-1 text-[0.6875rem] text-amber-700 dark:text-amber-400"
+                    role="status"
+                  >
+                    {t('upload.taskStalledGuidance')}
+                  </p>
+                ) : null}
               </div>
-              {task.status === 'failed' ? (
+              {task.status === 'uploading' ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t('upload.taskCancel')}
+                  onClick={() => cancelUpload(task.taskId)}
+                >
+                  <X />
+                </Button>
+              ) : task.status === 'failed' || task.status === 'cancelled' ? (
                 <Button
                   type="button"
                   variant="ghost"

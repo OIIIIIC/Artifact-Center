@@ -18,7 +18,7 @@ import type {
   VersionDraft,
 } from '@/types/upload'
 import { UPLOAD_MAX_BYTES } from '@/types/upload'
-import { useUploadManager } from './upload-manager'
+import { useUploadManager } from './upload-manager-context'
 
 function emptyVersion(): VersionDraft {
   return {

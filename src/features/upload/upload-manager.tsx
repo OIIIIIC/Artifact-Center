@@ -1,31 +1,18 @@
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import {
+  calculateUploadTelemetry,
+  createUploadTelemetrySample,
+} from '@/features/upload/upload-telemetry'
+import { UploadManagerContext } from '@/features/upload/upload-manager-context'
 import { queryKeys } from '@/lib/query-keys'
 import { apiUploadArtifact } from '@/services/api'
 import { ApiError } from '@/services/http'
 import type { Application } from '@/types/application'
 import type { PublishError, UploadTask, VersionDraft } from '@/types/upload'
-
-type UploadManagerValue = {
-  tasks: UploadTask[]
-  startUpload: (input: {
-    application: Application
-    file: File
-    version: VersionDraft
-  }) => UploadTask
-  retryUpload: (taskId: string) => void
-}
 
 type PendingUpload = {
   task: UploadTask
@@ -34,7 +21,7 @@ type PendingUpload = {
   signature: string
 }
 
-const UploadManagerContext = createContext<UploadManagerValue | null>(null)
+const UPLOAD_STALL_THRESHOLD_MS = 15_000
 
 function createTaskId() {
   return (
@@ -48,6 +35,52 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [tasks, setTasks] = useState<UploadTask[]>([])
   const pending = useRef(new Map<string, PendingUpload>())
+  const controllers = useRef(new Map<string, AbortController>())
+  const hasActiveUpload = tasks.some((task) => task.status === 'uploading')
+  const hasTransferringUpload = tasks.some(
+    (task) =>
+      task.status === 'uploading' &&
+      task.transferStage === 'transferring' &&
+      task.lastProgressAt !== null &&
+      !task.isStalled,
+  )
+
+  useEffect(() => {
+    if (!hasActiveUpload) return
+
+    const confirmBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', confirmBeforeUnload)
+    return () => window.removeEventListener('beforeunload', confirmBeforeUnload)
+  }, [hasActiveUpload])
+
+  useEffect(() => {
+    if (!hasTransferringUpload) return
+
+    const timer = window.setInterval(() => {
+      const now = Date.now()
+      setTasks((current) => {
+        let changed = false
+        const next = current.map((task) => {
+          if (
+            task.status !== 'uploading' ||
+            task.transferStage !== 'transferring' ||
+            task.isStalled ||
+            task.lastProgressAt === null ||
+            now - task.lastProgressAt < UPLOAD_STALL_THRESHOLD_MS
+          ) {
+            return task
+          }
+          changed = true
+          return { ...task, isStalled: true }
+        })
+        return changed ? next : current
+      })
+    }, 1_000)
+    return () => window.clearInterval(timer)
+  }, [hasTransferringUpload])
 
   const updateTask = useCallback((taskId: string, patch: Partial<UploadTask>) => {
     setTasks((current) =>
@@ -57,7 +90,15 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
 
   const runUpload = useCallback(
     async ({ task, file, version }: PendingUpload) => {
+      const controller = new AbortController()
+      controllers.current.set(task.taskId, controller)
       try {
+        updateTask(task.taskId, {
+          lastProgressAt: Date.now(),
+          isStalled: false,
+        })
+        let telemetrySample = createUploadTelemetrySample(Date.now())
+
         await apiUploadArtifact(
           task.applicationId,
           file,
@@ -69,13 +110,40 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
             releaseNotes: version.releaseNotes,
             markLatest: version.markLatest,
           },
-          (progress) => updateTask(task.taskId, { progress }),
+          ({ progress, loadedBytes, totalBytes }) => {
+            if (controllers.current.get(task.taskId) !== controller) return
+            const now = Date.now()
+            const telemetry = calculateUploadTelemetry(
+              telemetrySample,
+              loadedBytes,
+              totalBytes,
+              now,
+            )
+            telemetrySample = telemetry.sample
+            updateTask(task.taskId, {
+              progress,
+              uploadedBytes: loadedBytes,
+              speedBytesPerSecond: telemetry.speedBytesPerSecond,
+              etaSeconds: telemetry.etaSeconds,
+              transferStage: telemetry.stage,
+              lastProgressAt: telemetry.stage === 'transferring' ? now : null,
+              isStalled: false,
+            })
+          },
+          controller.signal,
         )
 
+        if (controllers.current.get(task.taskId) !== controller) return
         const completedTask = {
           ...task,
           status: 'completed' as const,
           progress: 100,
+          uploadedBytes: file.size,
+          speedBytesPerSecond: null,
+          etaSeconds: null,
+          transferStage: 'processing' as const,
+          lastProgressAt: null,
+          isStalled: false,
           error: null,
         }
         pending.current.set(task.taskId, {
@@ -101,13 +169,37 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
           description: `${task.applicationName} · v${task.version}`,
         })
       } catch (error) {
+        if (controllers.current.get(task.taskId) !== controller) return
+        if (error instanceof ApiError && error.code === 'request_aborted') {
+          const cancelledTask = {
+            ...task,
+            status: 'cancelled' as const,
+            lastProgressAt: null,
+            isStalled: false,
+            error: null,
+          }
+          pending.current.set(task.taskId, {
+            task: cancelledTask,
+            file,
+            version,
+            signature: task.taskId,
+          })
+          updateTask(task.taskId, cancelledTask)
+          return
+        }
         const code: Exclude<PublishError, null> =
           error instanceof ApiError && error.code === 'duplicate_artifact'
             ? 'duplicate_artifact'
             : error instanceof ApiError && error.code === 'archived_application'
               ? 'archived_application'
               : 'upload_failed'
-        const failedTask = { ...task, status: 'failed' as const, error: code }
+        const failedTask = {
+          ...task,
+          status: 'failed' as const,
+          lastProgressAt: null,
+          isStalled: false,
+          error: code,
+        }
         pending.current.set(task.taskId, {
           task: failedTask,
           file,
@@ -116,6 +208,10 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         })
         updateTask(task.taskId, failedTask)
         toast.error(t('upload.taskFailed'), { description: task.fileName })
+      } finally {
+        if (controllers.current.get(task.taskId) === controller) {
+          controllers.current.delete(task.taskId)
+        }
       }
     },
     [queryClient, t, updateTask],
@@ -149,6 +245,12 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         channel: version.channel,
         status: 'uploading',
         progress: 0,
+        uploadedBytes: 0,
+        speedBytesPerSecond: null,
+        etaSeconds: null,
+        transferStage: 'transferring',
+        lastProgressAt: null,
+        isStalled: false,
         error: null,
       }
       const upload = { task, file, version, signature }
@@ -171,6 +273,12 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         ...upload.task,
         status: 'uploading' as const,
         progress: 0,
+        uploadedBytes: 0,
+        speedBytesPerSecond: null,
+        etaSeconds: null,
+        transferStage: 'transferring' as const,
+        lastProgressAt: null,
+        isStalled: false,
         error: null,
       }
       const nextUpload = { ...upload, task: nextTask }
@@ -183,19 +291,32 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
     [runUpload],
   )
 
+  const cancelUpload = useCallback(
+    (taskId: string) => {
+      const upload = pending.current.get(taskId)
+      if (!upload || upload.task.status !== 'uploading') return
+
+      const cancelledTask = {
+        ...upload.task,
+        status: 'cancelled' as const,
+        lastProgressAt: null,
+        isStalled: false,
+        error: null,
+      }
+      pending.current.set(taskId, { ...upload, task: cancelledTask })
+      updateTask(taskId, cancelledTask)
+      controllers.current.get(taskId)?.abort()
+    },
+    [updateTask],
+  )
+
   const value = useMemo(
-    () => ({ tasks, startUpload, retryUpload }),
-    [retryUpload, startUpload, tasks],
+    () => ({ tasks, startUpload, retryUpload, cancelUpload }),
+    [cancelUpload, retryUpload, startUpload, tasks],
   )
   return (
     <UploadManagerContext.Provider value={value}>
       {children}
     </UploadManagerContext.Provider>
   )
-}
-
-export function useUploadManager() {
-  const value = useContext(UploadManagerContext)
-  if (!value) throw new Error('useUploadManager 必须在 UploadManagerProvider 内使用')
-  return value
 }

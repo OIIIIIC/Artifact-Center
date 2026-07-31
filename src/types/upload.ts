@@ -12,7 +12,8 @@ export type UploadFileError = 'too_large' | 'wrong_platform' | 'unsupported' | '
 export type PublishError =
   'duplicate_artifact' | 'archived_application' | 'upload_failed' | null
 
-export type UploadTaskStatus = 'uploading' | 'completed' | 'failed'
+export type UploadTaskStatus = 'uploading' | 'completed' | 'failed' | 'cancelled'
+export type UploadTransferStage = 'transferring' | 'processing'
 
 /** 全局上传任务；File 仅在当前页面会话内保留，不做持久化。 */
 export interface UploadTask {
@@ -26,6 +27,12 @@ export interface UploadTask {
   channel: UploadChannel
   status: UploadTaskStatus
   progress: number
+  uploadedBytes: number
+  speedBytesPerSecond: number | null
+  etaSeconds: number | null
+  transferStage: UploadTransferStage
+  lastProgressAt: number | null
+  isStalled: boolean
   error: PublishError
 }
 
