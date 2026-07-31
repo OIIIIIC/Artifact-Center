@@ -1,4 +1,4 @@
-import { asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, isNotNull } from 'drizzle-orm'
 
 import { db } from '../db/client.js'
 import {
@@ -8,6 +8,7 @@ import {
   shareLinkItems,
   shareLinks,
 } from '../db/schema.js'
+import { hashShareToken } from './share-token.js'
 
 export type ResolvedShareItem = {
   item: typeof shareLinkItems.$inferSelect
@@ -25,13 +26,37 @@ export type ShareResolution =
       items: ResolvedShareItem[]
     }
 
-/** 统一解析单制品分享与 Share Collection，公开页面和下载共用此接口。 */
+/**
+ * 按公开 URL 中的明文令牌解析分享。
+ * 优先匹配 token_hash；若命中遗留明文 token 列则就地升级为 hash 并清空明文。
+ */
 export async function resolveShare(token: string): Promise<ShareResolution> {
-  const [share] = await db
+  const trimmed = token.trim()
+  if (!trimmed) return { status: 'not_found' }
+
+  const tokenHash = hashShareToken(trimmed)
+  let [share] = await db
     .select()
     .from(shareLinks)
-    .where(eq(shareLinks.token, token))
+    .where(eq(shareLinks.tokenHash, tokenHash))
     .limit(1)
+
+  if (!share) {
+    const [legacy] = await db
+      .select()
+      .from(shareLinks)
+      .where(and(eq(shareLinks.token, trimmed), isNotNull(shareLinks.token)))
+      .limit(1)
+    if (legacy) {
+      const [upgraded] = await db
+        .update(shareLinks)
+        .set({ tokenHash, token: null })
+        .where(eq(shareLinks.id, legacy.id))
+        .returning()
+      share = upgraded ?? legacy
+    }
+  }
+
   if (!share) return { status: 'not_found' }
   if (share.revokedAt) return { status: 'revoked' }
   if (share.expiresAt && share.expiresAt.getTime() < Date.now()) {

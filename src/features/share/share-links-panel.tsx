@@ -39,7 +39,11 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
     return Number.isNaN(exp) || exp > query.dataUpdatedAt
   })
 
-  const onCopy = async (token: string) => {
+  const onCopy = async (token: string | undefined) => {
+    if (!token) {
+      toast.error(t('share.copyUnavailable'))
+      return
+    }
     if (await copyText(shareUrlForToken(token))) {
       toast.success(t('share.copied'))
     } else {
@@ -124,19 +128,26 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
               {typeof s.downloadCount === 'number'
                 ? ` · ${t('share.downloadCount', { count: s.downloadCount })}`
                 : null}
+              {s.tokenPrefix ? ` · #${s.tokenPrefix}` : null}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={() => void onCopy(s.token)}
-            >
-              <Copy className="size-3.5" strokeWidth={1.75} />
-              {t('share.copyAgain')}
-            </Button>
+            {s.token ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => void onCopy(s.token)}
+              >
+                <Copy className="size-3.5" strokeWidth={1.75} />
+                {t('share.copyAgain')}
+              </Button>
+            ) : (
+              <span className="px-2 text-[0.75rem] text-muted-foreground/80">
+                {t('share.copyUnavailableShort')}
+              </span>
+            )}
             <Button
               type="button"
               variant="ghost"

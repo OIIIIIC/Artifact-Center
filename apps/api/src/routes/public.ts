@@ -3,6 +3,7 @@ import { Hono, type Context } from 'hono'
 import { Readable } from 'node:stream'
 
 import { db } from '../db/client.js'
+import { env } from '../env.js'
 import { shareLinkItems, shareLinks } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
 import { attachmentDisposition } from '../lib/download-response.js'
@@ -13,9 +14,27 @@ import {
   type ResolvedShareItem,
 } from '../lib/share-resolution.js'
 import { openDownloadStream } from '../lib/storage.js'
+import {
+  enforceRateLimit,
+  FixedWindowRateLimiter,
+  resolveClientIp,
+} from '../middleware/rate-limit.js'
 
 /** Public read/download routes for server-issued capability links. */
 export const publicRoutes = new Hono()
+const publicRateLimiter = new FixedWindowRateLimiter({
+  maxRequests: env.publicRateLimitMaxRequests,
+  windowMs: env.rateLimitWindowSeconds * 1000,
+})
+
+function limitPublicShare(c: Context): Response | undefined {
+  const token = c.req.param('token')
+  return enforceRateLimit(
+    c,
+    publicRateLimiter,
+    `public:${resolveClientIp(c, env.trustProxy)}:${token}`,
+  )
+}
 
 function mapRegion(region: ResolvedShareItem['region']) {
   return {
@@ -127,6 +146,8 @@ async function streamItem(
 
 /** GET /public/shares/:token — resolve one or many Share Items. */
 publicRoutes.get('/shares/:token', async (c) => {
+  const limited = limitPublicShare(c)
+  if (limited) return limited
   const resolution = await resolveShare(c.req.param('token'))
   if (resolution.status !== 'ok') return mapShareError(c, resolution.status)
 
@@ -135,7 +156,7 @@ publicRoutes.get('/shares/:token', async (c) => {
     ok: true,
     share: {
       id: resolution.share.id,
-      token: resolution.share.token,
+      // 不回显能力令牌（SEC-01）：URL 已含 token，响应体无需再带
       kind: resolution.share.kind,
       title: resolution.share.title,
       regionId: resolution.share.regionId,
@@ -159,6 +180,8 @@ publicRoutes.get('/shares/:token', async (c) => {
 
 /** GET /public/shares/:token/items/:itemId/download */
 publicRoutes.get('/shares/:token/items/:itemId/download', async (c) => {
+  const limited = limitPublicShare(c)
+  if (limited) return limited
   const resolution = await resolveShareItem(c.req.param('token'), c.req.param('itemId'))
   if (resolution.status === 'item_not_found') {
     return jsonError(c, 404, 'item_not_found', 'Share item not found')
@@ -169,6 +192,8 @@ publicRoutes.get('/shares/:token/items/:itemId/download', async (c) => {
 
 /** 兼容旧客户端：单项链接继续使用原下载地址。 */
 publicRoutes.get('/shares/:token/download', async (c) => {
+  const limited = limitPublicShare(c)
+  if (limited) return limited
   const resolution = await resolveShare(c.req.param('token'))
   if (resolution.status !== 'ok') return mapShareError(c, resolution.status)
   const firstAvailable = resolution.items.find((entry) => entry.artifact)

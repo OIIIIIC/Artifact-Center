@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto'
 import { desc, eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
@@ -7,6 +6,7 @@ import { db } from '../db/client.js'
 import { applications, artifacts, shareLinkItems, shareLinks } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
 import { jsonError } from '../lib/errors.js'
+import { createShareToken, hashShareToken, shareTokenPrefix } from '../lib/share-token.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import {
   hasApplicationRole,
@@ -45,10 +45,17 @@ function mapShare(
   row: typeof shareLinks.$inferSelect,
   itemCount = 1,
   item?: { mode: 'latest' | 'artifact'; artifactVersion: string | null },
+  /** 仅创建响应可附带明文 token；列表与吊销不得回传可重放凭证。 */
+  plainToken?: string,
 ) {
   return {
     id: row.id,
-    token: row.token,
+    token: plainToken ?? '',
+    tokenPrefix: plainToken
+      ? shareTokenPrefix(plainToken)
+      : row.token
+        ? shareTokenPrefix(row.token)
+        : row.tokenHash.slice(0, 8),
     kind: row.kind,
     title: row.title,
     regionId: row.regionId,
@@ -67,8 +74,11 @@ function mapShare(
   }
 }
 
-function newToken(): string {
-  return randomBytes(24).toString('base64url')
+function shareInsertValues(plainToken: string) {
+  return {
+    tokenHash: hashShareToken(plainToken),
+    token: null as string | null,
+  }
 }
 
 function expiryFromDays(days = 0) {
@@ -169,11 +179,12 @@ shareRoutes.post('/shares', requireAuth, requireMinRole('maintainer'), async (c)
   const appById = new Map(apps.map((app) => [app.id, app]))
   const orderedApps = applicationIds.map((id) => appById.get(id)!)
   const expiresAt = expiryFromDays(parsed.data.expiresInDays)
+  const plainToken = createShareToken()
   const row = await db.transaction(async (tx) => {
     const [created] = await tx
       .insert(shareLinks)
       .values({
-        token: newToken(),
+        ...shareInsertValues(plainToken),
         kind: 'collection',
         title: parsed.data.title,
         regionId: parsed.data.regionId,
@@ -204,10 +215,14 @@ shareRoutes.post('/shares', requireAuth, requireMinRole('maintainer'), async (c)
       applicationIds,
       itemCount: resolvedItems.length,
       expiresAt: expiresAt?.toISOString() ?? null,
+      tokenPrefix: shareTokenPrefix(plainToken),
     },
   })
 
-  return c.json({ share: mapShare(row, resolvedItems.length) }, 201)
+  return c.json(
+    { share: mapShare(row, resolvedItems.length, undefined, plainToken) },
+    201,
+  )
 })
 
 /** POST /applications/:appId/shares — 保留单应用分享接口。 */
@@ -262,11 +277,12 @@ shareRoutes.post(
     }
 
     const expiresAt = expiryFromDays(parsed.data.expiresInDays)
+    const plainToken = createShareToken()
     const row = await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(shareLinks)
         .values({
-          token: newToken(),
+          ...shareInsertValues(plainToken),
           kind: 'single',
           title: app.name,
           regionId: app.regionId,
@@ -297,10 +313,11 @@ shareRoutes.post(
         mode: parsed.data.mode,
         artifactId,
         expiresAt: expiresAt?.toISOString() ?? null,
+        tokenPrefix: shareTokenPrefix(plainToken),
       },
     })
 
-    return c.json({ share: mapShare(row) }, 201)
+    return c.json({ share: mapShare(row, 1, undefined, plainToken) }, 201)
   },
 )
 
@@ -373,7 +390,12 @@ shareRoutes.delete(
       objectId: updated.id,
       applicationId: updated.applicationId,
       summary: `吊销分享链接`,
-      meta: { tokenPrefix: updated.token.slice(0, 8), kind: updated.kind },
+      meta: {
+        tokenPrefix: updated.token
+          ? shareTokenPrefix(updated.token)
+          : updated.tokenHash.slice(0, 8),
+        kind: updated.kind,
+      },
     })
     return c.json({ share: mapShare(updated) })
   },
