@@ -48,12 +48,18 @@
 
   /* ——— Typography ——— */
   /*
-   * 正文优先使用易读的界面字体；等宽字体仅用于版本、哈希和文件名。
+   * PERF-02：系统字体优先，避免首访下载数十 MiB CJK TTF。
+   * 品牌字体仅作 optional 增强（见 fonts.css font-display: optional）。
+   * 等宽字体仅用于版本、哈希和文件名。
    */
-  --font-sans: 'Alibaba PuHuiTi', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
-  --font-heading: 'Alibaba PuHuiTi', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    'Alibaba PuHuiTi', ui-sans-serif, sans-serif;
+  --font-heading:
+    system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    'Alibaba PuHuiTi', ui-sans-serif, sans-serif;
   --font-mono:
-    'JetBrains Mono', 'Alibaba PuHuiTi', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
+    'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Code', Menlo, Consolas,
     monospace;
 
   --text-display: 2rem;

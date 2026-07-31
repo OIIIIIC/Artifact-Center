@@ -37,4 +37,14 @@
   :focus-visible {
     @apply outline-none ring-2 ring-ring/50 ring-offset-2 ring-offset-background;
   }
+
+  /* 键盘用户：保证可聚焦控件有可见焦点（A11Y-01） */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role='button']:focus-visible {
+    @apply outline-none ring-2 ring-ring/55 ring-offset-2 ring-offset-background;
+  }
 }

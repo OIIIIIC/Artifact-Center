@@ -31,6 +31,7 @@ export function ApplicationSearch({
         type="text"
         inputMode="search"
         enterKeyHint="search"
+        maxLength={120}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={t('applications.searchPlaceholder')}

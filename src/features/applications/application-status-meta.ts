@@ -1,5 +1,13 @@
 import type { ApplicationStatus } from '@/types/application'
 
+export const APPLICATION_STATUS_LABEL = {
+  new: 'NEW',
+  beta: 'Beta',
+  deprecated: 'Deprecated',
+  archived: 'Archived',
+  active: null,
+} as const
+
 /**
  * Lifecycle palette — aligned with StatusBadge semantics.
  * Quiet tints (not ERP rainbow): emerald / sky / violet / amber / stone.

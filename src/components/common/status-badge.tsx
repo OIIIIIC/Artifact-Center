@@ -56,11 +56,3 @@ export function StatusBadge({ className, status, ...props }: StatusBadgeProps) {
     />
   )
 }
-
-export const APPLICATION_STATUS_LABEL = {
-  new: 'NEW',
-  beta: 'Beta',
-  deprecated: 'Deprecated',
-  archived: 'Archived',
-  active: null,
-} as const

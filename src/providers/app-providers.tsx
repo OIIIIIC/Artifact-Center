@@ -9,9 +9,36 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { QueryProvider } from '@/providers/query-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { UploadManagerProvider } from '@/features/upload/upload-manager'
+import { useAuthStore } from '@/store/auth-store'
 
 interface AppProvidersProps {
   children: ReactNode
+}
+
+/**
+ * 已登录会话才挂载上传管理器与任务条，避免登录/公开下载页拉取上传链路模块（PERF-01）。
+ */
+function AuthenticatedShell({ children }: { children: ReactNode }) {
+  const user = useAuthStore((s) => s.user)
+
+  if (!user) {
+    return (
+      <>
+        {children}
+        <ConnectivityNotice />
+        <Toaster />
+      </>
+    )
+  }
+
+  return (
+    <UploadManagerProvider>
+      {children}
+      <ConnectivityNotice />
+      <UploadTaskIndicator />
+      <Toaster />
+    </UploadManagerProvider>
+  )
 }
 
 export function AppProviders({ children }: AppProvidersProps) {
@@ -19,16 +46,11 @@ export function AppProviders({ children }: AppProvidersProps) {
     <QueryProvider>
       <ThemeProvider>
         <BrowserRouter>
-          <UploadManagerProvider>
-            <TooltipProvider delayDuration={200}>
-              <AuthBootstrap>
-                {children}
-                <ConnectivityNotice />
-                <UploadTaskIndicator />
-                <Toaster />
-              </AuthBootstrap>
-            </TooltipProvider>
-          </UploadManagerProvider>
+          <TooltipProvider delayDuration={200}>
+            <AuthBootstrap>
+              <AuthenticatedShell>{children}</AuthenticatedShell>
+            </AuthBootstrap>
+          </TooltipProvider>
         </BrowserRouter>
       </ThemeProvider>
     </QueryProvider>

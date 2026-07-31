@@ -1,7 +1,7 @@
 import { Download, Loader2, MapPin, Share2, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 import { StatusBadge } from '@/components/common/status-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -29,6 +29,15 @@ interface ApplicationDetailHeaderProps {
   className?: string
 }
 
+function getReturnTo(state: unknown): string {
+  const returnTo = (state as { returnTo?: unknown } | null)?.returnTo
+  return typeof returnTo === 'string' &&
+    returnTo.startsWith('/') &&
+    !returnTo.startsWith('//')
+    ? returnTo
+    : '/'
+}
+
 function extFor(platform: Application['platform']) {
   if (platform === 'windows') return 'exe'
   if (platform === 'zip') return 'zip'
@@ -41,6 +50,8 @@ export function ApplicationDetailHeader({
   className,
 }: ApplicationDetailHeaderProps) {
   const { t, i18n } = useTranslation()
+  const location = useLocation()
+  const returnTo = getReturnTo(location.state)
   void i18n.language
   const role = useAuthStore((s) => s.user?.role)
   const canWrite = canWriteContent(role)
@@ -282,7 +293,9 @@ export function ApplicationDetailHeader({
             variant="ghost"
             className="text-muted-foreground lg:hidden"
           >
-            <Link to="/">{t('detail.back')}</Link>
+            <Link to={returnTo} state={{ restoreContentScroll: true }}>
+              {t('detail.back')}
+            </Link>
           </Button>
         </div>
         {hasVersion && latest?.buildNumber ? (

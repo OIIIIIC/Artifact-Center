@@ -30,9 +30,14 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
 
   if (!hydrated || !bootstrapped) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background">
+      <div
+        className="flex min-h-dvh items-center justify-center bg-background"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
         <div className="size-8 animate-pulse rounded-xl bg-muted" aria-hidden />
-        <span className="sr-only">Loading</span>
+        <span className="sr-only">正在恢复登录状态…</span>
       </div>
     )
   }

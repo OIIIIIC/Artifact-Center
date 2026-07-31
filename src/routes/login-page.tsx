@@ -68,7 +68,10 @@ export function LoginPage() {
             >
               AC
             </div>
-            <h1 className="text-[1.5rem] font-semibold tracking-tight text-foreground">
+            <h1
+              id="login-heading"
+              className="text-[1.5rem] font-semibold tracking-tight text-foreground"
+            >
               {t('brand.name')}
             </h1>
             <p className="mt-1.5 text-[0.875rem] text-muted-foreground">
@@ -78,6 +81,7 @@ export function LoginPage() {
 
           <form
             onSubmit={(e) => void onSubmit(e)}
+            aria-labelledby="login-heading"
             className={cn(
               'space-y-4 rounded-2xl bg-card/80 p-6 ring-1 ring-border/70',
               'dark:bg-card/50 dark:ring-border',
@@ -103,6 +107,8 @@ export function LoginPage() {
                 className="h-10 rounded-lg"
                 disabled={loading}
                 required
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? 'login-error' : undefined}
               />
             </div>
 
@@ -126,10 +132,12 @@ export function LoginPage() {
                 className="h-10 rounded-lg"
                 disabled={loading}
                 required
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? 'login-error' : undefined}
               />
             </div>
 
-            <FormError message={error} />
+            <FormError id="login-error" message={error} />
 
             <Button type="submit" size="lg" className="w-full" disabled={loading}>
               {loading ? t('auth.signingIn') : t('auth.signIn')}

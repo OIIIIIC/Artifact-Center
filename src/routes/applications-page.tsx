@@ -25,6 +25,7 @@ import {
   useApplications,
 } from '@/features/applications/use-applications'
 import { useRegions } from '@/features/regions/use-regions'
+import { useContentScrollRestoration } from '@/hooks/use-content-scroll-restoration'
 import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
@@ -47,6 +48,8 @@ export function ApplicationsPage() {
     error,
     refetch,
   } = useApplications()
+
+  useContentScrollRestoration({ ready: !loading })
 
   const changeRegionScope = (next: string) => {
     setRegionScope(next)
@@ -86,11 +89,10 @@ export function ApplicationsPage() {
   return (
     <AppLayout breadcrumbs={[{ label: t('nav.applications') }]}>
       <PageContainer rhythm="product">
-        <section className="border-b border-border/60 pb-7 sm:pb-8">
-          <div className="flex min-h-[11rem] flex-col lg:min-h-[12rem]">
+        <section className="border-b border-border/60 pb-6 sm:pb-7">
+          <div className="flex flex-col gap-6">
             <PageHeader
               title={t('applications.title')}
-              description={t('applications.description')}
               action={
                 canWrite ? (
                   <div className="flex flex-wrap items-center gap-2">
@@ -135,7 +137,7 @@ export function ApplicationsPage() {
             <ApplicationSearch
               value={filters.query}
               onChange={(query) => setFilters({ ...filters, query })}
-              className="mt-auto w-full max-w-[40rem]"
+              className="w-full max-w-[40rem]"
             />
           </div>
         </section>

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
-import { APPLICATION_STATUS_LABEL, StatusBadge } from '@/components/common/status-badge'
+import { StatusBadge } from '@/components/common/status-badge'
+import { APPLICATION_STATUS_LABEL } from '@/features/applications/application-status-meta'
 import {
   Avatar,
   AvatarFallback,
@@ -35,6 +36,7 @@ function statusKey(status: ApplicationStatus): string | null {
  */
 export function ApplicationCard({ application, className }: ApplicationCardProps) {
   const { t, i18n } = useTranslation()
+  const location = useLocation()
   const PlatformIcon = PLATFORM_ICON[application.platform]
 
   const sKey = statusKey(application.status)
@@ -67,6 +69,9 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
   return (
     <Link
       to={`/applications/${application.id}`}
+      state={{
+        returnTo: `${location.pathname}${location.search}`,
+      }}
       className={cn(
         'group/card relative flex h-full flex-col rounded-xl bg-card p-5',
         'shadow-[var(--shadow-xs)] ring-1 ring-border/60',
