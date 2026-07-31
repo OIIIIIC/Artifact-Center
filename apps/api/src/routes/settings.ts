@@ -18,6 +18,7 @@ import { requireRoles } from '../middleware/require-role.js'
 const patchSchema = z.object({
   maxVersions: z.number().int().min(1).max(999).optional(),
   archiveDeprecatedDays: z.number().int().min(1).max(3650).optional(),
+  storageQuotaBytes: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
 })
 
 const regionCode = z
@@ -241,7 +242,8 @@ settingsRoutes.patch('/retention', requireRoles('admin'), async (c) => {
   }
   if (
     parsed.data.maxVersions === undefined &&
-    parsed.data.archiveDeprecatedDays === undefined
+    parsed.data.archiveDeprecatedDays === undefined &&
+    parsed.data.storageQuotaBytes === undefined
   ) {
     return jsonError(c, 400, 'invalid_body', 'No fields to update')
   }
@@ -252,10 +254,11 @@ settingsRoutes.patch('/retention', requireRoles('admin'), async (c) => {
     action: 'settings.retention_update',
     objectType: 'system',
     objectId: 'retention',
-    summary: `更新保留策略（最多 ${policy.maxVersions} 版 / 弃用 ${policy.archiveDeprecatedDays} 天）`,
+    summary: `更新保留策略（最多 ${policy.maxVersions} 版 / 弃用 ${policy.archiveDeprecatedDays} 天 / 配额 ${policy.storageQuotaBytes} 字节）`,
     meta: {
       maxVersions: policy.maxVersions,
       archiveDeprecatedDays: policy.archiveDeprecatedDays,
+      storageQuotaBytes: policy.storageQuotaBytes,
     },
   })
 

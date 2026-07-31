@@ -6,6 +6,22 @@ import { applicationMembers, applications, artifacts, regions } from '../db/sche
 import { jsonError } from '../lib/errors.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 
+const applicationSearchColumns = {
+  id: applications.id,
+  name: applications.name,
+  description: applications.description,
+  packageName: applications.packageName,
+  platform: applications.platform,
+  regionId: applications.regionId,
+  repository: applications.repository,
+  status: applications.status,
+  ownerName: applications.ownerName,
+  latestVersion: applications.latestVersion,
+  artifactCount: applications.artifactCount,
+  createdAt: applications.createdAt,
+  updatedAt: applications.updatedAt,
+}
+
 /**
  * GET /search?q= — applications + artifacts for global search.
  */
@@ -48,14 +64,14 @@ searchRoutes.get('/', async (c) => {
   const appRows =
     user.role === 'admin'
       ? await db
-          .select()
+          .select(applicationSearchColumns)
           .from(applications)
           .where(appFilter)
           .orderBy(desc(applications.updatedAt))
           .limit(appLimit)
       : (
           await db
-            .select({ application: applications })
+            .select({ application: applicationSearchColumns })
             .from(applications)
             .innerJoin(
               applicationMembers,
@@ -82,12 +98,9 @@ searchRoutes.get('/', async (c) => {
       status: artifacts.status,
       filename: artifacts.filename,
       sizeBytes: artifacts.sizeBytes,
-      sha256: artifacts.sha256,
       releaseNotes: artifacts.releaseNotes,
       uploader: artifacts.uploaderName,
       uploadedAt: artifacts.uploadedAt,
-      parsedMeta: artifacts.parsedMeta,
-      buildMeta: artifacts.buildMeta,
       appName: applications.name,
       appPackageName: applications.packageName,
       appPlatform: applications.platform,
@@ -164,12 +177,9 @@ searchRoutes.get('/', async (c) => {
       status: r.status,
       filename: r.filename,
       sizeBytes: r.sizeBytes,
-      sha256: r.sha256,
       releaseNotes: r.releaseNotes,
       uploader: r.uploader,
       uploadedAt: r.uploadedAt.toISOString(),
-      parsedMeta: r.parsedMeta,
-      buildMeta: r.buildMeta,
     },
     application: {
       id: r.applicationId,

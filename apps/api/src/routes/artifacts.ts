@@ -12,6 +12,7 @@ import {
 import { writeAudit } from '../lib/audit.js'
 import { attachmentDisposition } from '../lib/download-response.js'
 import { enforceRetentionAfterUpload } from '../lib/retention.js'
+import { reserveUploadCapacity } from '../lib/upload-capacity.js'
 import { jsonError } from '../lib/errors.js'
 import {
   signDownloadTicket,
@@ -25,7 +26,11 @@ import {
   saveUploadBuffer,
   storageKeyFor,
 } from '../lib/storage.js'
-import { requireAuth, type AuthVariables } from '../middleware/auth.js'
+import {
+  requireAuth,
+  type AuthVariables,
+  validateCurrentAuthUser,
+} from '../middleware/auth.js'
 import {
   hasApplicationRole,
   requireApplicationRole,
@@ -165,10 +170,30 @@ artifactRoutes.post(
       )
     }
 
-    ensureStorageRoot()
-    const storageKey = storageKeyFor(appId, file.name)
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const { sizeBytes, sha256 } = await saveUploadBuffer(storageKey, buffer)
+    const capacity = await reserveUploadCapacity(file.size)
+    if (!capacity.accepted) {
+      const message =
+        capacity.reason === 'storage_quota_exceeded'
+          ? 'Storage quota exceeded'
+          : capacity.reason === 'storage_low_disk'
+            ? 'Insufficient disk space'
+            : 'Storage capacity is unavailable'
+      return jsonError(c, 507, capacity.reason, message)
+    }
+
+    let storageKey = ''
+    let sizeBytes: number
+    let sha256: string
+    try {
+      ensureStorageRoot()
+      storageKey = storageKeyFor(appId, file.name)
+      const buffer = Buffer.from(await file.arrayBuffer())
+      ;({ sizeBytes, sha256 } = await saveUploadBuffer(storageKey, buffer))
+    } catch (error) {
+      capacity.release()
+      if (storageKey) await deleteStorageFile(storageKey)
+      throw error
+    }
 
     const channel = channelParsed.data
     const status = markLatest
@@ -245,6 +270,7 @@ artifactRoutes.post(
         return created
       })
     } catch (error) {
+      capacity.release()
       await deleteStorageFile(storageKey)
       if (isUniqueViolation(error)) {
         return jsonError(
@@ -256,6 +282,8 @@ artifactRoutes.post(
       }
       throw error
     }
+
+    capacity.release()
 
     // Enforce max-versions after upload
     await enforceRetentionAfterUpload(appId)
@@ -347,6 +375,9 @@ artifactRoutes.get('/downloads/:ticket', async (c) => {
   let ticket: DownloadTicketPayload
   try {
     ticket = await verifyDownloadTicket(c.req.param('ticket'))
+    const currentTicketUser = await validateCurrentAuthUser(ticket)
+    if (!currentTicketUser) throw new Error('revoked_ticket')
+    ticket = currentTicketUser
   } catch {
     return jsonError(c, 401, 'unauthorized', 'Invalid or expired download ticket')
   }

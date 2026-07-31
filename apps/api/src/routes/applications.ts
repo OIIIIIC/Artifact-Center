@@ -60,8 +60,42 @@ type ApplicationManagerPreview = {
   avatarUrl: string | null
 }
 
+type ApplicationResponseRow = Pick<
+  typeof applications.$inferSelect,
+  | 'id'
+  | 'name'
+  | 'description'
+  | 'packageName'
+  | 'platform'
+  | 'regionId'
+  | 'repository'
+  | 'status'
+  | 'ownerName'
+  | 'latestVersion'
+  | 'artifactCount'
+  | 'createdAt'
+  | 'updatedAt'
+>
+
+/** 目录与搜索结果不读取 ownerId 等不会返回给客户端的列。 */
+const applicationResponseColumns = {
+  id: applications.id,
+  name: applications.name,
+  description: applications.description,
+  packageName: applications.packageName,
+  platform: applications.platform,
+  regionId: applications.regionId,
+  repository: applications.repository,
+  status: applications.status,
+  ownerName: applications.ownerName,
+  latestVersion: applications.latestVersion,
+  artifactCount: applications.artifactCount,
+  createdAt: applications.createdAt,
+  updatedAt: applications.updatedAt,
+}
+
 function mapApp(
-  row: typeof applications.$inferSelect,
+  row: ApplicationResponseRow,
   region: typeof regions.$inferSelect,
   managers: ApplicationManagerPreview[] = [],
 ) {
@@ -120,10 +154,14 @@ applicationRoutes.get('/', async (c) => {
   const user = c.get('user')
   const rows =
     user.role === 'admin'
-      ? await db.select().from(applications).where(where).orderBy(order)
+      ? await db
+          .select(applicationResponseColumns)
+          .from(applications)
+          .where(where)
+          .orderBy(order)
       : (
           await db
-            .select({ application: applications })
+            .select({ application: applicationResponseColumns })
             .from(applications)
             .innerJoin(
               applicationMembers,

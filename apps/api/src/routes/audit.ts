@@ -1,8 +1,8 @@
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '../db/client.js'
-import { auditLogs } from '../db/schema.js'
+import { applicationMembers, auditLogs } from '../db/schema.js'
 import { jsonError } from '../lib/errors.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import { hasApplicationRole } from '../middleware/application-access.js'
@@ -38,36 +38,38 @@ auditRoutes.get('/', async (c) => {
     return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   }
 
-  const rows = applicationId
-    ? await db
-        .select()
-        .from(auditLogs)
-        .where(eq(auditLogs.applicationId, applicationId))
-        .orderBy(desc(auditLogs.createdAt))
-        .offset(offset)
-        .limit(limit)
-    : await db
-        .select()
-        .from(auditLogs)
-        .orderBy(desc(auditLogs.createdAt))
-        .offset(offset)
-        .limit(limit)
-
-  // Non-admins only see entries that are app-scoped when not filtering?
-  // For MVP: all authenticated users can read audit (internal tool).
-  // Tighten later if needed with requireAdmin for global feed.
-  if (!applicationId && user.role !== 'admin') {
-    // Maintainers/viewers: only return app-related entries (no user.* / global noise)
-    const filtered = rows.filter(
-      (r) =>
-        r.applicationId != null ||
-        r.objectType === 'application' ||
-        r.objectType === 'artifact',
-    )
-    return c.json({
-      items: filtered.map(mapRow),
-      nextOffset: filtered.length === limit ? offset + filtered.length : null,
-    })
+  let rows: Array<typeof auditLogs.$inferSelect>
+  if (applicationId) {
+    rows = await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.applicationId, applicationId))
+      .orderBy(desc(auditLogs.createdAt))
+      .offset(offset)
+      .limit(limit)
+  } else if (user.role === 'admin') {
+    rows = await db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .offset(offset)
+      .limit(limit)
+  } else {
+    // 非管理员只能看到自己有权访问的应用事件；全局用户与设置事件不暴露。
+    const memberRows = await db
+      .select({ audit: auditLogs })
+      .from(auditLogs)
+      .innerJoin(
+        applicationMembers,
+        and(
+          eq(applicationMembers.applicationId, auditLogs.applicationId),
+          eq(applicationMembers.userId, user.sub),
+        ),
+      )
+      .orderBy(desc(auditLogs.createdAt))
+      .offset(offset)
+      .limit(limit)
+    rows = memberRows.map((row) => row.audit)
   }
 
   return c.json({
