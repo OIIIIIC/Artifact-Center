@@ -72,11 +72,12 @@ export async function apiUpdateProfile(
 export async function apiChangePassword(input: {
   currentPassword: string
   newPassword: string
-}): Promise<void> {
-  await request<{ ok: true }>('/auth/change-password', {
+}): Promise<{ token: string }> {
+  const data = await request<{ ok: true; token: string }>('/auth/change-password', {
     method: 'POST',
     body: input,
   })
+  return { token: data.token }
 }
 
 /* ── Audit ────────────────────────────────────────────── */
@@ -246,6 +247,7 @@ export type ListApplicationsParams = {
 
 export async function apiListApplications(
   params: ListApplicationsParams = {},
+  signal?: AbortSignal,
 ): Promise<Application[]> {
   const sp = new URLSearchParams()
   if (params.q?.trim()) sp.set('q', params.q.trim())
@@ -256,6 +258,7 @@ export async function apiListApplications(
   const qs = sp.toString()
   const data = await request<{ items: ApiApplication[]; total: number }>(
     `/applications${qs ? `?${qs}` : ''}`,
+    { signal },
   )
   return data.items.map(mapApp)
 }
@@ -499,6 +502,7 @@ export async function apiUploadArtifact(
   file: File,
   fields: UploadArtifactFields,
   onProgress?: UploadProgress,
+  signal?: AbortSignal,
 ): Promise<Artifact> {
   const form = new FormData()
   form.append('file', file)
@@ -513,6 +517,7 @@ export async function apiUploadArtifact(
     `/applications/${appId}/artifacts`,
     form,
     onProgress,
+    signal,
   )
   return mapArtifact(artifact)
 }
@@ -602,7 +607,10 @@ export async function apiGenerateDiagnosticReport(
 
 export type ShareLinkDto = {
   id: string
+  /** 仅创建响应返回明文；列表/吊销为空，不可用于再次复制。 */
   token: string
+  /** 展示用短前缀，不可鉴权。 */
+  tokenPrefix?: string
   kind: 'single' | 'collection'
   title: string
   regionId: string | null

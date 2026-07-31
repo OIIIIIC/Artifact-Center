@@ -139,10 +139,11 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          await apiChangePassword({
+          const { token } = await apiChangePassword({
             currentPassword: current,
             newPassword: next,
           })
+          set(applySession(token, user))
           return { ok: true }
         } catch (err) {
           if (err instanceof ApiError) {

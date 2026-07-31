@@ -14,6 +14,8 @@ export type HttpError = {
 
 export type ConnectivityStatus = 'offline' | 'unavailable' | null
 
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
+
 export const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') || '/api'
 
@@ -59,6 +61,7 @@ export function setConnectivityStatus(next: ConnectivityStatus) {
 
 export function getConnectivityStatusForError(error: unknown): ConnectivityStatus {
   if (!(error instanceof ApiError)) return null
+  if (error.code === 'request_aborted') return null
   if (error.status >= 500) return 'unavailable'
   if (error.status !== 0) return null
   return typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'unavailable'
@@ -74,9 +77,17 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   public?: boolean
   /** FormData / Blob body — do not JSON-stringify */
   rawBody?: BodyInit | null
+  /** 普通 API 请求超时；设为 0 可关闭，上传请求不使用此选项。 */
+  timeoutMs?: number
 }
 
-export type UploadProgress = (progress: number) => void
+export interface UploadProgressEvent {
+  progress: number
+  loadedBytes: number
+  totalBytes: number
+}
+
+export type UploadProgress = (event: UploadProgressEvent) => void
 
 /** Called on 401 so auth-store can clear session without circular imports */
 let onUnauthorized: (() => void) | null = null
@@ -115,7 +126,25 @@ async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Promise<R
     const response = await fetch(input, init)
     updateConnectivityStatus(null)
     return response
-  } catch {
+  } catch (cause) {
+    const abortName =
+      cause instanceof DOMException || cause instanceof Error ? cause.name : ''
+    if (abortName === 'AbortError') {
+      throw new ApiError({
+        status: 0,
+        code: 'request_aborted',
+        message: 'Request was cancelled',
+      })
+    }
+    if (abortName === 'TimeoutError') {
+      const error = new ApiError({
+        status: 0,
+        code: 'request_timeout',
+        message: 'Request timed out',
+      })
+      updateConnectivityStatus(getConnectivityStatusForError(error))
+      throw error
+    }
     const error = new ApiError({
       status: 0,
       code: 'network_error',
@@ -126,8 +155,22 @@ async function fetchApi(input: RequestInfo | URL, init?: RequestInit): Promise<R
   }
 }
 
+function withTimeout(signal: AbortSignal | null | undefined, timeoutMs: number) {
+  if (timeoutMs <= 0) return signal ?? undefined
+  const timeoutSignal = AbortSignal.timeout(timeoutMs)
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, rawBody, public: isPublic, headers: initHeaders, ...rest } = options
+  const {
+    body,
+    rawBody,
+    public: isPublic,
+    headers: initHeaders,
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    signal,
+    ...rest
+  } = options
   const headers = new Headers(initHeaders)
 
   if (!isPublic) {
@@ -145,6 +188,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     ...rest,
     headers,
     body: finalBody === null ? undefined : finalBody,
+    signal: withTimeout(signal, timeoutMs),
   })
 
   if (res.status === 401 && !isPublic) {
@@ -176,30 +220,60 @@ export async function requestMultipart<T>(
   path: string,
   body: FormData,
   onProgress?: UploadProgress,
+  signal?: AbortSignal,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
+    let settled = false
+
+    const abortRequest = () => xhr.abort()
+    const cleanup = () => signal?.removeEventListener('abort', abortRequest)
+    const finish = (callback: () => void) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      callback()
+    }
+
     xhr.open('POST', `${API_BASE_URL}${path}`)
 
     const token = getAccessToken()
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
 
     xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable)
-        onProgress?.(Math.round((event.loaded / event.total) * 100))
+      if (event.lengthComputable) {
+        onProgress?.({
+          progress: Math.round((event.loaded / event.total) * 100),
+          loadedBytes: event.loaded,
+          totalBytes: event.total,
+        })
+      }
     }
 
     xhr.onerror = () => {
-      reject(
-        new ApiError({
-          status: 0,
-          code: 'network_error',
-          message: 'Network request failed',
-        }),
+      const error = new ApiError({
+        status: 0,
+        code: 'network_error',
+        message: 'Network request failed',
+      })
+      updateConnectivityStatus(getConnectivityStatusForError(error))
+      finish(() => reject(error))
+    }
+
+    xhr.onabort = () => {
+      finish(() =>
+        reject(
+          new ApiError({
+            status: 0,
+            code: 'request_aborted',
+            message: 'Request was cancelled',
+          }),
+        ),
       )
     }
 
     xhr.onload = () => {
+      updateConnectivityStatus(null)
       if (xhr.status === 401) {
         setAccessToken(null)
         onUnauthorized?.()
@@ -216,39 +290,57 @@ export async function requestMultipart<T>(
       }
 
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(
-          new ApiError({
-            status: xhr.status,
-            code: data.error?.code ?? 'http_error',
-            message: data.error?.message ?? `HTTP ${xhr.status}`,
-            details: data.error?.details,
-            requestId: xhr.getResponseHeader('x-request-id') ?? undefined,
-          }),
+        finish(() =>
+          reject(
+            new ApiError({
+              status: xhr.status,
+              code: data.error?.code ?? 'http_error',
+              message: data.error?.message ?? `HTTP ${xhr.status}`,
+              details: data.error?.details,
+              requestId: xhr.getResponseHeader('x-request-id') ?? undefined,
+            }),
+          ),
         )
         return
       }
 
       if (!data.artifact) {
-        reject(
-          new ApiError({
-            status: xhr.status,
-            code: 'invalid_response',
-            message: 'Expected a JSON response body',
-            requestId: xhr.getResponseHeader('x-request-id') ?? undefined,
-          }),
+        finish(() =>
+          reject(
+            new ApiError({
+              status: xhr.status,
+              code: 'invalid_response',
+              message: 'Expected a JSON response body',
+              requestId: xhr.getResponseHeader('x-request-id') ?? undefined,
+            }),
+          ),
         )
         return
       }
-      resolve(data.artifact)
+      finish(() => resolve(data.artifact as T))
     }
 
+    if (signal?.aborted) {
+      finish(() =>
+        reject(
+          new ApiError({
+            status: 0,
+            code: 'request_aborted',
+            message: 'Request was cancelled',
+          }),
+        ),
+      )
+      return
+    }
+
+    signal?.addEventListener('abort', abortRequest, { once: true })
     xhr.send(body)
   })
 }
 
 export async function requestBlob(
   path: string,
-  options: { public?: boolean } = {},
+  options: { public?: boolean; signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<{ blob: Blob; filename?: string }> {
   const headers = new Headers()
   if (!options.public) {
@@ -256,7 +348,10 @@ export async function requestBlob(
     if (token) headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const res = await fetchApi(`${API_BASE_URL}${path}`, { headers })
+  const res = await fetchApi(`${API_BASE_URL}${path}`, {
+    headers,
+    signal: withTimeout(options.signal, options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS),
+  })
 
   if (res.status === 401 && !options.public) {
     setAccessToken(null)

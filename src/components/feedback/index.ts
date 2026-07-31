@@ -1,5 +1,6 @@
 export { ConnectivityNotice } from './connectivity-notice'
 export { EmptyState } from './empty-state'
+export { ErrorBoundary } from './error-boundary'
 export { FormError } from './form-error'
 export { Loading } from './loading'
 export { PageSkeleton } from './page-skeleton'

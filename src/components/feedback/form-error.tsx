@@ -5,12 +5,18 @@ import { cn } from '@/lib/utils'
 interface FormErrorProps {
   message?: string | null
   className?: string
+  /** 供输入框 aria-describedby 关联 */
+  id?: string
 }
 
 /** 预留错误文本高度，避免错误反复出现时推动相邻控件。 */
-export function FormError({ message, className }: FormErrorProps) {
+export function FormError({ message, className, id }: FormErrorProps) {
   return (
-    <div className={cn('min-h-[1.125rem] overflow-hidden', className)} aria-live="polite">
+    <div
+      id={id}
+      className={cn('min-h-[1.125rem] overflow-hidden', className)}
+      aria-live="polite"
+    >
       <AnimatePresence initial={false} mode="wait">
         {message ? (
           <motion.p
