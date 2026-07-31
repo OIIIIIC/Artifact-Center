@@ -9,6 +9,7 @@ export type AccessTokenPayload = {
   email: string
   name: string
   role: string
+  tokenVersion: number
 }
 
 export type DownloadTicketPayload = AccessTokenPayload & {
@@ -23,6 +24,7 @@ export async function signAccessToken(
     email: payload.email,
     name: payload.name,
     role: payload.role,
+    tokenVersion: payload.tokenVersion,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(payload.sub)
@@ -34,7 +36,13 @@ export async function signAccessToken(
 export async function verifyAccessToken(token: string): Promise<AccessTokenPayload> {
   const { payload } = await jwtVerify(token, secret)
   const sub = payload.sub
-  if (!sub || typeof payload.email !== 'string' || typeof payload.name !== 'string') {
+  if (
+    !sub ||
+    typeof payload.email !== 'string' ||
+    typeof payload.name !== 'string' ||
+    !Number.isInteger(payload.tokenVersion) ||
+    (payload.tokenVersion as number) < 0
+  ) {
     throw new Error('invalid_token')
   }
   return {
@@ -42,6 +50,7 @@ export async function verifyAccessToken(token: string): Promise<AccessTokenPaylo
     email: payload.email,
     name: payload.name,
     role: String(payload.role ?? 'viewer'),
+    tokenVersion: payload.tokenVersion as number,
   }
 }
 
@@ -55,6 +64,7 @@ export async function signDownloadTicket(
     email: payload.email,
     name: payload.name,
     role: payload.role,
+    tokenVersion: payload.tokenVersion,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(payload.sub)
@@ -73,7 +83,9 @@ export async function verifyDownloadTicket(
     !sub ||
     typeof payload.artifactId !== 'string' ||
     typeof payload.email !== 'string' ||
-    typeof payload.name !== 'string'
+    typeof payload.name !== 'string' ||
+    !Number.isInteger(payload.tokenVersion) ||
+    (payload.tokenVersion as number) < 0
   ) {
     throw new Error('invalid_download_ticket')
   }
@@ -83,5 +95,6 @@ export async function verifyDownloadTicket(
     email: payload.email,
     name: payload.name,
     role: String(payload.role ?? 'viewer'),
+    tokenVersion: payload.tokenVersion as number,
   }
 }

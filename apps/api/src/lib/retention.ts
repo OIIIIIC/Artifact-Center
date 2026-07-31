@@ -15,6 +15,7 @@ const DEFAULT_ID = 'default'
 export type RetentionPolicyDto = {
   maxVersions: number
   archiveDeprecatedDays: number
+  storageQuotaBytes: number
   artifactStorageBytes: number
   diskTotalBytes: number | null
   diskUsedBytes: number | null
@@ -71,6 +72,7 @@ export async function getRetentionPolicy(): Promise<RetentionPolicyDto> {
   return {
     maxVersions: s.maxVersions,
     archiveDeprecatedDays: s.archiveDeprecatedDays,
+    storageQuotaBytes: s.storageQuotaBytes,
     artifactStorageBytes,
     diskTotalBytes: diskSpace?.totalBytes ?? null,
     diskUsedBytes: diskSpace?.usedBytes ?? null,
@@ -83,6 +85,7 @@ export async function getRetentionPolicy(): Promise<RetentionPolicyDto> {
 export async function updateRetentionSettings(input: {
   maxVersions?: number
   archiveDeprecatedDays?: number
+  storageQuotaBytes?: number
 }): Promise<RetentionPolicyDto> {
   await ensureRetentionSettings()
   const [row] = await db
@@ -91,6 +94,9 @@ export async function updateRetentionSettings(input: {
       ...(input.maxVersions !== undefined ? { maxVersions: input.maxVersions } : {}),
       ...(input.archiveDeprecatedDays !== undefined
         ? { archiveDeprecatedDays: input.archiveDeprecatedDays }
+        : {}),
+      ...(input.storageQuotaBytes !== undefined
+        ? { storageQuotaBytes: input.storageQuotaBytes }
         : {}),
       updatedAt: new Date(),
     })
@@ -104,6 +110,7 @@ export async function updateRetentionSettings(input: {
   return {
     maxVersions: row.maxVersions,
     archiveDeprecatedDays: row.archiveDeprecatedDays,
+    storageQuotaBytes: row.storageQuotaBytes,
     artifactStorageBytes,
     diskTotalBytes: diskSpace?.totalBytes ?? null,
     diskUsedBytes: diskSpace?.usedBytes ?? null,

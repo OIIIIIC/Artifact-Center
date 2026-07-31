@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ne } from 'drizzle-orm'
+import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -24,6 +24,7 @@ const createSchema = z.object({
 const patchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   role: roleEnum.optional(),
+  isActive: z.boolean().optional(),
 })
 
 const resetPasswordSchema = z.object({
@@ -38,13 +39,14 @@ function mapUser(row: typeof users.$inferSelect) {
     name: row.name,
     role: row.role,
     avatarUrl: row.avatarUrl,
+    isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }
 }
 
 async function countAdmins(excludeId?: string): Promise<number> {
-  const conditions = [eq(users.role, 'admin')]
+  const conditions = [eq(users.role, 'admin'), eq(users.isActive, true)]
   if (excludeId) {
     conditions.push(ne(users.id, excludeId))
   }
@@ -162,10 +164,28 @@ userRoutes.patch('/:id', async (c) => {
   if (!current) return jsonError(c, 404, 'not_found', 'User not found')
 
   const data = parsed.data
-  if (data.role !== undefined && data.role !== 'admin' && current.role === 'admin') {
+  const actor = c.get('user')
+  const revokesTokens =
+    (data.role !== undefined && data.role !== current.role) ||
+    (data.isActive !== undefined && data.isActive !== current.isActive)
+
+  if (current.id === actor.sub && data.isActive === false) {
+    return jsonError(
+      c,
+      400,
+      'cannot_deactivate_self',
+      'Cannot deactivate your own account',
+    )
+  }
+
+  const removesActiveAdmin =
+    current.role === 'admin' &&
+    current.isActive &&
+    ((data.role !== undefined && data.role !== 'admin') || data.isActive === false)
+  if (removesActiveAdmin) {
     const others = await countAdmins(id)
     if (others < 1) {
-      return jsonError(c, 400, 'last_admin', 'At least one admin is required')
+      return jsonError(c, 400, 'last_admin', 'At least one active admin is required')
     }
   }
 
@@ -174,6 +194,8 @@ userRoutes.patch('/:id', async (c) => {
     .set({
       ...(data.name !== undefined ? { name: data.name.trim() } : {}),
       ...(data.role !== undefined ? { role: data.role } : {}),
+      ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+      ...(revokesTokens ? { tokenVersion: sql`${users.tokenVersion} + 1` } : {}),
       updatedAt: new Date(),
     })
     .where(eq(users.id, id))
@@ -184,7 +206,7 @@ userRoutes.patch('/:id', async (c) => {
     objectType: 'user',
     objectId: row.id,
     summary: `更新用户 ${row.name}`,
-    meta: { fields: Object.keys(data), role: row.role },
+    meta: { fields: Object.keys(data), role: row.role, isActive: row.isActive },
   })
 
   return c.json({ user: mapUser(row) })
@@ -214,7 +236,11 @@ userRoutes.post('/:id/reset-password', async (c) => {
   const passwordHash = await hashPassword(parsed.data.password)
   await db
     .update(users)
-    .set({ passwordHash, updatedAt: new Date() })
+    .set({
+      passwordHash,
+      tokenVersion: sql`${users.tokenVersion} + 1`,
+      updatedAt: new Date(),
+    })
     .where(eq(users.id, id))
 
   await writeAudit(c, {

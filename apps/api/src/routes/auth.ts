@@ -1,8 +1,9 @@
-import { eq, or } from 'drizzle-orm'
+import { eq, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '../db/client.js'
+import { env } from '../env.js'
 import { users } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
 import { jsonError } from '../lib/errors.js'
@@ -10,6 +11,11 @@ import { signAccessToken } from '../lib/jwt.js'
 import { hashPassword, verifyPassword } from '../lib/password.js'
 import { validatePassword } from '../lib/password-policy.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
+import {
+  enforceRateLimit,
+  FixedWindowRateLimiter,
+  resolveClientIp,
+} from '../middleware/rate-limit.js'
 
 const loginSchema = z.object({
   identifier: z.string().min(1).max(255),
@@ -45,10 +51,15 @@ async function issueToken(user: typeof users.$inferSelect) {
     email: user.email,
     name: user.name,
     role: user.role,
+    tokenVersion: user.tokenVersion,
   })
 }
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>()
+const loginRateLimiter = new FixedWindowRateLimiter({
+  maxRequests: env.loginRateLimitMaxAttempts,
+  windowMs: env.rateLimitWindowSeconds * 1000,
+})
 
 authRoutes.post('/login', async (c) => {
   const body = await c.req.json().catch(() => null)
@@ -64,13 +75,19 @@ authRoutes.post('/login', async (c) => {
   }
 
   const identifier = parsed.data.identifier.trim().toLowerCase()
+  const limited = enforceRateLimit(
+    c,
+    loginRateLimiter,
+    `login:${resolveClientIp(c, env.trustProxy)}:${identifier}`,
+  )
+  if (limited) return limited
   const [user] = await db
     .select()
     .from(users)
     .where(or(eq(users.username, identifier), eq(users.email, identifier)))
     .limit(1)
 
-  if (!user) {
+  if (!user || !user.isActive) {
     return jsonError(c, 401, 'invalid_credentials', 'Invalid username, email or password')
   }
 
@@ -216,10 +233,15 @@ authRoutes.post('/change-password', requireAuth, async (c) => {
   }
 
   const passwordHash = await hashPassword(parsed.data.newPassword)
-  await db
+  const [updated] = await db
     .update(users)
-    .set({ passwordHash, updatedAt: new Date() })
+    .set({
+      passwordHash,
+      tokenVersion: sql`${users.tokenVersion} + 1`,
+      updatedAt: new Date(),
+    })
     .where(eq(users.id, user.id))
+    .returning()
 
   await writeAudit(c, {
     action: 'auth.change_password',
@@ -228,5 +250,5 @@ authRoutes.post('/change-password', requireAuth, async (c) => {
     summary: `修改登录密码`,
   })
 
-  return c.json({ ok: true })
+  return c.json({ ok: true, token: await issueToken(updated) })
 })

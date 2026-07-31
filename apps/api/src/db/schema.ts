@@ -65,6 +65,10 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   name: varchar('name', { length: 120 }).notNull(),
   passwordHash: text('password_hash').notNull(),
+  /** 每次凭据或平台权限发生安全变化时递增，使旧 JWT 立即失效。 */
+  tokenVersion: integer('token_version').notNull().default(0),
+  /** 管理员停用账号后，认证中间件拒绝所有已签发和后续登录令牌。 */
+  isActive: boolean('is_active').notNull().default(true),
   role: userRoleEnum('role').notNull().default('maintainer'),
   avatarUrl: text('avatar_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -200,6 +204,7 @@ export const artifacts = pgTable(
       .on(t.applicationId)
       .where(sql`${t.status} = 'latest'`),
     index('artifacts_application_uploaded_at_idx').on(t.applicationId, t.uploadedAt),
+    index('artifacts_application_sha256_idx').on(t.applicationId, t.sha256),
     index('artifacts_release_id_idx').on(t.releaseId),
     check('artifacts_size_bytes_nonnegative', sql`${t.sizeBytes} >= 0`),
   ],
@@ -229,7 +234,13 @@ export const shareLinks = pgTable(
   'share_links',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    token: varchar('token', { length: 64 }).notNull().unique(),
+    /**
+     * 明文令牌的 HMAC 摘要；公开 URL 中的明文只在创建时返回一次。
+     * 迁移期仍保留可空的 legacy token 列供回填升级。
+     */
+    tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+    /** @deprecated 仅遗留行；新写入必须为 null */
+    token: varchar('token', { length: 64 }),
     kind: shareKindEnum('kind').notNull().default('single'),
     title: varchar('title', { length: 200 }).notNull().default(''),
     regionId: uuid('region_id').references(() => regions.id, {

@@ -44,11 +44,13 @@ export function storageKeyFor(applicationId: string, filename: string): string {
 }
 
 export function absolutePathFor(storageKey: string): string {
-  const abs = path.resolve(env.storagePath, storageKey)
-  if (!abs.startsWith(path.resolve(env.storagePath))) {
+  const root = path.resolve(env.storagePath)
+  const absolute = path.resolve(root, storageKey)
+  const relative = path.relative(root, absolute)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new Error('path_traversal')
   }
-  return abs
+  return absolute
 }
 
 export async function saveUploadStream(

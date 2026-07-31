@@ -118,7 +118,13 @@ export function createDiagnosticsModule({
 
   return {
     record(log) {
-      if (log.event === 'http_request' && log.path === '/health') return
+      if (
+        log.event === 'http_request' &&
+        typeof log.path === 'string' &&
+        (log.path === '/health' || log.path.startsWith('/health/'))
+      ) {
+        return
+      }
       events.push(log)
       if (events.length > maxEvents) events.splice(0, events.length - maxEvents)
     },
