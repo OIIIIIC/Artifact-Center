@@ -65,10 +65,13 @@ chmod 600 deploy/.env
 编辑 `deploy/.env`：
 
 - `POSTGRES_PASSWORD`：数据库密码，建议使用 URL 安全字符
-- `JWT_SECRET`：执行 `openssl rand -hex 32` 生成
+- `JWT_SECRET`：执行 `openssl rand -hex 32` 生成（≥32 字符）
+- `SHARE_TOKEN_PEPPER`：分享链接 HMAC pepper，建议 `openssl rand -hex 32` 且与 JWT 不同；未设置时 Compose 会回落到 `JWT_SECRET`（仅过渡，生产请显式配置）
 - `ADMIN_*`：首次启动创建的管理员账号；`ADMIN_USERNAME` 是账号登录名，`ADMIN_EMAIL` 仍可用于邮箱登录
-- `APP_ORIGIN`：浏览器实际访问地址
+- `APP_ORIGIN`：浏览器实际访问地址（**禁止**设为 `*`）
 - `APP_PORT`：主机监听端口
+
+内测最低门槛清单见 [15-INTERNAL-BETA-CHECKLIST.md](./15-INTERNAL-BETA-CHECKLIST.md)。
 
 启动：
 
@@ -181,8 +184,9 @@ docker compose --env-file deploy/.env -f compose.prod.yml up -d
 # 容器与健康状态
 docker compose --env-file deploy/.env -f compose.prod.yml ps
 
-# API 健康检查（通过 Web 反代）
-curl -fsS http://127.0.0.1:8080/api/health
+# API 存活与就绪检查（通过 Web 反代）
+curl -fsS http://127.0.0.1:8080/api/health/live
+curl -fsS http://127.0.0.1:8080/api/health/ready
 
 # 磁盘与 Docker 占用
 df -h
