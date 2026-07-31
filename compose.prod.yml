@@ -34,6 +34,7 @@ services:
       PORT: 3001
       DATABASE_URL: postgres://artifact:${POSTGRES_PASSWORD}@postgres:5432/artifact_center
       JWT_SECRET: ${JWT_SECRET:?请在 deploy/.env 中设置 JWT_SECRET}
+      SHARE_TOKEN_PEPPER: ${SHARE_TOKEN_PEPPER:-${JWT_SECRET}}
       BOOTSTRAP_ADMIN_NAME: ${ADMIN_NAME:-}
       BOOTSTRAP_ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_EMAIL: ${ADMIN_EMAIL:-}
@@ -47,7 +48,8 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3001/health >/dev/null || exit 1']
+      test:
+        ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3001/health/ready >/dev/null || exit 1']
       interval: 10s
       timeout: 5s
       retries: 12

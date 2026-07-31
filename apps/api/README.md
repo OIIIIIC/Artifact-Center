@@ -46,7 +46,8 @@ npm run dev:api
 ```
 
 - API: http://localhost:3001
-- Health: `GET /health`
+- 存活检查：`GET /health/live`
+- 就绪检查：`GET /health/ready`（验证数据库与制品目录）
 - 演示账号: `oiiic` / `***REMOVED***`
 
 ## 环境变量
@@ -58,6 +59,8 @@ npm run dev:api
 | Method | Path                                | 说明                                |
 | ------ | ----------------------------------- | ----------------------------------- |
 | GET    | `/health`                           | 健康检查                            |
+| GET    | `/health/live`                      | 进程存活检查                        |
+| GET    | `/health/ready`                     | 数据库与存储就绪检查                |
 | POST   | `/auth/login`                       | 登录拿 JWT                          |
 | GET    | `/auth/me`                          | 当前用户                            |
 | PATCH  | `/auth/me`                          | 更新资料/头像（返回新 token）       |
@@ -93,7 +96,7 @@ npm run dev:api
 | GET    | `/public/shares/:token`             | 解析分享落地页                      |
 | GET    | `/public/shares/:token/download`    | 经分享下载                          |
 
-除 `/health`、`POST /auth/login`、服务端分享链接的 `/public/shares/*` 外均需 `Authorization: Bearer <token>`。
+除 `/health*`、`POST /auth/login`、服务端分享链接的 `/public/shares/*` 外均需 `Authorization: Bearer <token>`。
 
 ### 上传示例
 
