@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { copyText } from '@/lib/clipboard'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { apiGenerateDiagnosticReport, type DiagnosticReportDto } from '@/services/api'
@@ -68,10 +69,10 @@ export function DiagnosticsSettingsPanel() {
 
   const copyReport = async () => {
     if (!report) return
-    try {
-      await navigator.clipboard.writeText(report.markdown)
+    const copied = await copyText(report.markdown)
+    if (copied) {
       toast.success(t('settings.diagnosticsCopied'))
-    } catch {
+    } else {
       toast.error(t('settings.diagnosticsCopyFailed'))
     }
   }

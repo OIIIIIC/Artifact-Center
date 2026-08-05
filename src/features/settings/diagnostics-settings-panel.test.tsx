@@ -4,9 +4,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DiagnosticsSettingsPanel } from './diagnostics-settings-panel'
 
 const generateReport = vi.fn()
+const toastSuccess = vi.fn()
+const toastError = vi.fn()
 
 vi.mock('@/services/api', () => ({
   apiGenerateDiagnosticReport: (...args: unknown[]) => generateReport(...args),
+}))
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
+  },
 }))
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -22,6 +31,8 @@ vi.mock('react-i18next', async (importOriginal) => {
 describe('系统诊断设置面板', () => {
   beforeEach(() => {
     generateReport.mockReset()
+    toastSuccess.mockReset()
+    toastError.mockReset()
     generateReport.mockResolvedValue({
       generatedAt: '2026-07-20T08:30:00.000Z',
       eventCount: 1,
@@ -65,6 +76,28 @@ describe('系统诊断设置面板', () => {
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith('# 可交给 AI 的诊断包')
     })
+  })
+
+  it('内网 HTTP 环境没有 Clipboard API 时使用兼容复制', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: undefined,
+    })
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: vi.fn().mockReturnValue(true),
+    })
+    render(<DiagnosticsSettingsPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'settings.diagnosticsGenerate' }))
+    await screen.findByText('# 可交给 AI 的诊断包')
+    fireEvent.click(screen.getByRole('button', { name: 'settings.diagnosticsCopy' }))
+
+    await waitFor(() => {
+      expect(document.execCommand).toHaveBeenCalledWith('copy')
+      expect(toastSuccess).toHaveBeenCalledWith('settings.diagnosticsCopied')
+    })
+    expect(toastError).not.toHaveBeenCalled()
   })
 
   it('滚动容器内的诊断模块使用不会被裁剪的实体边框', () => {
