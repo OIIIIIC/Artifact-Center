@@ -22,11 +22,15 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024
+const MAX_AVATAR_DATA_URL_LENGTH =
+  'data:image/webp;base64,'.length + 4 * Math.ceil(MAX_AVATAR_BYTES / 3)
+
 const profileSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   email: z.string().email().max(255).optional(),
   /** data URL or remote URL; null clears */
-  avatarUrl: z.union([z.string().max(2_000_000), z.null()]).optional(),
+  avatarUrl: z.union([z.string().max(MAX_AVATAR_DATA_URL_LENGTH), z.null()]).optional(),
 })
 
 const changePasswordSchema = z.object({
