@@ -1,9 +1,9 @@
-import { and, asc, eq, ne, or } from 'drizzle-orm'
+import { and, asc, eq, inArray, ne, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '../db/client.js'
-import { applications, regions } from '../db/schema.js'
+import { applicationMembers, applications, regions, users } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
 import { diagnostics } from '../lib/diagnostics.js'
 import { jsonError } from '../lib/errors.js'
@@ -36,6 +36,22 @@ const createRegionSchema = z.object({
 })
 
 const updateRegionSchema = createRegionSchema.partial()
+
+const userIdSchema = z.string().uuid()
+
+const accessGrantSchema = z.discriminatedUnion('operation', [
+  z.object({
+    operation: z.literal('set'),
+    userId: z.string().uuid(),
+    applicationIds: z.array(z.string().uuid()).min(1).max(100),
+    role: z.enum(['maintainer', 'viewer']),
+  }),
+  z.object({
+    operation: z.literal('remove'),
+    userId: z.string().uuid(),
+    applicationIds: z.array(z.string().uuid()).min(1).max(100),
+  }),
+])
 
 const diagnosticsSchema = z.object({
   sinceMinutes: z.union([z.literal(15), z.literal(30), z.literal(60)]).default(30),
@@ -72,6 +88,150 @@ function mapRegion(row: typeof regions.$inferSelect) {
 export const settingsRoutes = new Hono<{ Variables: AuthVariables }>()
 
 settingsRoutes.use('*', requireAuth)
+
+/** GET /settings/access-grants/:userId — 管理员一次读取某账户的全部应用权限。 */
+settingsRoutes.get('/access-grants/:userId', requireRoles('admin'), async (c) => {
+  const userId = c.req.param('userId')
+  if (!userIdSchema.safeParse(userId).success) {
+    return jsonError(c, 400, 'invalid_body', 'Invalid user id')
+  }
+
+  const rows = await db
+    .select({
+      applicationId: applicationMembers.applicationId,
+      role: applicationMembers.role,
+      ownerId: applications.ownerId,
+    })
+    .from(applicationMembers)
+    .innerJoin(applications, eq(applicationMembers.applicationId, applications.id))
+    .where(eq(applicationMembers.userId, userId))
+
+  return c.json({
+    items: rows.map((row) => ({
+      applicationId: row.applicationId,
+      role: row.role,
+      isOwner: row.ownerId === userId,
+    })),
+  })
+})
+
+/**
+ * POST /settings/access-grants — 管理员按用户批量维护多个应用的成员关系。
+ * 地域仅用于前端筛选；最终仍是应用级权限，避免产生隐式的地域 ACL。
+ */
+settingsRoutes.post('/access-grants', requireRoles('admin'), async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = accessGrantSchema.safeParse(body)
+  if (!parsed.success) {
+    return jsonError(
+      c,
+      400,
+      'invalid_body',
+      'Invalid access grants payload',
+      parsed.error.flatten(),
+    )
+  }
+
+  const data = parsed.data
+  const applicationIds = [...new Set(data.applicationIds)]
+  const [target] = await db
+    .select({ id: users.id, name: users.name, role: users.role })
+    .from(users)
+    .where(eq(users.id, data.userId))
+    .limit(1)
+  if (!target) return jsonError(c, 404, 'not_found', 'User not found')
+  if (target.role === 'admin') {
+    return jsonError(
+      c,
+      400,
+      'admin_automatic_access',
+      'Administrators already have access to every application',
+    )
+  }
+  if (
+    data.operation === 'set' &&
+    data.role === 'maintainer' &&
+    target.role === 'viewer'
+  ) {
+    return jsonError(
+      c,
+      400,
+      'platform_role_insufficient',
+      'Viewer cannot be application maintainer',
+    )
+  }
+
+  const selectedApplications = await db
+    .select({
+      id: applications.id,
+      name: applications.name,
+      ownerId: applications.ownerId,
+    })
+    .from(applications)
+    .where(inArray(applications.id, applicationIds))
+  if (selectedApplications.length !== applicationIds.length) {
+    return jsonError(c, 400, 'invalid_body', 'One or more applications do not exist')
+  }
+
+  const touchesOwner = selectedApplications.some(
+    (application) => application.ownerId === target.id,
+  )
+  if (
+    touchesOwner &&
+    (data.operation === 'remove' ||
+      (data.operation === 'set' && data.role !== 'maintainer'))
+  ) {
+    return jsonError(
+      c,
+      400,
+      'owner_membership_required',
+      'Application owner must remain maintainer',
+    )
+  }
+
+  await db.transaction(async (tx) => {
+    if (data.operation === 'remove') {
+      await tx
+        .delete(applicationMembers)
+        .where(
+          and(
+            eq(applicationMembers.userId, target.id),
+            inArray(applicationMembers.applicationId, applicationIds),
+          ),
+        )
+      return
+    }
+
+    await tx
+      .insert(applicationMembers)
+      .values(
+        applicationIds.map((applicationId) => ({
+          applicationId,
+          userId: target.id,
+          role: data.role,
+          updatedAt: new Date(),
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [applicationMembers.applicationId, applicationMembers.userId],
+        set: { role: sql`excluded.role`, updatedAt: new Date() },
+      })
+  })
+
+  await writeAudit(c, {
+    action: 'settings.access_update',
+    objectType: 'user',
+    objectId: target.id,
+    summary: `批量${data.operation === 'remove' ? '移除' : '设置'} ${target.name} 的 ${applicationIds.length} 个应用权限`,
+    meta: {
+      operation: data.operation,
+      role: data.operation === 'set' ? data.role : null,
+      applicationIds,
+    },
+  })
+
+  return c.json({ ok: true, affected: applicationIds.length })
+})
 
 /** POST /settings/diagnostics/report — 仅管理员生成进程内脱敏诊断报告。 */
 settingsRoutes.post('/diagnostics/report', requireRoles('admin'), async (c) => {

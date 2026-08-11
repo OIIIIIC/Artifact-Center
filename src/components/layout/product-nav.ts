@@ -1,4 +1,4 @@
-import { LayoutGrid, Settings, Users } from 'lucide-react'
+import { LayoutGrid, MapPinned, Settings, ShieldCheck, Users } from 'lucide-react'
 
 import i18n from '@/i18n'
 import type { SidebarNavGroup } from './types'
@@ -29,6 +29,22 @@ export function getProductNavGroups(
           href: '/members',
           icon: Users,
           active: pathname.startsWith('/members'),
+          disabled: !options.isAdmin,
+        },
+        {
+          id: 'regions',
+          label: t('settings.navRegions'),
+          href: '/regions',
+          icon: MapPinned,
+          active: pathname.startsWith('/regions'),
+          disabled: !options.isAdmin,
+        },
+        {
+          id: 'access',
+          label: t('settings.navAccess'),
+          href: '/permissions',
+          icon: ShieldCheck,
+          active: pathname.startsWith('/permissions'),
           disabled: !options.isAdmin,
         },
         {

@@ -19,6 +19,9 @@ export const queryKeys = {
     candidates: (appId: string, q: string) =>
       ['application-members', appId, 'candidates', q] as const,
   },
+  accessGrants: {
+    byUser: (userId: string) => ['access-grants', userId] as const,
+  },
   users: {
     all: ['users'] as const,
     list: ['users', 'list'] as const,

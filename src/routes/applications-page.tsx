@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { EmptyState } from '@/components/feedback'
-import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
+import { AppLayout, PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { ApplicationFiltersBar } from '@/features/applications/application-filters'
 import { ApplicationGrid } from '@/features/applications/application-grid'
@@ -89,75 +89,102 @@ export function ApplicationsPage() {
   return (
     <AppLayout breadcrumbs={[{ label: t('nav.applications') }]}>
       <PageContainer rhythm="product">
-        <section className="border-b border-border/60 pb-6 sm:pb-7">
-          <div className="flex flex-col gap-6">
-            <PageHeader
-              title={t('applications.title')}
-              action={
-                canWrite ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {resolvedRegionScope !== 'all' && resolvedRegionScope ? (
-                      <Button
-                        type="button"
-                        size="lg"
-                        variant="outline"
-                        onClick={() => setShareRegionId(resolvedRegionScope)}
-                      >
-                        <Share2 className="size-3.5" strokeWidth={1.75} />
-                        {t('share.collectionAction')}
-                      </Button>
-                    ) : null}
-                    <Button asChild size="lg">
-                      <Link to="/applications/new">
-                        <Plus className="size-3.5" strokeWidth={1.75} />
-                        {t('applications.newApplication')}
-                      </Link>
-                    </Button>
+        <section className="relative overflow-hidden rounded-2xl bg-card/80 px-5 py-6 ring-1 ring-border/60 sm:px-7 sm:py-7">
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 hidden w-[45%] overflow-hidden lg:block"
+            aria-hidden
+          >
+            <span className="absolute top-[23%] right-[30%] size-16 rounded-[1.25rem] border border-primary/10 bg-primary/[0.04] shadow-[0_20px_40px_-24px_color-mix(in_oklch,var(--primary),transparent_30%)]" />
+            <span className="absolute top-[38%] right-[58%] size-24 rounded-full bg-cyan-300/15 blur-sm dark:bg-cyan-300/8" />
+            <span className="absolute right-[8%] bottom-[-26%] size-64 rounded-full border border-border/60" />
+            <span className="absolute right-[21%] bottom-[-35%] size-64 rounded-full border border-primary/10" />
+            <span className="absolute top-[49%] right-[16%] size-10 rotate-45 rounded-lg bg-foreground/8 shadow-sm" />
+            <span className="absolute top-[65%] right-[35%] size-7 rotate-45 rounded-md bg-foreground/10" />
+          </div>
+
+          <div className="relative flex flex-col gap-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h1 className="text-[1.875rem] leading-tight font-semibold tracking-tight text-foreground sm:text-[2.125rem]">
+                    {t('applications.title')}
+                  </h1>
+                  {!loading ? (
+                    <span className="text-[0.8125rem] text-muted-foreground">
+                      {t('applications.count', { count: catalog.length })}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1.5 text-[0.8125rem] text-muted-foreground">
+                  {t('applications.description')}
+                </p>
+              </div>
+
+              {canWrite ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {resolvedRegionScope !== 'all' && resolvedRegionScope ? (
                     <Button
-                      asChild
+                      type="button"
                       size="lg"
                       variant="outline"
-                      className={cn(
-                        'border-0 bg-muted/40 font-medium text-muted-foreground',
-                        'ring-1 ring-border/60',
-                        'hover:bg-muted/55 hover:text-foreground hover:ring-border',
-                        'dark:bg-muted/25 dark:hover:bg-muted/35',
-                      )}
+                      onClick={() => setShareRegionId(resolvedRegionScope)}
                     >
-                      <Link to="/upload">
-                        <Upload className="size-3.5" strokeWidth={1.75} />
-                        {t('applications.uploadArtifact')}
-                      </Link>
+                      <Share2 className="size-3.5" strokeWidth={1.75} />
+                      {t('share.collectionAction')}
                     </Button>
-                  </div>
-                ) : undefined
-              }
-            />
+                  ) : null}
+                  <Button asChild size="lg">
+                    <Link to="/applications/new">
+                      <Plus className="size-3.5" strokeWidth={1.75} />
+                      {t('applications.newApplication')}
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className={cn(
+                      'border-0 bg-background/75 font-medium text-muted-foreground',
+                      'ring-1 ring-border/60 backdrop-blur-sm',
+                      'hover:bg-muted/55 hover:text-foreground hover:ring-border',
+                      'dark:bg-muted/25 dark:hover:bg-muted/35',
+                    )}
+                  >
+                    <Link to="/upload">
+                      <Upload className="size-3.5" strokeWidth={1.75} />
+                      {t('applications.uploadArtifact')}
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
+            </div>
 
             <ApplicationSearch
               value={filters.query}
               onChange={(query) => setFilters({ ...filters, query })}
-              className="w-full max-w-[40rem]"
+              className="w-full max-w-[34rem]"
             />
           </div>
         </section>
 
-        <div className="mt-7 space-y-6 sm:mt-8">
-          <div className="space-y-3 rounded-xl bg-card p-3 ring-1 ring-border/60">
-            <ApplicationFiltersBar
-              filters={filters}
-              onChange={setFilters}
-              meta={
-                !loading && !isEmptyCatalog && !isSearchEmpty
-                  ? t('applications.count', { count: visibleApplications.length })
-                  : !loading && isSearchEmpty
-                    ? t('applications.count', { count: 0 })
-                    : undefined
-              }
-            />
+        <div className="mt-5 space-y-6 sm:mt-6">
+          <div className="overflow-hidden rounded-2xl bg-card/80 ring-1 ring-border/60">
+            <div className="p-3 sm:px-4 sm:py-3.5">
+              <ApplicationFiltersBar
+                filters={filters}
+                onChange={setFilters}
+                meta={
+                  !loading && !isEmptyCatalog && !isSearchEmpty
+                    ? t('applications.count', { count: visibleApplications.length })
+                    : !loading && isSearchEmpty
+                      ? t('applications.count', { count: 0 })
+                      : undefined
+                }
+              />
+            </div>
 
             {!loading && !error && browseRegions.length > 0 ? (
-              <div className="border-t border-border/60 pt-3">
+              <div className="border-t border-border/60 px-3 py-3 sm:px-4">
                 <RegionSwitcher
                   regions={browseRegions}
                   selected={resolvedRegionScope}

@@ -33,7 +33,13 @@ type RegionDraft = {
 
 const EMPTY_DRAFT: RegionDraft = { code: '', name: '', sortOrder: '0' }
 
-export function RegionsSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
+export function RegionsSettingsPanel({
+  isAdmin,
+  hideHeader = false,
+}: {
+  isAdmin: boolean
+  hideHeader?: boolean
+}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { regions, loading, error } = useRegions()
@@ -49,6 +55,13 @@ export function RegionsSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
   const boundApplications = deletingRegion
     ? catalog.filter((application) => application.region.id === deletingRegion.id)
     : []
+  const applicationCountByRegion = catalog.reduce<Record<string, number>>(
+    (counts, application) => {
+      counts[application.region.id] = (counts[application.region.id] ?? 0) + 1
+      return counts
+    },
+    {},
+  )
 
   const openCreate = () => {
     setEditing(null)
@@ -149,6 +162,7 @@ export function RegionsSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
       title={t('settings.regionsTitle')}
       description={t('settings.regionsDesc')}
       wide
+      hideHeader={hideHeader}
     >
       <div className="overflow-hidden rounded-xl bg-card/70 ring-1 ring-border/70">
         <div className="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-3 sm:px-5">
@@ -207,11 +221,21 @@ export function RegionsSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
                   </div>
                   <p className="mt-0.5 font-mono text-[0.6875rem] text-muted-foreground">
                     {region.code} ·{' '}
-                    {t('settings.regionSort', { value: region.sortOrder })}
+                    {t('settings.regionSort', { value: region.sortOrder })} ·{' '}
+                    {t('settings.regionApplicationCount', {
+                      count: applicationCountByRegion[region.id] ?? 0,
+                    })}
                   </p>
                 </div>
                 {isAdmin ? (
                   <div className="flex shrink-0 items-center gap-1">
+                    {region.enabled ? (
+                      <Button asChild type="button" size="sm" variant="ghost">
+                        <Link to={`/applications/new?region=${region.id}`}>
+                          {t('settings.createApplicationInRegion')}
+                        </Link>
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       size="icon-sm"

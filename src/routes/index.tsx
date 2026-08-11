@@ -101,6 +101,22 @@ export function AppRouter() {
           }
         />
         <Route
+          path="/regions"
+          element={
+            <RequireAuth>
+              <SettingsPage standalone="regions" />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/permissions"
+          element={
+            <RequireAuth>
+              <SettingsPage standalone="access" />
+            </RequireAuth>
+          }
+        />
+        <Route
           path="/settings"
           element={
             <RequireAuth>

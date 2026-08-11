@@ -21,6 +21,7 @@ export type AuditAction =
   | 'settings.region_create'
   | 'settings.region_update'
   | 'settings.region_delete'
+  | 'settings.access_update'
   | 'user.create'
   | 'user.update'
   | 'user.delete'

@@ -33,10 +33,8 @@ import {
   apiAdminResetPassword,
   apiCreateUser,
   apiDeleteUser,
-  apiListApplications,
   apiListUsers,
   apiUpdateUser,
-  apiUpsertApplicationMember,
 } from '@/services/api'
 import { useAuthStore } from '@/store/auth-store'
 import { MEMBER_ROLES, type MemberRole } from './mock-members'
@@ -68,21 +66,12 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
   const [role, setRole] = useState<MemberRole>('viewer')
   const [createError, setCreateError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [applicationSearch, setApplicationSearch] = useState('')
-  const [applicationRoles, setApplicationRoles] = useState<
-    Record<string, 'maintainer' | 'viewer'>
-  >({})
   const [removeId, setRemoveId] = useState<string | null>(null)
   const [resetId, setResetId] = useState<string | null>(null)
   const [resetPassword, setResetPassword] = useState('')
   const [resetConfirm, setResetConfirm] = useState('')
   const [resetError, setResetError] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
-  const applicationsQuery = useQuery({
-    queryKey: queryKeys.applications.list({ sort: 'name' }),
-    queryFn: () => apiListApplications({ sort: 'name' }),
-    enabled: isAdmin && showCreate,
-  })
 
   const roleLabel = (value: MemberRole) => t(`settings.role.${value}`)
   const errorMessage = (error: unknown) => {
@@ -125,16 +114,6 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
     (Math.min(page, totalPages) - 1) * PAGE_SIZE,
     Math.min(page, totalPages) * PAGE_SIZE,
   )
-  const applications = useMemo(() => {
-    const query = applicationSearch.trim().toLowerCase()
-    return (applicationsQuery.data ?? []).filter(
-      (application) =>
-        !query ||
-        application.name.toLowerCase().includes(query) ||
-        application.packageName.toLowerCase().includes(query),
-    )
-  }, [applicationSearch, applicationsQuery.data])
-
   const createMember = async () => {
     setCreateError(null)
     if (!name.trim() || !username.trim() || !email.trim() || !password)
@@ -152,26 +131,6 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
         password,
         role,
       })
-      const assignments = Object.entries(applicationRoles)
-      if (member.role !== 'admin' && assignments.length) {
-        const results = await Promise.allSettled(
-          assignments.map(([applicationId, applicationRole]) =>
-            apiUpsertApplicationMember(
-              applicationId,
-              member.id,
-              member.role === 'viewer' ? 'viewer' : applicationRole,
-            ),
-          ),
-        )
-        const failed = results.filter((result) => result.status === 'rejected').length
-        if (failed)
-          toast.warning(t('settings.applicationAssignmentPartial'), {
-            description: t('settings.applicationAssignmentPartialDesc', {
-              success: assignments.length - failed,
-              failed,
-            }),
-          })
-      }
       await invalidate()
       toast.success(t('settings.memberAdded'), {
         description: t('settings.memberAddedDesc', {
@@ -185,8 +144,6 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
       setPassword('')
       setPasswordConfirm('')
       setRole('viewer')
-      setApplicationSearch('')
-      setApplicationRoles({})
       setShowCreate(false)
     } catch (error) {
       setCreateError(errorMessage(error))
@@ -392,68 +349,6 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
                     </button>
                   ))}
                 </div>
-                {role !== 'admin' ? (
-                  <div className="space-y-2 rounded-xl bg-muted/20 p-3 ring-1 ring-border/60">
-                    <Input
-                      value={applicationSearch}
-                      onChange={(event) => setApplicationSearch(event.target.value)}
-                      placeholder={t('settings.applicationSearchPlaceholder')}
-                    />
-                    {applications.map((application) => {
-                      const selected = applicationRoles[application.id]
-                      return (
-                        <div
-                          key={application.id}
-                          className="flex items-center justify-between gap-3"
-                        >
-                          <button
-                            type="button"
-                            className="min-w-0 flex-1 truncate text-left text-[0.8125rem]"
-                            onClick={() =>
-                              setApplicationRoles((current) => {
-                                const next = { ...current }
-                                if (next[application.id]) delete next[application.id]
-                                else
-                                  next[application.id] =
-                                    role === 'viewer' ? 'viewer' : 'maintainer'
-                                return next
-                              })
-                            }
-                          >
-                            {selected ? '✓ ' : ''}
-                            {application.name}
-                          </button>
-                          {selected && role !== 'viewer' ? (
-                            <div className="flex gap-1">
-                              {(['maintainer', 'viewer'] as const).map(
-                                (applicationRole) => (
-                                  <button
-                                    key={applicationRole}
-                                    type="button"
-                                    className={cn(
-                                      'rounded px-2 py-1 text-[0.6875rem]',
-                                      selected === applicationRole
-                                        ? 'bg-background shadow-sm'
-                                        : 'text-muted-foreground',
-                                    )}
-                                    onClick={() =>
-                                      setApplicationRoles((current) => ({
-                                        ...current,
-                                        [application.id]: applicationRole,
-                                      }))
-                                    }
-                                  >
-                                    {t(`appMembers.roleName.${applicationRole}`)}
-                                  </button>
-                                ),
-                              )}
-                            </div>
-                          ) : null}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : null}
                 <FormError message={createError} />
               </ModalBody>
               <ModalFooter>

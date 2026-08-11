@@ -80,7 +80,7 @@ export function UploadPage() {
       }
     >
       <PageContainer rhythm="product" className={cn(isAppStep ? 'pb-0' : 'pb-28')}>
-        <div className="max-w-4xl space-y-7 sm:space-y-8">
+        <div className="w-full space-y-7 sm:space-y-8">
           <PageHeader
             title={t('upload.title')}
             description={t('upload.stepOf', {
