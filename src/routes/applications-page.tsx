@@ -15,9 +15,9 @@ import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { ApplicationFiltersBar } from '@/features/applications/application-filters'
-import { ApplicationGrid } from '@/features/applications/application-grid'
 import { ApplicationGridSkeleton } from '@/features/applications/application-grid-skeleton'
 import { ApplicationSearch } from '@/features/applications/application-search'
+import { ApplicationTimeline } from '@/features/applications/application-timeline'
 import { RegionSwitcher } from '@/features/applications/region-switcher'
 import { ShareCollectionDialog } from '@/features/share/share-collection-dialog'
 import {
@@ -47,6 +47,8 @@ export function ApplicationsPage() {
     isSearchEmpty,
     error,
     refetch,
+    refreshing,
+    transitionKey,
   } = useApplications()
 
   useContentScrollRestoration({ ready: !loading })
@@ -115,9 +117,6 @@ export function ApplicationsPage() {
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-1.5 text-[0.8125rem] text-muted-foreground">
-                  {t('applications.description')}
-                </p>
               </div>
 
               {canWrite ? (
@@ -260,9 +259,10 @@ export function ApplicationsPage() {
           ) : null}
 
           {!loading && !isEmptyCatalog && !isSearchEmpty && !hasNoVisibleMatches ? (
-            <ApplicationGrid
+            <ApplicationTimeline
               applications={visibleApplications}
-              transitionKey={`${filters.platform}:${resolvedRegionScope}:${filters.sort}`}
+              transitionKey={`${transitionKey}:${resolvedRegionScope}`}
+              refreshing={refreshing}
             />
           ) : null}
         </div>

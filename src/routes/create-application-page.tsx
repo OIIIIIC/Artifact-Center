@@ -164,10 +164,7 @@ export function CreateApplicationPage() {
     >
       <PageContainer rhythm="product">
         <div className="space-y-6 sm:space-y-8">
-          <PageHeader
-            title={t('createApp.title')}
-            description={t('createApp.description')}
-          />
+          <PageHeader title={t('createApp.title')} />
 
           <form onSubmit={(e) => void onSubmit(e)} className="space-y-5 sm:space-y-6">
             <section className={sectionClass}>

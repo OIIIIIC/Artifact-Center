@@ -21,11 +21,12 @@ interface PageContainerProps {
 }
 
 /**
- * Unified page content frame: max-width + horizontal/vertical padding tokens.
+ * Unified page content frame: shared horizontal/vertical padding tokens.
  * Future pages must wrap primary content with this — not ad-hoc margins.
  *
- * Width rule: shell is always `--content-max-width`. Narrow forms with
- * `max-w-[var(--form-max-width)]` on the form stack only, left-aligned.
+ * Width rule: shell uses all available workspace width with fixed side gutters.
+ * Narrow forms with `max-w-[var(--form-max-width)]` on the form stack only,
+ * left-aligned.
  */
 export function PageContainer({
   children,

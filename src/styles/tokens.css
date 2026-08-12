@@ -48,16 +48,15 @@
 
   /* ——— Typography ——— */
   /*
-   * PERF-02：系统字体优先，避免首访下载数十 MiB CJK TTF。
-   * 品牌字体仅作 optional 增强（见 fonts.css font-display: optional）。
+   * 阿里普惠体优先；字体文件不可用时再回退到系统字体。
    * 等宽字体仅用于版本、哈希和文件名。
    */
   --font-sans:
-    system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
-    'Alibaba PuHuiTi', ui-sans-serif, sans-serif;
+    'Alibaba PuHuiTi', system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', ui-sans-serif, sans-serif;
   --font-heading:
-    system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
-    'Alibaba PuHuiTi', ui-sans-serif, sans-serif;
+    'Alibaba PuHuiTi', system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', ui-sans-serif, sans-serif;
   --font-mono:
     'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Code', Menlo, Consolas,
     monospace;
@@ -113,11 +112,11 @@
 
   /* ——— Layout ——— */
   /*
-   * Product shell width is shared by ALL product pages (list, detail, settings, search…).
+   * Product pages share the same fixed side gutter and use the available workspace width.
    * Do not invent per-page max-width on PageContainer. Narrow only form fields via
    * --form-max-width, never the page chrome.
    */
-  --content-max-width: 88rem;
+  --content-max-width: none;
   /* Single-column forms / reading blocks inside the shell (left-aligned, not centered) */
   --form-max-width: 40rem;
   /* Settings section rail inside the product shell */

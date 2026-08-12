@@ -12,6 +12,8 @@ interface ApplicationGridProps {
    * 同格叠层 crossfade，避免退场清空造成闪烁。
    */
   transitionKey?: string
+  /** 新筛选结果正在加载时保持当前网格，并给出极轻的忙碌语义。 */
+  refreshing?: boolean
 }
 
 const easeOut = [0.2, 0, 0, 1] as const
@@ -24,11 +26,12 @@ export function ApplicationGrid({
   applications,
   className,
   transitionKey = 'grid',
+  refreshing = false,
 }: ApplicationGridProps) {
   const reduceMotion = useReducedMotion()
 
   return (
-    <div className="grid">
+    <div className="grid" aria-busy={refreshing}>
       <AnimatePresence initial={false} mode="sync">
         <motion.div
           key={transitionKey}

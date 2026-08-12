@@ -1,3 +1,4 @@
+import { MapPin, Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -122,7 +123,8 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-1.5">
-        <span className="inline-flex h-5 items-center rounded-md bg-muted/55 px-1.5 text-[11px] font-medium text-foreground/75 dark:bg-muted/45">
+        <span className="inline-flex h-5 items-center gap-1 rounded-md bg-muted/55 px-1.5 text-[11px] font-medium text-foreground/75 dark:bg-muted/45">
+          <MapPin className="size-3 opacity-65" strokeWidth={1.75} aria-hidden />
           {application.region.name}
         </span>
         <span className="inline-flex h-5 items-center gap-1 rounded-md bg-muted/50 px-1.5 text-[11px] text-muted-foreground dark:bg-muted/40">
@@ -157,13 +159,16 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
           </AvatarGroup>
           <time
             className="truncate text-[0.75rem] text-muted-foreground/70"
-            dateTime={application.updatedAt}
-            title={application.updatedAt}
+            dateTime={application.latestArtifactUploadedAt ?? application.updatedAt}
+            title={application.latestArtifactUploadedAt ?? application.updatedAt}
           >
-            {formatRelativeTime(application.updatedAt)}
+            {formatRelativeTime(
+              application.latestArtifactUploadedAt ?? application.updatedAt,
+            )}
           </time>
         </div>
-        <span className="shrink-0 text-[0.75rem] text-muted-foreground/70">
+        <span className="inline-flex shrink-0 items-center gap-1 text-[0.75rem] text-muted-foreground/70">
+          <Package className="size-3.5" strokeWidth={1.75} aria-hidden />
           {t('applications.artifactsCount', { count: application.artifactCount })}
         </span>
       </div>

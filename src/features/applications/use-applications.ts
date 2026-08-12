@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -80,15 +80,36 @@ export function useApplications() {
         },
         signal,
       ),
+    // 筛选改变时保留上一批应用，避免网格被骨架屏替换而闪烁。
+    placeholderData: keepPreviousData,
   })
 
   const applications = useMemo(() => query.data ?? [], [query.data])
   const loading = query.isLoading
+  // 以实际展示内容作为过渡标识：placeholderData 保留旧列表时标识不变，
+  // 新筛选结果真正到达且内容变化后才触发现有的淡入过渡。
+  const transitionKey = applications
+    .map((application) =>
+      [
+        application.id,
+        application.name,
+        application.platform,
+        application.region.id,
+        application.latestVersion,
+        application.updatedAt,
+        application.owner,
+        application.artifactCount,
+        application.status,
+      ].join(':'),
+    )
+    .join('|')
 
   const filtered = applications
 
   return {
     loading,
+    refreshing: query.isFetching && query.isPlaceholderData,
+    transitionKey,
     applications,
     filtered,
     filters,

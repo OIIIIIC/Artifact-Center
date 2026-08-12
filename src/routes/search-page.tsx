@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { FileBox, LayoutGrid, Loader2, Search, SearchX } from 'lucide-react'
 
 import { EmptyState } from '@/components/feedback'
-import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
+import { AppLayout, PageContainer } from '@/components/layout'
 import { Input } from '@/components/ui/input'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useServerSearch } from '@/features/search/use-server-search'
@@ -37,9 +37,7 @@ export function SearchPage() {
   return (
     <AppLayout breadcrumbs={[{ label: t('search.pageTitle') }]}>
       <PageContainer rhythm="product">
-        <div className="space-y-6 sm:space-y-7">
-          <PageHeader title={t('search.pageTitle')} description={t('search.pageDesc')} />
-
+        <div>
           <div className="relative w-full">
             <Search
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"

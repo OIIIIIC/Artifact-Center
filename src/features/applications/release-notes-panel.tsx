@@ -2,6 +2,7 @@ import { FileText, Upload } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
+import { MarkdownPreview } from '@/components/common/markdown-preview'
 import { EmptyState } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
 import { formatRelativeTime } from '@/lib/format'
@@ -89,9 +90,7 @@ export function ReleaseNotesPanel({
                 {formatRelativeTime(release.publishedAt)}
               </time>
             </div>
-            <p className="mt-2 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              {release.releaseNotes}
-            </p>
+            <MarkdownPreview content={release.releaseNotes} className="mt-2" />
             <p className="mt-2 text-[0.6875rem] text-muted-foreground/80">
               {release.createdBy}
               {release.artifactTypes.length

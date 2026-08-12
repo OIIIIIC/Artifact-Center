@@ -1,4 +1,4 @@
-import { LayoutGrid, MapPinned, Settings, ShieldCheck, Users } from 'lucide-react'
+import { LayoutGrid, Settings } from 'lucide-react'
 
 import i18n from '@/i18n'
 import type { SidebarNavGroup } from './types'
@@ -6,7 +6,7 @@ import type { SidebarNavGroup } from './types'
 /** 日常产品导航仅呈现用户完成制品管理所需的对象入口。 */
 export function getProductNavGroups(
   pathname: string,
-  options: { isAdmin?: boolean } = {},
+  _options: { isAdmin?: boolean } = {},
 ): SidebarNavGroup[] {
   const t = i18n.t.bind(i18n)
   const isApps = pathname === '/' || pathname.startsWith('/applications')
@@ -24,30 +24,6 @@ export function getProductNavGroups(
           active: isApps,
         },
         {
-          id: 'members',
-          label: t('nav.members'),
-          href: '/members',
-          icon: Users,
-          active: pathname.startsWith('/members'),
-          disabled: !options.isAdmin,
-        },
-        {
-          id: 'regions',
-          label: t('settings.navRegions'),
-          href: '/regions',
-          icon: MapPinned,
-          active: pathname.startsWith('/regions'),
-          disabled: !options.isAdmin,
-        },
-        {
-          id: 'access',
-          label: t('settings.navAccess'),
-          href: '/permissions',
-          icon: ShieldCheck,
-          active: pathname.startsWith('/permissions'),
-          disabled: !options.isAdmin,
-        },
-        {
           id: 'settings',
           label: t('nav.settings'),
           href: '/settings',
@@ -57,8 +33,6 @@ export function getProductNavGroups(
       ],
     },
   ]
-
-  groups[0].items = groups[0].items.filter((item) => !item.disabled)
 
   return groups
 }

@@ -160,12 +160,12 @@ export function SidebarBrand({
       to={href}
       className="flex min-w-0 items-center gap-2.5 transition-opacity duration-[var(--duration-hover)] hover:opacity-75"
     >
-      <span
-        className="flex size-6 shrink-0 items-center justify-center rounded-md bg-foreground text-[10px] font-semibold tracking-tight text-background"
+      <img
+        src="/images/artifact-center-logo.png"
+        alt=""
         aria-hidden
-      >
-        AC
-      </span>
+        className="size-7 shrink-0 object-contain"
+      />
       <span className="min-w-0 leading-tight">
         <span className="block truncate text-[13px] font-semibold tracking-tight text-sidebar-foreground">
           {title}

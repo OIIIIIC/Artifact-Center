@@ -1,17 +1,17 @@
 /**
  * Product fonts（PERF-02 减负）
- * - 正文默认走系统字体栈（见 tokens.css），不强制下载 CJK 大文件
- * - 可选品牌字体仅保留 400/700 两个字重；未使用的 TTF 仍留在 public/fonts，但不引用
+ * - 正文优先使用阿里普惠体；字体资源不可用时回退到系统字体栈（见 tokens.css）
+ * - 品牌字体仅保留 400/700 两个字重；未使用的 TTF 仍留在 public/fonts，但不引用
  * - 技术信息：JetBrains Mono 仅 Regular + SemiBold
  */
 
-/* ——— Alibaba PuHuiTi：可选增强，仅两档字重 ——— */
+/* ——— Alibaba PuHuiTi：正文优先字体，仅两档字重 ——— */
 @font-face {
   font-family: 'Alibaba PuHuiTi';
   src: url('/fonts/alibaba-puhuiti/AlibabaPuHuiTi-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
-  font-display: optional;
+  font-display: swap;
 }
 
 @font-face {
@@ -19,7 +19,7 @@
   src: url('/fonts/alibaba-puhuiti/AlibabaPuHuiTi-Bold.ttf') format('truetype');
   font-weight: 500 800;
   font-style: normal;
-  font-display: optional;
+  font-display: swap;
 }
 
 /* ——— JetBrains Mono：版本 / 哈希 / 文件名 ——— */
