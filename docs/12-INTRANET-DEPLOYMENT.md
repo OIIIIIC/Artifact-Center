@@ -24,7 +24,10 @@ offline-deploy/
 ├── artifact-center-images.tar
 ├── compose.offline.yml
 └── deploy/
-    └── .env
+    ├── .env
+    ├── preflight.sh
+    ├── verify-running.sh
+    └── collect-diagnostics.sh
 ```
 
 把这个文件夹拷到内网服务器，就可以部署。
@@ -35,47 +38,19 @@ offline-deploy/
 
 ```powershell
 cd D:\MyCode\artifact-center
+./scripts/build-offline-package.ps1
 ```
 
-构建前端镜像：
+脚本会先运行完整校验，再构建前端/API/PostgreSQL 镜像、导出离线镜像包，并生成以下目录。它只写入一个**此前不存在**的本机输出目录，不会连接或修改服务器。
+
+如需指定输出目录或跳过本机校验：
 
 ```powershell
-docker build -t artifact-center-web:0.1.0 .
-```
-
-构建后端镜像：
-
-```powershell
-docker build -t artifact-center-api:0.1.0 .\apps\api
-```
-
-拉取数据库镜像：
-
-```powershell
-docker pull postgres:16-alpine
-```
-
-创建离线部署目录：
-
-```powershell
-New-Item -ItemType Directory -Force .\output\offline-deploy\deploy
-```
-
-导出镜像包：
-
-```powershell
-docker save `
-  artifact-center-web:0.1.0 `
-  artifact-center-api:0.1.0 `
-  postgres:16-alpine `
-  -o .\output\offline-deploy\artifact-center-images.tar
-```
-
-复制启动配置：
-
-```powershell
-Copy-Item .\compose.offline.yml .\output\offline-deploy\compose.offline.yml
-Copy-Item .\deploy\.env.example .\output\offline-deploy\deploy\.env
+./scripts/build-offline-package.ps1 -OutputDirectory .\output\artifact-center-20260812
+# 仅在已完成校验时使用：
+./scripts/build-offline-package.ps1 -SkipVerification
+# Docker 构建缓存异常时使用；不会清理已有缓存：
+./scripts/build-offline-package.ps1 -NoCache
 ```
 
 现在离线包在：
@@ -139,7 +114,10 @@ APP_PORT=8080
 ├── artifact-center-images.tar
 ├── compose.offline.yml
 └── deploy/
-    └── .env
+    ├── .env
+    ├── preflight.sh
+    ├── verify-running.sh
+    └── collect-diagnostics.sh
 ```
 
 ## 第四步：在内网服务器导入镜像
@@ -148,7 +126,11 @@ SSH 登录服务器，进入离线包目录：
 
 ```bash
 cd /opt/artifact-center/offline-deploy
+chmod +x deploy/*.sh
+./deploy/preflight.sh --offline
 ```
+
+预检只检查 Docker、Compose、配置和既有外部网络，不会启动服务、导入镜像或修改数据。预检通过后再执行以下实际部署步骤。
 
 导入镜像：
 
@@ -175,7 +157,10 @@ docker compose --env-file deploy/.env -f compose.offline.yml up -d
 
 ```bash
 docker compose --env-file deploy/.env -f compose.offline.yml ps
+./deploy/verify-running.sh --offline
 ```
+
+运行核验只读取容器状态并访问本机健康检查地址，不会重启服务或修改数据。
 
 正常情况下你会看到三个服务：
 
