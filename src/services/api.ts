@@ -9,7 +9,12 @@ import type { Artifact, ArtifactStatus } from '@/types/artifact'
 import type { Release } from '@/types/release'
 import type { AuthUser, LoginCredentials } from '@/types/auth'
 import type { UploadChannel } from '@/types/upload'
-import { requestMultipart, type UploadProgress } from '@/services/http'
+import {
+  requestExternalUploadPart,
+  requestMultipart,
+  requestUploadPart,
+  type UploadProgress,
+} from '@/services/http'
 
 /* ── Auth ─────────────────────────────────────────────── */
 
@@ -216,6 +221,7 @@ type ApiApplication = {
   }>
   latestVersion: string
   artifactCount: number
+  latestArtifactUploadedAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -234,6 +240,7 @@ function mapApp(a: ApiApplication): Application {
     managers: a.managers,
     latestVersion: a.latestVersion,
     artifactCount: a.artifactCount,
+    latestArtifactUploadedAt: a.latestArtifactUploadedAt ?? null,
     createdAt: a.createdAt,
     updatedAt: a.updatedAt,
   }
@@ -555,6 +562,92 @@ export async function apiUploadArtifact(
   return mapArtifact(artifact)
 }
 
+type ResumableUploadDto = {
+  uploadId: string
+  partSize: number
+  partCount: number
+  uploadedParts: number[]
+  expiresAt: string
+  transport: 'proxy' | 'direct'
+}
+
+type ResumableUploadFields = UploadArtifactFields & {
+  resumeKey: string
+}
+
+function resumableUploadBody(file: File, fields: ResumableUploadFields) {
+  return {
+    resumeKey: fields.resumeKey,
+    filename: file.name,
+    sizeBytes: file.size,
+    version: fields.version,
+    buildNumber: fields.buildNumber ?? '',
+    channel: fields.channel ?? 'stable',
+    platform: fields.platform,
+    releaseNotes: fields.releaseNotes ?? '',
+    markLatest: fields.markLatest !== false,
+  }
+}
+
+export async function apiCreateResumableUpload(
+  appId: string,
+  file: File,
+  fields: ResumableUploadFields,
+): Promise<ResumableUploadDto> {
+  const data = await request<{ upload: ResumableUploadDto }>(
+    `/applications/${appId}/uploads`,
+    {
+      method: 'POST',
+      body: resumableUploadBody(file, fields),
+    },
+  )
+  return data.upload
+}
+
+export function apiUploadResumablePart(
+  uploadId: string,
+  partNumber: number,
+  body: Blob,
+  onProgress?: UploadProgress,
+  signal?: AbortSignal,
+) {
+  return requestUploadPart(
+    `/uploads/${uploadId}/parts/${partNumber}`,
+    body,
+    onProgress,
+    signal,
+  )
+}
+
+export async function apiUploadDirectResumablePart(
+  uploadId: string,
+  partNumber: number,
+  body: Blob,
+  onProgress?: UploadProgress,
+  signal?: AbortSignal,
+) {
+  const signed = await request<{ url: string }>(
+    `/uploads/${uploadId}/parts/${partNumber}/sign`,
+    {
+      method: 'POST',
+      body: {},
+    },
+  )
+  const etag = await requestExternalUploadPart(signed.url, body, onProgress, signal)
+  await request(`/uploads/${uploadId}/parts/${partNumber}/complete`, {
+    method: 'POST',
+    body: { etag, sizeBytes: body.size },
+  })
+}
+
+export async function apiCompleteResumableUpload(uploadId: string): Promise<Artifact> {
+  const data = await request<{ artifact: ApiArtifact }>(`/uploads/${uploadId}/complete`, {
+    method: 'POST',
+    body: {},
+  })
+  return mapArtifact(data.artifact)
+}
+
 export async function apiCreateArtifactDownloadUrl(id: string): Promise<string> {
   const data = await request<{ url: string }>(`/artifacts/${id}/download-ticket`, {
     method: 'POST',
@@ -602,38 +695,6 @@ export async function apiRunRetentionCleanup(): Promise<{
   retention: RetentionPolicyDto
 }> {
   return request('/settings/retention/run', { method: 'POST' })
-}
-
-/* ── Diagnostics / settings ───────────────────────────── */
-
-export type DiagnosticReportInput = {
-  sinceMinutes: 15 | 30 | 60
-  requestId?: string
-  operation?: string
-  expected?: string
-  actual?: string
-  occurredAt?: string
-  client?: {
-    page?: string
-    browser?: string
-    timezone?: string
-  }
-}
-
-export type DiagnosticReportDto = {
-  generatedAt: string
-  eventCount: number
-  markdown: string
-}
-
-export async function apiGenerateDiagnosticReport(
-  body: DiagnosticReportInput,
-): Promise<DiagnosticReportDto> {
-  const data = await request<{ report: DiagnosticReportDto }>(
-    '/settings/diagnostics/report',
-    { method: 'POST', body },
-  )
-  return data.report
 }
 
 /* ── Shares (server-issued) ───────────────────────────── */

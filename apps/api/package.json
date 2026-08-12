@@ -19,8 +19,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1108.0",
+    "@aws-sdk/s3-request-presigner": "^3.1108.0",
     "@hono/node-server": "^1.14.3",
     "bcryptjs": "^3.0.2",
+    "busboy": "^1.6.0",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.7.10",
@@ -30,6 +33,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/busboy": "^1.5.4",
     "@types/node": "^22.15.21",
     "drizzle-kit": "^0.31.1",
     "tsx": "^4.19.4",

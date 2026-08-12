@@ -26,6 +26,8 @@ export interface Application {
   platform: ApplicationPlatform
   region: Region
   latestVersion: string
+  /** Latest artifact upload time; distinct from application metadata updates. */
+  latestArtifactUploadedAt?: string | null
   updatedAt: string
   createdAt: string
   owner: string

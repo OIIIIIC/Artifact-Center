@@ -30,6 +30,33 @@ const databaseUrl = required(
 )
 const jwtSecret = required('JWT_SECRET', 'dev-change-me-artifact-center-jwt-secret')
 const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:5173'
+const objectStorageEndpoint = process.env.OBJECT_STORAGE_ENDPOINT
+const objectStoragePublicEndpoint = process.env.OBJECT_STORAGE_PUBLIC_ENDPOINT
+const objectStorageBucket = process.env.OBJECT_STORAGE_BUCKET
+const objectStorageAccessKey = process.env.OBJECT_STORAGE_ACCESS_KEY
+const objectStorageSecretKey = process.env.OBJECT_STORAGE_SECRET_KEY
+const objectStorageConfigured = [
+  objectStorageEndpoint,
+  objectStoragePublicEndpoint,
+  objectStorageBucket,
+  objectStorageAccessKey,
+  objectStorageSecretKey,
+].some(Boolean)
+
+if (
+  objectStorageConfigured &&
+  ![
+    objectStorageEndpoint,
+    objectStoragePublicEndpoint,
+    objectStorageBucket,
+    objectStorageAccessKey,
+    objectStorageSecretKey,
+  ].every(Boolean)
+) {
+  throw new Error(
+    'Object storage requires endpoint, public endpoint, bucket and access keys',
+  )
+}
 
 if (production && !process.env.DATABASE_URL) {
   throw new Error('Missing env DATABASE_URL in production')
@@ -58,6 +85,17 @@ export const env = {
     process.cwd(),
     process.env.STORAGE_PATH ?? '../../data/files',
   ),
+  /** Optional S3-compatible storage (MinIO / AWS S3) for browser-direct multipart upload. */
+  objectStorage: objectStorageConfigured
+    ? {
+        endpoint: objectStorageEndpoint!,
+        publicEndpoint: objectStoragePublicEndpoint!,
+        bucket: objectStorageBucket!,
+        accessKey: objectStorageAccessKey!,
+        secretKey: objectStorageSecretKey!,
+        region: process.env.OBJECT_STORAGE_REGION ?? 'us-east-1',
+      }
+    : null,
   corsOrigin,
   slowRequestMs: positiveNumber('SLOW_REQUEST_MS', 500),
   /** 仅在前置代理会覆盖 X-Real-IP 时启用，防止客户端伪造转发头绕过限流。 */

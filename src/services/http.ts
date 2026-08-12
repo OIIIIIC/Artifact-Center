@@ -338,6 +338,173 @@ export async function requestMultipart<T>(
   })
 }
 
+/** Upload one resumable binary chunk and report its individual wire progress. */
+export async function requestUploadPart(
+  path: string,
+  body: Blob,
+  onProgress?: UploadProgress,
+  signal?: AbortSignal,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    let settled = false
+    const abortRequest = () => xhr.abort()
+    const finish = (callback: () => void) => {
+      if (settled) return
+      settled = true
+      signal?.removeEventListener('abort', abortRequest)
+      callback()
+    }
+
+    xhr.open('PUT', `${API_BASE_URL}${path}`)
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+    const token = getAccessToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return
+      onProgress?.({
+        progress: Math.round((event.loaded / event.total) * 100),
+        loadedBytes: event.loaded,
+        totalBytes: event.total,
+      })
+    }
+    xhr.onerror = () =>
+      finish(() =>
+        reject(
+          new ApiError({
+            status: 0,
+            code: 'network_error',
+            message: 'Network request failed',
+          }),
+        ),
+      )
+    xhr.onabort = () =>
+      finish(() =>
+        reject(
+          new ApiError({
+            status: 0,
+            code: 'request_aborted',
+            message: 'Request was cancelled',
+          }),
+        ),
+      )
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        finish(resolve)
+        return
+      }
+      let data: { error?: { code?: string; message?: string; details?: unknown } } = {}
+      try {
+        data = JSON.parse(xhr.responseText) as typeof data
+      } catch {
+        // Use HTTP fallback below.
+      }
+      finish(() =>
+        reject(
+          new ApiError({
+            status: xhr.status,
+            code: data.error?.code ?? 'http_error',
+            message: data.error?.message ?? `HTTP ${xhr.status}`,
+            details: data.error?.details,
+            requestId: xhr.getResponseHeader('x-request-id') ?? undefined,
+          }),
+        ),
+      )
+    }
+    if (signal?.aborted) {
+      finish(() =>
+        reject(
+          new ApiError({
+            status: 0,
+            code: 'request_aborted',
+            message: 'Request was cancelled',
+          }),
+        ),
+      )
+      return
+    }
+    signal?.addEventListener('abort', abortRequest, { once: true })
+    xhr.send(body)
+  })
+}
+
+/** Upload to a short-lived object-store URL. The ETag is needed to complete S3 multipart upload. */
+export async function requestExternalUploadPart(
+  url: string,
+  body: Blob,
+  onProgress?: UploadProgress,
+  signal?: AbortSignal,
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    let settled = false
+    const abortRequest = () => xhr.abort()
+    const finish = (callback: () => void) => {
+      if (settled) return
+      settled = true
+      signal?.removeEventListener('abort', abortRequest)
+      callback()
+    }
+    xhr.open('PUT', url)
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress?.({
+          progress: Math.round((event.loaded / event.total) * 100),
+          loadedBytes: event.loaded,
+          totalBytes: event.total,
+        })
+      }
+    }
+    xhr.onerror = () =>
+      finish(() =>
+        reject(
+          new ApiError({
+            status: 0,
+            code: 'network_error',
+            message: 'Network request failed',
+          }),
+        ),
+      )
+    xhr.onabort = () =>
+      finish(() =>
+        reject(
+          new ApiError({
+            status: 0,
+            code: 'request_aborted',
+            message: 'Request was cancelled',
+          }),
+        ),
+      )
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const etag = xhr.getResponseHeader('etag')
+        if (etag) return finish(() => resolve(etag))
+      }
+      finish(() =>
+        reject(
+          new ApiError({
+            status: xhr.status,
+            code: 'object_upload_failed',
+            message: 'Object storage upload failed',
+          }),
+        ),
+      )
+    }
+    if (signal?.aborted)
+      return finish(() =>
+        reject(
+          new ApiError({
+            status: 0,
+            code: 'request_aborted',
+            message: 'Request was cancelled',
+          }),
+        ),
+      )
+    signal?.addEventListener('abort', abortRequest, { once: true })
+    xhr.send(body)
+  })
+}
+
 export async function requestBlob(
   path: string,
   options: { public?: boolean; signal?: AbortSignal; timeoutMs?: number } = {},

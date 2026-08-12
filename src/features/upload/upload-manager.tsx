@@ -8,8 +8,8 @@ import {
   createUploadTelemetrySample,
 } from '@/features/upload/upload-telemetry'
 import { UploadManagerContext } from '@/features/upload/upload-manager-context'
+import { uploadArtifactResumable } from '@/features/upload/resumable-upload'
 import { queryKeys } from '@/lib/query-keys'
-import { apiUploadArtifact } from '@/services/api'
 import { ApiError } from '@/services/http'
 import type { Application } from '@/types/application'
 import type { PublishError, UploadTask, VersionDraft } from '@/types/upload'
@@ -99,10 +99,10 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         })
         let telemetrySample = createUploadTelemetrySample(Date.now())
 
-        await apiUploadArtifact(
-          task.applicationId,
+        await uploadArtifactResumable({
+          appId: task.applicationId,
           file,
-          {
+          fields: {
             version: version.version.trim(),
             buildNumber: version.buildNumber.trim(),
             platform: version.platform as Application['platform'],
@@ -110,7 +110,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
             releaseNotes: version.releaseNotes,
             markLatest: version.markLatest,
           },
-          ({ progress, loadedBytes, totalBytes }) => {
+          onProgress: ({ progress, loadedBytes, totalBytes }) => {
             if (controllers.current.get(task.taskId) !== controller) return
             const now = Date.now()
             const telemetry = calculateUploadTelemetry(
@@ -130,8 +130,8 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
               isStalled: false,
             })
           },
-          controller.signal,
-        )
+          signal: controller.signal,
+        })
 
         if (controllers.current.get(task.taskId) !== controller) return
         const completedTask = {

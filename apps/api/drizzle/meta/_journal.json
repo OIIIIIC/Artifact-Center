@@ -85,6 +85,20 @@
       "when": 1785415000000,
       "tag": "0011_share_token_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786501800000,
+      "tag": "0012_resumable_uploads",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786502400000,
+      "tag": "0013_object_storage_uploads",
+      "breakpoints": true
     }
   ]
 }

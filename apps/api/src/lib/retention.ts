@@ -8,7 +8,7 @@ import {
   type RetentionSettings,
 } from '../db/schema.js'
 import { refreshApplicationArtifactStats } from './artifact-helpers.js'
-import { deleteStorageFile, getStorageDiskSpace } from './storage.js'
+import { deleteArtifactStorageFile, getStorageDiskSpace } from './storage.js'
 
 const DEFAULT_ID = 'default'
 
@@ -148,7 +148,7 @@ export async function enforceMaxVersionsForApp(
 
   for (const v of victims) {
     await db.delete(artifacts).where(eq(artifacts.id, v.id))
-    await deleteStorageFile(v.storageKey)
+    await deleteArtifactStorageFile(v.storageKey, v.storageBackend)
     deleted += 1
   }
 

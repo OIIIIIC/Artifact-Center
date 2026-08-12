@@ -3,14 +3,14 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { type ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { apiUploadArtifact } from '@/services/api'
+import { uploadArtifactResumable } from '@/features/upload/resumable-upload'
 import { ApiError } from '@/services/http'
 import type { Application } from '@/types/application'
 import { UploadManagerProvider } from './upload-manager'
 import { useUploadManager } from './upload-manager-context'
 
-vi.mock('@/services/api', () => ({
-  apiUploadArtifact: vi.fn(),
+vi.mock('@/features/upload/resumable-upload', () => ({
+  uploadArtifactResumable: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -104,8 +104,8 @@ function UploadProbe() {
 describe('UploadManagerProvider', () => {
   it('可以取消上传并从已取消状态重试', async () => {
     const signals: AbortSignal[] = []
-    vi.mocked(apiUploadArtifact).mockImplementation(
-      async (_appId, _file, _fields, _onProgress, signal) =>
+    vi.mocked(uploadArtifactResumable).mockImplementation(
+      async ({ signal }) =>
         new Promise((_, reject) => {
           if (!signal) return
           signals.push(signal)
@@ -138,7 +138,7 @@ describe('UploadManagerProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '重试' }))
     await waitFor(() => expect(screen.getByText('uploading')).toBeInTheDocument())
-    expect(apiUploadArtifact).toHaveBeenCalledTimes(2)
+    expect(uploadArtifactResumable).toHaveBeenCalledTimes(2)
     expect(signals[1]?.aborted).toBe(false)
   })
 
@@ -147,12 +147,10 @@ describe('UploadManagerProvider', () => {
     let reportProgress:
       | ((event: { progress: number; loadedBytes: number; totalBytes: number }) => void)
       | undefined
-    vi.mocked(apiUploadArtifact).mockImplementation(
-      async (_appId, _file, _fields, onProgress) => {
-        reportProgress = onProgress
-        return new Promise<never>(() => undefined)
-      },
-    )
+    vi.mocked(uploadArtifactResumable).mockImplementation(async ({ onProgress }) => {
+      reportProgress = onProgress
+      return new Promise<never>(() => undefined)
+    })
 
     render(<UploadProbe />, { wrapper: TestProviders })
     fireEvent.click(screen.getByRole('button', { name: '开始' }))

@@ -42,6 +42,12 @@ export const artifactStatusEnum = pgEnum('artifact_status', [
 
 export const artifactTypeEnum = pgEnum('artifact_type', ['apk', 'aab', 'exe', 'zip'])
 
+export const uploadSessionStatusEnum = pgEnum('upload_session_status', [
+  'active',
+  'completed',
+  'cancelled',
+])
+
 export const releaseStatusEnum = pgEnum('release_status', [
   'published',
   'deprecated',
@@ -184,6 +190,8 @@ export const artifacts = pgTable(
     sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull().default(0),
     sha256: varchar('sha256', { length: 64 }),
     storageKey: text('storage_key').notNull(),
+    /** local keeps existing files compatible; s3 is browser-direct multipart storage. */
+    storageBackend: varchar('storage_backend', { length: 16 }).notNull().default('local'),
     releaseNotes: text('release_notes').notNull().default(''),
     uploaderId: uuid('uploader_id').references(() => users.id, { onDelete: 'set null' }),
     uploaderName: varchar('uploader_name', { length: 120 }).notNull().default(''),
@@ -207,6 +215,59 @@ export const artifacts = pgTable(
     index('artifacts_application_sha256_idx').on(t.applicationId, t.sha256),
     index('artifacts_release_id_idx').on(t.releaseId),
     check('artifacts_size_bytes_nonnegative', sql`${t.sizeBytes} >= 0`),
+  ],
+)
+
+/** Resumable artifact upload: metadata is retained while chunks are being transferred. */
+export const uploadSessions = pgTable(
+  'upload_sessions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    applicationId: uuid('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    uploaderId: uuid('uploader_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    resumeKey: varchar('resume_key', { length: 160 }).notNull(),
+    filename: varchar('filename', { length: 500 }).notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+    fields: jsonb('fields').$type<Record<string, string>>().notNull(),
+    storageKey: text('storage_key').notNull(),
+    storageBackend: varchar('storage_backend', { length: 16 }).notNull().default('local'),
+    objectUploadId: text('object_upload_id'),
+    partSize: integer('part_size').notNull(),
+    partCount: integer('part_count').notNull(),
+    status: uploadSessionStatusEnum('status').notNull().default('active'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('upload_sessions_resume_idx').on(t.applicationId, t.uploaderId, t.resumeKey),
+    index('upload_sessions_expires_idx').on(t.status, t.expiresAt),
+    check('upload_sessions_size_nonnegative', sql`${t.sizeBytes} > 0`),
+    check('upload_sessions_part_count_positive', sql`${t.partCount} > 0`),
+  ],
+)
+
+export const uploadParts = pgTable(
+  'upload_parts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => uploadSessions.id, { onDelete: 'cascade' }),
+    partNumber: integer('part_number').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    sha256: varchar('sha256', { length: 64 }).notNull(),
+    etag: varchar('etag', { length: 128 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('upload_parts_session_number_uidx').on(t.sessionId, t.partNumber),
+    check('upload_parts_number_positive', sql`${t.partNumber} > 0`),
+    check('upload_parts_size_positive', sql`${t.sizeBytes} > 0`),
   ],
 )
 

@@ -19,6 +19,7 @@ import { searchRoutes } from './routes/search.js'
 import { settingsRoutes } from './routes/settings.js'
 import { shareRoutes } from './routes/shares.js'
 import { userRoutes } from './routes/users.js'
+import { uploadRoutes } from './routes/uploads.js'
 
 ensureStorageRoot()
 void ensureRetentionSettings().catch((err) =>
@@ -45,7 +46,7 @@ app.use(
   cors({
     origin: env.corsOrigin,
     allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     exposeHeaders: ['Content-Disposition', 'Content-Length', 'X-Request-ID'],
   }),
 )
@@ -59,6 +60,7 @@ app.route('/audit', auditRoutes)
 app.route('/search', searchRoutes)
 app.route('/settings', settingsRoutes)
 app.route('/applications', applicationRoutes)
+app.route('/', uploadRoutes)
 app.route('/', shareRoutes)
 app.route('/', artifactRoutes)
 

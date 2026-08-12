@@ -14,16 +14,18 @@ import { attachmentDisposition } from '../lib/download-response.js'
 import { enforceRetentionAfterUpload } from '../lib/retention.js'
 import { reserveUploadCapacity } from '../lib/upload-capacity.js'
 import { jsonError } from '../lib/errors.js'
+import { MultipartUploadError, streamMultipartForm } from '../lib/multipart-upload.js'
 import {
   signDownloadTicket,
   verifyDownloadTicket,
   type DownloadTicketPayload,
 } from '../lib/jwt.js'
 import {
+  deleteArtifactStorageFile,
   deleteStorageFile,
   ensureStorageRoot,
-  openDownloadStream,
-  saveUploadBuffer,
+  openArtifactDownloadStream,
+  saveUploadStream,
   storageKeyFor,
 } from '../lib/storage.js'
 import {
@@ -39,6 +41,8 @@ import { requireMinRole } from '../middleware/require-role.js'
 
 /** Max artifact size — keep in sync with frontend UPLOAD_MAX_BYTES */
 const MAX_UPLOAD_BYTES = 512 * 1024 * 1024 // 512 MB
+/** Multipart boundary and release metadata have a small envelope beyond the file bytes. */
+const MAX_MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 const channelEnum = z.enum(['stable', 'beta', 'internal', 'deprecated'])
 const platformEnum = z.enum(['android', 'windows', 'zip'])
@@ -119,80 +123,165 @@ artifactRoutes.post(
       return jsonError(c, 409, 'archived_application', 'Application is archived')
     }
 
-    const body = await c.req.parseBody()
-    const file = body['file']
-    if (!file || !(file instanceof File)) {
-      return jsonError(c, 400, 'file_required', 'Multipart field "file" is required')
+    let releaseCapacity: (() => void) | null = null
+    const releaseReservedCapacity = () => {
+      releaseCapacity?.()
+      releaseCapacity = null
     }
-    if (file.size <= 0) {
-      return jsonError(c, 400, 'empty_file', 'Empty file')
+    const contentLengthHeader = c.req.header('content-length')
+    const contentLength =
+      contentLengthHeader === undefined ? undefined : Number(contentLengthHeader)
+    if (
+      contentLength !== undefined &&
+      (!Number.isSafeInteger(contentLength) || contentLength < 1)
+    ) {
+      return jsonError(c, 400, 'invalid_content_length', 'Invalid Content-Length')
     }
-    if (file.size > MAX_UPLOAD_BYTES) {
+    if (
+      contentLength !== undefined &&
+      contentLength > MAX_UPLOAD_BYTES + MAX_MULTIPART_OVERHEAD_BYTES
+    ) {
       return jsonError(c, 400, 'too_large', `Max size is ${MAX_UPLOAD_BYTES} bytes`)
     }
-
-    const artifactType = resolveArtifactType(file.name)
-    if (!artifactType) {
-      return jsonError(c, 400, 'unsupported_file_type', 'Unsupported artifact file type')
+    if (contentLength !== undefined) {
+      const reservation = await reserveUploadCapacity(contentLength)
+      if (!reservation.accepted) {
+        const message =
+          reservation.reason === 'storage_quota_exceeded'
+            ? 'Storage quota exceeded'
+            : reservation.reason === 'storage_low_disk'
+              ? 'Insufficient disk space'
+              : 'Storage capacity is unavailable'
+        return jsonError(c, 507, reservation.reason, message)
+      }
+      releaseCapacity = reservation.release
     }
 
-    const version = String(body['version'] ?? '').trim()
-    const buildNumber = String(body['buildNumber'] ?? '').trim()
-    const releaseNotes = String(body['releaseNotes'] ?? '').trim()
-    const markLatest = String(body['markLatest'] ?? 'true') !== 'false'
-    const channelParsed = channelEnum.safeParse(String(body['channel'] ?? 'stable'))
-    const platformParsed = platformEnum.safeParse(
-      String(body['platform'] ?? app.platform),
-    )
+    let storageKey = ''
+    let uploadedFile: {
+      filename: string
+      type: ArtifactType | null
+      sizeBytes: number
+      sha256: string
+    } | null = null
+    const discardUpload = async () => {
+      if (!storageKey) return
+      await deleteStorageFile(storageKey)
+      storageKey = ''
+    }
+    const rejectUpload = async (status: number, code: string, message: string) => {
+      releaseReservedCapacity()
+      await discardUpload()
+      return jsonError(c, status, code, message)
+    }
+
+    let body: Record<string, string>
+    try {
+      body = await streamMultipartForm(c.req.raw, {
+        limits: {
+          files: 1,
+          fields: 12,
+          fieldNameSize: 100,
+          fieldSize: 8 * 1024,
+          fileSize: MAX_UPLOAD_BYTES,
+        },
+        onFile: async ({ fieldName, filename, stream }) => {
+          if (fieldName !== 'file') {
+            stream.resume()
+            throw new MultipartUploadError('file_required')
+          }
+
+          const type = resolveArtifactType(filename)
+          if (!type) {
+            uploadedFile = { filename, type: null, sizeBytes: 0, sha256: '' }
+            stream.resume()
+            return
+          }
+
+          ensureStorageRoot()
+          storageKey = storageKeyFor(appId, filename)
+          const saved = await saveUploadStream(storageKey, stream)
+          uploadedFile = { filename, type, ...saved }
+        },
+      })
+    } catch (error) {
+      releaseReservedCapacity()
+      await discardUpload()
+      if (error instanceof MultipartUploadError) {
+        const message =
+          error.code === 'file_too_large'
+            ? `Max size is ${MAX_UPLOAD_BYTES} bytes`
+            : error.code === 'file_required'
+              ? 'Multipart field "file" is required'
+              : error.code === 'multiple_files'
+                ? 'Only one artifact file can be uploaded at a time'
+                : 'Invalid multipart upload'
+        return jsonError(c, 400, error.code, message)
+      }
+      throw error
+    }
+
+    // Assignments from multipart callbacks are intentionally opaque to TypeScript's
+    // control-flow analysis; re-read the completed upload after the parser settles.
+    const file = uploadedFile as {
+      filename: string
+      type: ArtifactType | null
+      sizeBytes: number
+      sha256: string
+    } | null
+    if (!file) {
+      return rejectUpload(400, 'file_required', 'Multipart field "file" is required')
+    }
+    if (file.sizeBytes <= 0) {
+      return rejectUpload(400, 'empty_file', 'Empty file')
+    }
+    if (!file.type) {
+      return rejectUpload(400, 'unsupported_file_type', 'Unsupported artifact file type')
+    }
+
+    const { filename, type: artifactType, sizeBytes, sha256 } = file
+    const version = String(body.version ?? '').trim()
+    const buildNumber = String(body.buildNumber ?? '').trim()
+    const releaseNotes = String(body.releaseNotes ?? '').trim()
+    const markLatest = String(body.markLatest ?? 'true') !== 'false'
+    const channelParsed = channelEnum.safeParse(String(body.channel ?? 'stable'))
+    const platformParsed = platformEnum.safeParse(String(body.platform ?? app.platform))
 
     if (!version) {
-      return jsonError(c, 400, 'invalid_body', 'version is required')
+      return rejectUpload(400, 'invalid_body', 'version is required')
     }
     if (!channelParsed.success || !platformParsed.success) {
-      return jsonError(c, 400, 'invalid_body', 'Invalid channel or platform')
+      return rejectUpload(400, 'invalid_body', 'Invalid channel or platform')
     }
 
     const platform = platformParsed.data
     if (platform !== platformForArtifactType(artifactType)) {
-      return jsonError(
-        c,
+      return rejectUpload(
         400,
         'platform_mismatch',
         'File type does not match application platform',
       )
     }
     if (platform !== app.platform) {
-      return jsonError(
-        c,
+      return rejectUpload(
         400,
         'platform_mismatch',
         'File type does not match application platform',
       )
     }
 
-    const capacity = await reserveUploadCapacity(file.size)
-    if (!capacity.accepted) {
-      const message =
-        capacity.reason === 'storage_quota_exceeded'
-          ? 'Storage quota exceeded'
-          : capacity.reason === 'storage_low_disk'
-            ? 'Insufficient disk space'
-            : 'Storage capacity is unavailable'
-      return jsonError(c, 507, capacity.reason, message)
-    }
-
-    let storageKey = ''
-    let sizeBytes: number
-    let sha256: string
-    try {
-      ensureStorageRoot()
-      storageKey = storageKeyFor(appId, file.name)
-      const buffer = Buffer.from(await file.arrayBuffer())
-      ;({ sizeBytes, sha256 } = await saveUploadBuffer(storageKey, buffer))
-    } catch (error) {
-      capacity.release()
-      if (storageKey) await deleteStorageFile(storageKey)
-      throw error
+    if (!releaseCapacity) {
+      const reservation = await reserveUploadCapacity(sizeBytes)
+      if (!reservation.accepted) {
+        const message =
+          reservation.reason === 'storage_quota_exceeded'
+            ? 'Storage quota exceeded'
+            : reservation.reason === 'storage_low_disk'
+              ? 'Insufficient disk space'
+              : 'Storage capacity is unavailable'
+        return rejectUpload(507, reservation.reason, message)
+      }
+      releaseCapacity = reservation.release
     }
 
     const channel = channelParsed.data
@@ -249,7 +338,7 @@ artifactRoutes.post(
             type: artifactType,
             channel,
             status,
-            filename: file.name,
+            filename,
             sizeBytes,
             sha256,
             storageKey,
@@ -270,7 +359,7 @@ artifactRoutes.post(
         return created
       })
     } catch (error) {
-      capacity.release()
+      releaseReservedCapacity()
       await deleteStorageFile(storageKey)
       if (isUniqueViolation(error)) {
         return jsonError(
@@ -283,7 +372,7 @@ artifactRoutes.post(
       throw error
     }
 
-    capacity.release()
+    releaseReservedCapacity()
 
     // Enforce max-versions after upload
     await enforceRetentionAfterUpload(appId)
@@ -293,7 +382,7 @@ artifactRoutes.post(
       objectType: 'artifact',
       objectId: row.id,
       applicationId: appId,
-      summary: `上传 ${app.name} v${version}（${file.name}）`,
+      summary: `上传 ${app.name} v${version}（${file.filename}）`,
       meta: {
         version,
         channel,
@@ -334,7 +423,7 @@ artifactRoutes.get('/artifacts/:id/download', requireAuth, async (c) => {
     return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   }
 
-  const stream = openDownloadStream(row.storageKey)
+  const stream = await openArtifactDownloadStream(row.storageKey, row.storageBackend)
   if (!stream) {
     return jsonError(c, 404, 'file_missing', 'File missing from storage')
   }
@@ -392,7 +481,7 @@ artifactRoutes.get('/downloads/:ticket', async (c) => {
     return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   }
 
-  const stream = openDownloadStream(row.storageKey)
+  const stream = await openArtifactDownloadStream(row.storageKey, row.storageBackend)
   if (!stream) return jsonError(c, 404, 'file_missing', 'File missing from storage')
 
   c.header('Content-Disposition', attachmentDisposition(row.filename))
@@ -565,7 +654,7 @@ artifactRoutes.delete(
     }
 
     await db.delete(artifacts).where(eq(artifacts.id, id))
-    await deleteStorageFile(current.storageKey)
+    await deleteArtifactStorageFile(current.storageKey, current.storageBackend)
     await refreshApplicationArtifactStats(current.applicationId)
 
     await writeAudit(c, {

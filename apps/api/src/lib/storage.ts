@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto'
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs'
-import { mkdir, statfs, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rm, statfs, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { pipeline } from 'node:stream/promises'
+import { once } from 'node:events'
+import { finished, pipeline } from 'node:stream/promises'
 import type { Readable } from 'node:stream'
 
 import { env } from '../env.js'
+import { deleteObject, openObjectDownloadStream } from './object-storage.js'
 
 export function ensureStorageRoot() {
   if (!existsSync(env.storagePath)) {
@@ -69,8 +71,82 @@ export async function saveUploadStream(
     hash.update(chunk)
   })
 
-  await pipeline(stream, out)
+  try {
+    await pipeline(stream, out)
+  } catch (error) {
+    await unlink(abs).catch(() => undefined)
+    throw error
+  }
   return { sizeBytes, sha256: hash.digest('hex') }
+}
+
+function uploadPartStorageKey(sessionId: string, partNumber: number): string {
+  return path.posix.join('_uploads', sessionId, 'parts', `${partNumber}.part`)
+}
+
+export async function saveUploadPart(
+  sessionId: string,
+  partNumber: number,
+  stream: Readable,
+) {
+  return saveUploadStream(uploadPartStorageKey(sessionId, partNumber), stream)
+}
+
+/** Concatenate already persisted parts into the final artifact without buffering it in memory. */
+export async function assembleUploadParts(
+  storageKey: string,
+  sessionId: string,
+  partNumbers: number[],
+): Promise<{ sizeBytes: number; sha256: string }> {
+  const abs = absolutePathFor(storageKey)
+  await mkdir(path.dirname(abs), { recursive: true })
+  const hash = createHash('sha256')
+  const out = createWriteStream(abs)
+  let sizeBytes = 0
+
+  try {
+    for (const partNumber of partNumbers) {
+      const part = createReadStream(
+        absolutePathFor(uploadPartStorageKey(sessionId, partNumber)),
+      )
+      for await (const chunk of part) {
+        const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+        sizeBytes += data.length
+        hash.update(data)
+        if (!out.write(data)) await once(out, 'drain')
+      }
+    }
+    out.end()
+    await finished(out)
+  } catch (error) {
+    out.destroy()
+    await unlink(abs).catch(() => undefined)
+    throw error
+  }
+
+  return { sizeBytes, sha256: hash.digest('hex') }
+}
+
+/** Remove the temporary directory for one explicitly identified resumable upload. */
+export async function deleteUploadSessionFiles(sessionId: string): Promise<void> {
+  const key = path.posix.join('_uploads', sessionId)
+  await rm(absolutePathFor(key), { recursive: true, force: true }).catch((error) => {
+    console.error('[storage] delete resumable upload failed', sessionId, error)
+  })
+}
+
+export async function listUploadPartNumbers(sessionId: string): Promise<number[]> {
+  const directory = absolutePathFor(path.posix.join('_uploads', sessionId, 'parts'))
+  try {
+    const names = await readdir(directory)
+    return names
+      .map((name) => /^([1-9]\d*)\.part$/.exec(name)?.[1])
+      .filter((value): value is string => value !== undefined)
+      .map(Number)
+      .sort((left, right) => left - right)
+  } catch {
+    return []
+  }
 }
 
 export async function saveUploadBuffer(
@@ -99,4 +175,26 @@ export async function deleteStorageFile(storageKey: string): Promise<void> {
   } catch (err) {
     console.error('[storage] delete failed', storageKey, err)
   }
+}
+
+/** Read either the legacy filesystem artifact or an S3-compatible object. */
+export async function openArtifactDownloadStream(
+  storageKey: string,
+  storageBackend: string,
+) {
+  return storageBackend === 's3'
+    ? openObjectDownloadStream(storageKey)
+    : openDownloadStream(storageKey)
+}
+
+/** Delete either legacy filesystem storage or an S3-compatible object. */
+export async function deleteArtifactStorageFile(
+  storageKey: string,
+  storageBackend: string,
+) {
+  if (storageBackend === 's3') {
+    await deleteObject(storageKey)
+    return
+  }
+  await deleteStorageFile(storageKey)
 }

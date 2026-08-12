@@ -13,7 +13,7 @@ import {
   resolveShareItem,
   type ResolvedShareItem,
 } from '../lib/share-resolution.js'
-import { openDownloadStream } from '../lib/storage.js'
+import { openArtifactDownloadStream } from '../lib/storage.js'
 import {
   enforceRateLimit,
   FixedWindowRateLimiter,
@@ -108,7 +108,10 @@ async function streamItem(
   if (!artifact) {
     return jsonError(c, 404, 'artifact_missing', 'Nothing available to download')
   }
-  const stream = openDownloadStream(artifact.storageKey)
+  const stream = await openArtifactDownloadStream(
+    artifact.storageKey,
+    artifact.storageBackend,
+  )
   if (!stream) return jsonError(c, 404, 'file_missing', 'File missing from storage')
 
   await Promise.all([

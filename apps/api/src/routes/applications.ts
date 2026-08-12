@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or } from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -13,7 +13,7 @@ import {
 } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
 import { jsonError } from '../lib/errors.js'
-import { deleteStorageFile } from '../lib/storage.js'
+import { deleteArtifactStorageFile } from '../lib/storage.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import { requireApplicationRole } from '../middleware/application-access.js'
 import { requireMinRole, requireRoles } from '../middleware/require-role.js'
@@ -75,7 +75,9 @@ type ApplicationResponseRow = Pick<
   | 'artifactCount'
   | 'createdAt'
   | 'updatedAt'
->
+> & {
+  latestArtifactUploadedAt?: Date | null
+}
 
 /** 目录与搜索结果不读取 ownerId 等不会返回给客户端的列。 */
 const applicationResponseColumns = {
@@ -90,6 +92,11 @@ const applicationResponseColumns = {
   ownerName: applications.ownerName,
   latestVersion: applications.latestVersion,
   artifactCount: applications.artifactCount,
+  latestArtifactUploadedAt: sql<Date | null>`(
+    SELECT max(${artifacts.uploadedAt})
+    FROM ${artifacts}
+    WHERE ${artifacts.applicationId} = ${applications.id}
+  )`,
   createdAt: applications.createdAt,
   updatedAt: applications.updatedAt,
 }
@@ -112,6 +119,7 @@ function mapApp(
     managers,
     latestVersion: row.latestVersion,
     artifactCount: row.artifactCount,
+    latestArtifactUploadedAt: row.latestArtifactUploadedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }
@@ -385,12 +393,17 @@ applicationRoutes.delete('/:id', requireRoles('admin'), async (c) => {
   if (!existing) return jsonError(c, 404, 'not_found', 'Application not found')
 
   const files = await db
-    .select({ storageKey: artifacts.storageKey })
+    .select({
+      storageKey: artifacts.storageKey,
+      storageBackend: artifacts.storageBackend,
+    })
     .from(artifacts)
     .where(eq(artifacts.applicationId, id))
 
   await db.delete(applications).where(eq(applications.id, id))
-  await Promise.all(files.map((file) => deleteStorageFile(file.storageKey)))
+  await Promise.all(
+    files.map((file) => deleteArtifactStorageFile(file.storageKey, file.storageBackend)),
+  )
 
   await writeAudit(c, {
     action: 'app.delete',
