@@ -5,7 +5,6 @@ import { z } from 'zod'
 import { db } from '../db/client.js'
 import { applicationMembers, applications, regions, users } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
-import { diagnostics } from '../lib/diagnostics.js'
 import { jsonError } from '../lib/errors.js'
 import {
   getRetentionPolicy,
@@ -52,26 +51,6 @@ const accessGrantSchema = z.discriminatedUnion('operation', [
     applicationIds: z.array(z.string().uuid()).min(1).max(100),
   }),
 ])
-
-const diagnosticsSchema = z.object({
-  sinceMinutes: z.union([z.literal(15), z.literal(30), z.literal(60)]).default(30),
-  requestId: z
-    .string()
-    .trim()
-    .regex(/^[A-Za-z0-9._:-]{1,128}$/)
-    .optional(),
-  operation: z.string().trim().max(500).optional(),
-  expected: z.string().trim().max(1000).optional(),
-  actual: z.string().trim().max(1000).optional(),
-  occurredAt: z.string().trim().max(120).optional(),
-  client: z
-    .object({
-      page: z.string().trim().max(200).optional(),
-      browser: z.string().trim().max(500).optional(),
-      timezone: z.string().trim().max(100).optional(),
-    })
-    .optional(),
-})
 
 function mapRegion(row: typeof regions.$inferSelect) {
   return {
@@ -231,36 +210,6 @@ settingsRoutes.post('/access-grants', requireRoles('admin'), async (c) => {
   })
 
   return c.json({ ok: true, affected: applicationIds.length })
-})
-
-/** POST /settings/diagnostics/report — 仅管理员生成进程内脱敏诊断报告。 */
-settingsRoutes.post('/diagnostics/report', requireRoles('admin'), async (c) => {
-  const body = await c.req.json().catch(() => null)
-  const parsed = diagnosticsSchema.safeParse(body)
-  if (!parsed.success) {
-    return jsonError(
-      c,
-      400,
-      'invalid_body',
-      'Invalid diagnostics payload',
-      parsed.error.flatten(),
-    )
-  }
-
-  const report = await diagnostics.buildReport(parsed.data)
-  await writeAudit(c, {
-    action: 'settings.diagnostics_export',
-    objectType: 'system',
-    objectId: 'diagnostics',
-    summary: `生成最近 ${parsed.data.sinceMinutes} 分钟的系统诊断包`,
-    meta: {
-      sinceMinutes: parsed.data.sinceMinutes,
-      requestId: parsed.data.requestId ?? null,
-      eventCount: report.eventCount,
-    },
-  })
-
-  return c.json({ report })
 })
 
 /** GET /settings/regions — 所有登录用户可读取，供应用选择与目录分组。 */

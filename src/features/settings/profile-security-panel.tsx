@@ -114,20 +114,12 @@ export function ProfileSecurityPanel() {
   }
 
   return (
-    <div className="max-w-[44rem] space-y-6">
-      <section className="min-w-0 rounded-2xl bg-card/60 p-5 ring-1 ring-border/70 sm:p-6 dark:bg-card/40 dark:ring-border/80">
-        <header className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-[1.0625rem] font-semibold tracking-tight text-foreground">
-              {t('settings.generalTitle')}
-            </h2>
-            <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">
-              {t('settings.generalDesc')}
-            </p>
-          </div>
-        </header>
-
-        <div className="mt-6 grid min-w-0 gap-6 sm:grid-cols-[9rem_minmax(0,1fr)] sm:items-start">
+    <div className="w-full space-y-6">
+      <section
+        aria-label={t('settings.generalTitle')}
+        className="min-w-0 rounded-2xl bg-card/60 p-5 ring-1 ring-border/70 sm:p-6 dark:bg-card/40 dark:ring-border/80"
+      >
+        <div className="grid min-w-0 gap-6 sm:grid-cols-[9rem_minmax(0,1fr)] sm:items-start">
           <AvatarUpload
             name={user?.name ?? profileName}
             avatarUrl={user?.avatarUrl}
@@ -206,40 +198,32 @@ export function ProfileSecurityPanel() {
         </div>
       </section>
 
-      <section className="min-w-0 rounded-2xl bg-card/60 p-5 ring-1 ring-border/70 sm:p-6 dark:bg-card/40 dark:ring-border/80">
-        <header>
-          <h2 className="text-[1.0625rem] font-semibold tracking-tight text-foreground">
-            {t('settings.passwordTitle')}
-          </h2>
-          <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">
-            {t('settings.passwordDesc')}
+      <section
+        aria-label={t('settings.passwordTitle')}
+        className="flex min-w-0 flex-col items-stretch gap-3 rounded-2xl bg-card/60 px-4 py-3.5 ring-1 ring-border/70 sm:flex-row sm:items-center sm:px-5 dark:bg-card/40 dark:ring-border/80"
+      >
+        <span
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+          aria-hidden
+        >
+          <KeyRound className="size-4" strokeWidth={1.75} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[0.8125rem] font-medium text-foreground">
+            {t('settings.passwordMethodTitle')}
           </p>
-        </header>
-
-        <div className="mt-5 flex flex-col items-stretch gap-3 rounded-xl bg-muted/25 px-4 py-3 ring-1 ring-border/50 sm:flex-row sm:items-center dark:bg-muted/10">
-          <span
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
-            aria-hidden
-          >
-            <KeyRound className="size-4" strokeWidth={1.75} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[0.8125rem] font-medium text-foreground">
-              {t('settings.passwordMethodTitle')}
-            </p>
-            <p className="mt-0.5 text-[0.75rem] leading-relaxed text-muted-foreground">
-              {t('settings.passwordMethodDesc')}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="shrink-0 sm:self-center"
-            onClick={() => setPasswordOpen(true)}
-          >
-            {t('settings.changePassword')}
-          </Button>
+          <p className="mt-0.5 text-[0.75rem] leading-relaxed text-muted-foreground">
+            {t('settings.passwordMethodDesc')}
+          </p>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0 sm:self-center"
+          onClick={() => setPasswordOpen(true)}
+        >
+          {t('settings.changePassword')}
+        </Button>
       </section>
 
       <Modal open={passwordOpen} onOpenChange={onPasswordOpenChange}>

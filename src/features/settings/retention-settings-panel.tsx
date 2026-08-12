@@ -32,7 +32,13 @@ const FIELD_CLASS = cn(
   'focus-visible:bg-card focus-visible:ring-[3px] focus-visible:ring-ring/30',
 )
 
-export function RetentionSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
+export function RetentionSettingsPanel({
+  isAdmin,
+  hideHeader = false,
+}: {
+  isAdmin: boolean
+  hideHeader?: boolean
+}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const query = useQuery({
@@ -136,6 +142,7 @@ export function RetentionSettingsPanel({ isAdmin }: { isAdmin: boolean }) {
     <SettingsPanel
       title={t('settings.retentionTitle')}
       description={t('settings.retentionDesc')}
+      hideHeader={hideHeader}
     >
       {query.isLoading ? (
         <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">

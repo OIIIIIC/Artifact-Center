@@ -17,7 +17,6 @@ export type AuditAction =
   | 'share.download'
   | 'settings.retention_update'
   | 'settings.retention_run'
-  | 'settings.diagnostics_export'
   | 'settings.region_create'
   | 'settings.region_update'
   | 'settings.region_delete'

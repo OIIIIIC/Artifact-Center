@@ -28,7 +28,11 @@ function chipClass(active: boolean) {
   )
 }
 
-export function AppearanceSettingsPanel() {
+export function AppearanceSettingsPanel({
+  hideHeader = false,
+}: {
+  hideHeader?: boolean
+}) {
   const { t } = useTranslation()
   const theme = useThemeStore((state) => state.theme)
   const setTheme = useThemeStore((state) => state.setTheme)
@@ -39,6 +43,7 @@ export function AppearanceSettingsPanel() {
     <SettingsPanel
       title={t('settings.appearanceTitle')}
       description={t('settings.appearanceDesc')}
+      hideHeader={hideHeader}
     >
       <div className="space-y-6">
         <div className="space-y-2.5">

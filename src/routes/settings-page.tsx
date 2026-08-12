@@ -1,130 +1,155 @@
-import { Activity, HardDrive, Palette, UserRound } from 'lucide-react'
+import {
+  ClipboardList,
+  HardDrive,
+  MapPinned,
+  Palette,
+  ShieldCheck,
+  UserRound,
+  Users,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Navigate } from 'react-router-dom'
 
-import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
+import { AppLayout, PageContainer } from '@/components/layout'
 import { AccessPermissionsPanel } from '@/features/settings/access-permissions-panel'
 import { AppearanceSettingsPanel } from '@/features/settings/appearance-settings-panel'
-import { DiagnosticsSettingsPanel } from '@/features/settings/diagnostics-settings-panel'
 import { MembersSettingsPanel } from '@/features/settings/members-settings-panel'
+import { OperationLogsSettingsPanel } from '@/features/settings/operation-logs-settings-panel'
 import { ProfileSecurityPanel } from '@/features/settings/profile-security-panel'
 import { RegionsSettingsPanel } from '@/features/settings/regions-settings-panel'
 import { RetentionSettingsPanel } from '@/features/settings/retention-settings-panel'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
-type SettingsSection = 'general' | 'appearance' | 'retention' | 'diagnostics'
-type SettingsStandalone = 'members' | 'regions' | 'access'
+type SettingsSection =
+  'general' | 'appearance' | 'retention' | 'members' | 'regions' | 'access' | 'audit'
+type SettingsStandalone = Extract<SettingsSection, 'members' | 'regions' | 'access'>
 
-const SECTIONS: SettingsSection[] = ['general', 'appearance', 'retention']
+const PERSONAL_SECTIONS: SettingsSection[] = ['general', 'appearance']
+const PLATFORM_SECTIONS: SettingsSection[] = ['retention']
+const MANAGEMENT_SECTIONS: SettingsSection[] = ['members', 'regions', 'access', 'audit']
 
 export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }) {
   const { t } = useTranslation()
   const isAdmin = useAuthStore((state) => state.user?.role === 'admin')
-  const [section, setSection] = useState<SettingsSection>('general')
-  const sections = isAdmin ? [...SECTIONS, 'diagnostics' as const] : SECTIONS
+  const [section, setSection] = useState<SettingsSection>(standalone ?? 'general')
+
+  if (standalone && !isAdmin) {
+    return <Navigate to="/settings" replace />
+  }
+
   const sectionMeta = {
     general: { label: t('settings.navGeneral'), icon: UserRound },
     appearance: { label: t('settings.navAppearance'), icon: Palette },
     retention: { label: t('settings.navRetention'), icon: HardDrive },
-    diagnostics: { label: t('settings.navDiagnostics'), icon: Activity },
+    members: { label: t('settings.navMembers'), icon: Users },
+    regions: { label: t('settings.navRegions'), icon: MapPinned },
+    access: { label: t('settings.navAccess'), icon: ShieldCheck },
+    audit: { label: t('settings.navAudit'), icon: ClipboardList },
   } satisfies Record<SettingsSection, { label: string; icon: typeof UserRound }>
-  const standaloneMeta = {
-    members: {
-      title: t('settings.membersTitle'),
-      description: t('settings.membersDesc'),
-    },
-    regions: {
-      title: t('settings.regionsTitle'),
-      description: t('settings.regionsDesc'),
-    },
-    access: { title: t('access.title'), description: t('access.description') },
-  } satisfies Record<SettingsStandalone, { title: string; description: string }>
-  const pageTitle = standalone ? standaloneMeta[standalone].title : t('settings.title')
-  const pageDescription = standalone ? standaloneMeta[standalone].description : undefined
+  const renderNavItem = (id: SettingsSection) => {
+    const meta = sectionMeta[id]
+    const Icon = meta.icon
+    const active = section === id
+
+    return (
+      <button
+        key={id}
+        type="button"
+        onClick={() => setSection(id)}
+        className={cn(
+          'inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-[0.8125rem] font-medium transition-colors duration-[var(--duration-hover)]',
+          active
+            ? 'bg-muted/70 text-foreground'
+            : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+        )}
+        aria-current={active ? 'page' : undefined}
+      >
+        <Icon className="size-3.5 opacity-70" strokeWidth={1.75} />
+        {meta.label}
+      </button>
+    )
+  }
 
   return (
     <AppLayout
-      breadcrumbs={[{ label: pageTitle }]}
-      contentClassName={
-        section === 'diagnostics' && !standalone ? 'xl:overflow-hidden' : undefined
-      }
+      breadcrumbs={[{ label: t('settings.title') }]}
+      contentClassName="lg:overflow-hidden"
     >
-      <PageContainer
-        rhythm="product"
-        className={cn(
-          section === 'general' && !standalone && 'xl:pb-6',
-          section === 'diagnostics' &&
-            !standalone &&
-            'xl:flex xl:h-full xl:flex-col xl:overflow-hidden xl:pb-6',
-        )}
-      >
-        <PageHeader title={pageTitle} description={pageDescription} />
-
+      <PageContainer rhythm="product" className={cn('lg:h-full lg:py-0')}>
         <div
           className={cn(
-            'mt-5 flex flex-col gap-8 sm:mt-6',
-            !standalone && 'lg:flex-row lg:gap-10 xl:gap-12',
-            section === 'diagnostics' && !standalone && 'xl:min-h-0 xl:flex-1',
+            'flex flex-col gap-8 lg:h-full lg:min-h-0 lg:flex-row lg:gap-10 xl:gap-12',
           )}
         >
-          {!standalone ? (
+          <aside className="shrink-0 lg:h-full lg:w-[var(--settings-nav-width)] lg:overflow-hidden lg:py-8">
             <nav
               aria-label={t('settings.sectionNav')}
-              className="flex shrink-0 gap-1 overflow-x-auto pb-1 lg:sticky lg:top-6 lg:w-[var(--settings-nav-width)] lg:flex-col lg:overflow-visible lg:pb-0"
+              className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
             >
-              {sections.map((id) => {
-                const meta = sectionMeta[id]
-                const Icon = meta.icon
-                const active = section === id
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setSection(id)}
-                    className={cn(
-                      'inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-[0.8125rem] font-medium transition-colors duration-[var(--duration-hover)]',
-                      active
-                        ? 'bg-muted/70 text-foreground'
-                        : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
-                    )}
-                    aria-current={active ? 'page' : undefined}
-                  >
-                    <Icon className="size-3.5 opacity-70" strokeWidth={1.75} />
-                    {meta.label}
-                  </button>
-                )
-              })}
+              <SettingsNavGroup label={t('settings.groupPersonal')}>
+                {PERSONAL_SECTIONS.map(renderNavItem)}
+              </SettingsNavGroup>
+              <SettingsNavGroup label={t('settings.groupPlatform')}>
+                {PLATFORM_SECTIONS.map(renderNavItem)}
+              </SettingsNavGroup>
+              {isAdmin ? (
+                <SettingsNavGroup
+                  label={t('settings.groupManagement')}
+                  className="border-t border-border/60 pt-3 lg:mt-2"
+                >
+                  {MANAGEMENT_SECTIONS.map(renderNavItem)}
+                </SettingsNavGroup>
+              ) : null}
             </nav>
-          ) : null}
+          </aside>
 
           <div
             className={cn(
-              'min-w-0 flex-1',
-              !standalone && '[&_[data-slot=form-stack]]:max-w-none',
-              section === 'diagnostics' &&
-                !standalone &&
-                'xl:h-full xl:min-h-0 xl:overflow-hidden xl:[&>section]:flex xl:[&>section]:h-full xl:[&>section]:min-h-0 xl:[&>section]:flex-col',
+              'min-w-0 flex-1 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:px-1 lg:py-8 lg:[scrollbar-gutter:stable]',
+              '[&_[data-slot=form-stack]]:max-w-none',
             )}
           >
-            {standalone === 'members' ? <MembersSettingsPanel hideHeader /> : null}
-            {standalone === 'regions' ? (
+            {section === 'general' ? <ProfileSecurityPanel /> : null}
+            {section === 'appearance' ? <AppearanceSettingsPanel hideHeader /> : null}
+            {section === 'retention' ? (
+              <RetentionSettingsPanel isAdmin={isAdmin} hideHeader />
+            ) : null}
+            {isAdmin && section === 'members' ? (
+              <MembersSettingsPanel hideHeader />
+            ) : null}
+            {isAdmin && section === 'regions' ? (
               <RegionsSettingsPanel isAdmin={isAdmin} hideHeader />
             ) : null}
-            {standalone === 'access' ? (
+            {isAdmin && section === 'access' ? (
               <AccessPermissionsPanel isAdmin={isAdmin} hideHeader />
             ) : null}
-            {!standalone && section === 'general' ? <ProfileSecurityPanel /> : null}
-            {!standalone && section === 'appearance' ? <AppearanceSettingsPanel /> : null}
-            {!standalone && section === 'retention' ? (
-              <RetentionSettingsPanel isAdmin={isAdmin} />
-            ) : null}
-            {!standalone && isAdmin && section === 'diagnostics' ? (
-              <DiagnosticsSettingsPanel />
+            {isAdmin && section === 'audit' ? (
+              <OperationLogsSettingsPanel hideHeader />
             ) : null}
           </div>
         </div>
       </PageContainer>
     </AppLayout>
+  )
+}
+
+function SettingsNavGroup({
+  label,
+  children,
+  className,
+}: {
+  label: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn('flex shrink-0 flex-col gap-1', className)}>
+      <p className="hidden px-3 pb-0.5 pt-1 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground lg:block">
+        {label}
+      </p>
+      {children}
+    </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Camera, Trash2 } from 'lucide-react'
 
@@ -6,9 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { FormError } from '@/components/feedback'
 import { cn } from '@/lib/utils'
+import { AvatarCropDialog, type AvatarCropSource } from './avatar-crop-dialog'
 
 const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif'
+const ACCEPT = 'image/jpeg,image/png,image/webp'
+const SUPPORTED_TYPES = new Set(ACCEPT.split(','))
 
 interface AvatarUploadProps {
   name: string
@@ -31,6 +33,14 @@ export function AvatarUpload({
   const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [cropSource, setCropSource] = useState<AvatarCropSource | null>(null)
+
+  useEffect(
+    () => () => {
+      if (cropSource) URL.revokeObjectURL(cropSource.url)
+    },
+    [cropSource],
+  )
 
   const initials = name
     .split(/\s+/)
@@ -47,7 +57,7 @@ export function AvatarUpload({
   const onFile = (file: File | undefined) => {
     setError(null)
     if (!file) return
-    if (!file.type.startsWith('image/')) {
+    if (!SUPPORTED_TYPES.has(file.type)) {
       setError(t('settings.avatarErrorType'))
       return
     }
@@ -55,14 +65,20 @@ export function AvatarUpload({
       setError(t('settings.avatarErrorSize'))
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result
-      if (typeof result === 'string') onChange(result)
-      else setError(t('settings.avatarErrorType'))
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => {
+      setCropSource({
+        url,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      })
     }
-    reader.onerror = () => setError(t('settings.avatarErrorType'))
-    reader.readAsDataURL(file)
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      setError(t('settings.avatarErrorType'))
+    }
+    image.src = url
   }
 
   return (
@@ -137,6 +153,15 @@ export function AvatarUpload({
         onChange={(e) => {
           onFile(e.target.files?.[0])
           e.target.value = ''
+        }}
+      />
+
+      <AvatarCropDialog
+        source={cropSource}
+        onClose={() => setCropSource(null)}
+        onSave={async (dataUrl) => {
+          setError(null)
+          await onChange(dataUrl)
         }}
       />
     </div>
