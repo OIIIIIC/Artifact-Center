@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { MarkdownPreview } from '@/components/common/markdown-preview'
 import { CHANNEL_CHIP } from '@/features/upload/channel-meta'
 import { cn } from '@/lib/utils'
 import type { ApplicationPlatform } from '@/types/application'
-import type { UploadChannel, VersionDraft } from '@/types/upload'
+import type { UploadChannel, VersionDraft, VersionSuggestionMode } from '@/types/upload'
 
 const CHANNELS: UploadChannel[] = ['stable', 'beta', 'internal', 'deprecated']
 const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
@@ -12,8 +13,11 @@ const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
 interface StepVersionProps {
   version: VersionDraft
   applicationPlatform: ApplicationPlatform
+  versionSuggestionMode: VersionSuggestionMode
+  detectedVersion: string | null
   onChange: (patch: Partial<VersionDraft>) => void
   onChannel: (c: UploadChannel) => void
+  onVersionSuggestionModeChange: (mode: VersionSuggestionMode) => void
 }
 
 /** Single control field — safe to use native label. */
@@ -76,23 +80,76 @@ const inputClass = cn(
 export function StepVersion({
   version,
   applicationPlatform,
+  versionSuggestionMode,
+  detectedVersion,
   onChange,
   onChannel,
+  onVersionSuggestionModeChange,
 }: StepVersionProps) {
   const { t } = useTranslation()
   const channel = version.channel || 'stable'
+  const [notesMode, setNotesMode] = useState<'edit' | 'preview'>('edit')
+  const canUseFilenameVersion = Boolean(detectedVersion)
 
   return (
     <div className="w-full space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t('upload.fieldVersion')} hint={t('upload.hintAuto')}>
+        <div className="block space-y-1.5">
+          <div className="flex items-baseline justify-between gap-2">
+            <label
+              htmlFor="artifact-version"
+              className="text-[0.8125rem] font-medium text-foreground"
+            >
+              {t('upload.fieldVersion')}
+            </label>
+            <div
+              className="inline-flex shrink-0 rounded-md bg-muted/50 p-0.5 ring-1 ring-border/60"
+              role="group"
+              aria-label={t('upload.fieldVersion')}
+            >
+              {(['increment', 'filename'] as const).map((mode) => {
+                const active = versionSuggestionMode === mode
+                const unavailable = mode === 'filename' && !canUseFilenameVersion
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    disabled={unavailable}
+                    onClick={() => onVersionSuggestionModeChange(mode)}
+                    title={
+                      unavailable
+                        ? t('upload.versionModeNoFilename')
+                        : t('upload.versionModeToggle')
+                    }
+                    className={cn(
+                      'rounded-sm px-2 py-0.5 text-[0.6875rem] font-medium',
+                      'transition-[background-color,color,box-shadow] duration-[var(--duration-hover)]',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+                      active
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                      unavailable &&
+                        'cursor-not-allowed opacity-45 hover:text-muted-foreground',
+                    )}
+                  >
+                    {t(
+                      mode === 'increment'
+                        ? 'upload.versionModeIncrement'
+                        : 'upload.versionModeFilename',
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <input
+            id="artifact-version"
             className={cn(inputClass, 'font-mono')}
             value={version.version}
             onChange={(e) => onChange({ version: e.target.value })}
             placeholder="1.0.0"
           />
-        </Field>
+        </div>
         <Field label={t('upload.fieldBuild')} hint={t('upload.hintAutoShort')}>
           <input
             className={cn(inputClass, 'font-mono')}
@@ -195,18 +252,62 @@ export function StepVersion({
         {t('upload.markLatest')}
       </label>
 
-      <Field label={t('upload.fieldNotes')} hint={t('upload.hintOptional')}>
-        <textarea
-          value={version.releaseNotes}
-          onChange={(e) => onChange({ releaseNotes: e.target.value })}
-          rows={4}
-          placeholder={t('upload.notesPlaceholder')}
-          className={cn(
-            inputClass,
-            'h-auto min-h-[6.5rem] resize-y py-2.5 leading-relaxed',
-          )}
-        />
-      </Field>
+      <FieldGroup label={t('upload.fieldNotes')} hint={t('upload.hintOptional')}>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[0.75rem] text-muted-foreground">
+            {t('upload.notesMarkdownHint')}
+          </p>
+          <div
+            className="inline-flex shrink-0 rounded-lg bg-muted/50 p-0.5 ring-1 ring-border/60"
+            role="tablist"
+            aria-label={t('upload.fieldNotes')}
+          >
+            {(['edit', 'preview'] as const).map((mode) => {
+              const active = notesMode === mode
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setNotesMode(mode)}
+                  className={cn(
+                    'rounded-md px-2.5 py-1 text-[0.75rem] font-medium transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+                    active
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {t(`upload.notes${mode === 'edit' ? 'Edit' : 'Preview'}`)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        {notesMode === 'edit' ? (
+          <textarea
+            value={version.releaseNotes}
+            onChange={(e) => onChange({ releaseNotes: e.target.value })}
+            rows={4}
+            placeholder={t('upload.notesPlaceholder')}
+            className={cn(
+              inputClass,
+              'h-auto min-h-[6.5rem] resize-y py-2.5 leading-relaxed',
+            )}
+          />
+        ) : (
+          <MarkdownPreview
+            content={version.releaseNotes}
+            empty={
+              <p className="text-[0.8125rem] text-muted-foreground">
+                {t('upload.notesPreviewEmpty')}
+              </p>
+            }
+            className="min-h-[6.5rem] rounded-lg bg-muted/20 p-3 ring-1 ring-border/60"
+          />
+        )}
+      </FieldGroup>
     </div>
   )
 }

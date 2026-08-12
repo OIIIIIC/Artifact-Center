@@ -16,6 +16,7 @@ import type {
   UploadPhase,
   UploadStep,
   VersionDraft,
+  VersionSuggestionMode,
 } from '@/types/upload'
 import { UPLOAD_MAX_BYTES } from '@/types/upload'
 import { useUploadManager } from './upload-manager-context'
@@ -45,6 +46,8 @@ export function useUploadFlow() {
   const [fileError, setFileError] = useState<UploadFileError | null>(null)
   const [parsed, setParsed] = useState<ParsedArtifactFile | null>(null)
   const [version, setVersion] = useState<VersionDraft>(emptyVersion())
+  const [versionSuggestionMode, setVersionSuggestionMode] =
+    useState<VersionSuggestionMode>('increment')
   const [publishError, setPublishError] = useState<PublishError>(null)
   const [publishing, setPublishing] = useState(false)
   const [taskId, setTaskId] = useState<string | null>(null)
@@ -73,6 +76,7 @@ export function useUploadFlow() {
     setPhase('idle')
     setFileError(null)
     setParsed(null)
+    setVersionSuggestionMode('increment')
     fileRef.current = null
   }, [])
 
@@ -81,6 +85,7 @@ export function useUploadFlow() {
     setFileError(null)
     setParsed(null)
     setPublishError(null)
+    setVersionSuggestionMode('increment')
     fileRef.current = file
 
     if (!file || file.size === 0) {
@@ -127,8 +132,8 @@ export function useUploadFlow() {
 
       setParsed(result)
       setVersion({
-        version: result.suggestedVersion,
-        buildNumber: result.suggestedBuild,
+        version: result.incrementedVersion,
+        buildNumber: result.incrementedBuild,
         packageName: result.suggestedPackageName || app?.packageName || '',
         platform: result.platform ?? app?.platform ?? '',
         channel: 'stable',
@@ -188,6 +193,23 @@ export function useUploadFlow() {
     setVersion((v) => ({ ...v, channel }))
   }, [])
 
+  const setSuggestedVersionMode = useCallback(
+    (mode: VersionSuggestionMode) => {
+      if (!parsed || (mode === 'filename' && !parsed.detectedVersion)) return
+
+      setVersion((current) => ({
+        ...current,
+        version:
+          mode === 'filename' ? parsed.suggestedVersion : parsed.incrementedVersion,
+        buildNumber:
+          mode === 'filename' ? parsed.suggestedBuild : parsed.incrementedBuild,
+      }))
+      setVersionSuggestionMode(mode)
+      setPublishError(null)
+    },
+    [parsed],
+  )
+
   const publish = useCallback(async () => {
     if (!application || !parsed || !fileRef.current) return
     if (publishing) return
@@ -218,6 +240,7 @@ export function useUploadFlow() {
     setFileError(null)
     setParsed(null)
     setVersion(emptyVersion())
+    setVersionSuggestionMode('increment')
     setPublishError(null)
     setPublishing(false)
     setTaskId(null)
@@ -238,6 +261,8 @@ export function useUploadFlow() {
     processFile,
     resetFile,
     version,
+    versionSuggestionMode,
+    setSuggestedVersionMode,
     updateVersion,
     setChannel,
     canNext,

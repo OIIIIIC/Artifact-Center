@@ -1,8 +1,9 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { Link, Navigate } from 'react-router-dom'
 
-import { AppLayout, PageContainer, PageHeader } from '@/components/layout'
+import { AppLayout, PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { ApplicationPicker } from '@/features/upload/application-picker'
 import { FileDropzone } from '@/features/upload/file-dropzone'
@@ -14,19 +15,14 @@ import { useUploadFlow } from '@/features/upload/use-upload-flow'
 import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
-import type { UploadStep } from '@/types/upload'
 
-const STEP_LABEL_KEYS: Record<UploadStep, string> = {
-  1: 'upload.stepApplication',
-  2: 'upload.stepArtifact',
-  3: 'upload.stepVersion',
-  4: 'upload.stepReview',
-}
+const easeOut = [0.2, 0, 0, 1] as const
 
 export function UploadPage() {
   const { t } = useTranslation()
   const role = useAuthStore((s) => s.user?.role)
   const flow = useUploadFlow()
+  const reduceMotion = useReducedMotion()
 
   if (!canWriteContent(role)) {
     return <Navigate to="/" replace />
@@ -81,15 +77,6 @@ export function UploadPage() {
     >
       <PageContainer rhythm="product" className={cn(isAppStep ? 'pb-0' : 'pb-28')}>
         <div className="w-full space-y-7 sm:space-y-8">
-          <PageHeader
-            title={t('upload.title')}
-            description={t('upload.stepOf', {
-              current: flow.step,
-              total: 4,
-              label: t(STEP_LABEL_KEYS[flow.step]),
-            })}
-          />
-
           <StepIndicator step={flow.step} className="w-full" />
 
           <div className="w-full space-y-3">
@@ -111,41 +98,54 @@ export function UploadPage() {
             </div>
 
             <div className="w-full">
-              {flow.step === 1 ? (
-                <ApplicationPicker
-                  value={flow.applicationId}
-                  onChange={flow.selectApplication}
-                />
-              ) : null}
+              <AnimatePresence initial={false} mode="wait">
+                <motion.div
+                  key={flow.step}
+                  initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.28, ease: easeOut }}
+                >
+                  {flow.step === 1 ? (
+                    <ApplicationPicker
+                      value={flow.applicationId}
+                      onChange={flow.selectApplication}
+                    />
+                  ) : null}
 
-              {flow.step === 2 ? (
-                <FileDropzone
-                  application={flow.application}
-                  phase={flow.phase}
-                  fileError={flow.fileError}
-                  parsed={flow.parsed}
-                  onFile={(file) => flow.processFile(file, flow.application)}
-                  onClear={flow.resetFile}
-                />
-              ) : null}
+                  {flow.step === 2 ? (
+                    <FileDropzone
+                      application={flow.application}
+                      phase={flow.phase}
+                      fileError={flow.fileError}
+                      parsed={flow.parsed}
+                      onFile={(file) => flow.processFile(file, flow.application)}
+                      onClear={flow.resetFile}
+                    />
+                  ) : null}
 
-              {flow.step === 3 ? (
-                <StepVersion
-                  version={flow.version}
-                  applicationPlatform={flow.application?.platform ?? 'zip'}
-                  onChange={flow.updateVersion}
-                  onChannel={flow.setChannel}
-                />
-              ) : null}
+                  {flow.step === 3 ? (
+                    <StepVersion
+                      version={flow.version}
+                      applicationPlatform={flow.application?.platform ?? 'zip'}
+                      versionSuggestionMode={flow.versionSuggestionMode}
+                      detectedVersion={flow.parsed?.detectedVersion ?? null}
+                      onChange={flow.updateVersion}
+                      onChannel={flow.setChannel}
+                      onVersionSuggestionModeChange={flow.setSuggestedVersionMode}
+                    />
+                  ) : null}
 
-              {flow.step === 4 && flow.application && flow.parsed ? (
-                <StepReview
-                  application={flow.application}
-                  parsed={flow.parsed}
-                  version={flow.version}
-                  publishError={flow.publishError}
-                />
-              ) : null}
+                  {flow.step === 4 && flow.application && flow.parsed ? (
+                    <StepReview
+                      application={flow.application}
+                      parsed={flow.parsed}
+                      version={flow.version}
+                      publishError={flow.publishError}
+                    />
+                  ) : null}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -159,7 +159,7 @@ export function UploadPage() {
           )}
         >
           <div className="mx-auto w-full max-w-[var(--content-max-width)] px-[var(--page-padding-x)]">
-            <div className="flex items-center justify-between gap-2.5 py-3.5">
+            <div className="flex items-center justify-end gap-2.5 py-3.5">
               <div className="flex shrink-0 items-center">
                 {flow.step > 1 ? (
                   <Button

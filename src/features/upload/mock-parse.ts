@@ -69,9 +69,10 @@ export function mockParseFile(
 ): ParsedArtifactFile {
   const kind = detectFileKind(file.name)
   const platform = platformFromKind(kind)
-  const suggestedVersion = application ? bumpPatch(application.latestVersion) : '1.0.0'
+  const incrementedVersion = application ? bumpPatch(application.latestVersion) : '1.0.0'
   const fromName = file.name.match(/(\d+\.\d+\.\d+(?:-[\w.]+)?)/)
-  const version = fromName?.[1] ?? suggestedVersion
+  const detectedVersion = fromName?.[1] ?? null
+  const suggestedVersion = detectedVersion ?? incrementedVersion
 
   return {
     name: file.name,
@@ -79,8 +80,11 @@ export function mockParseFile(
     kind,
     platform: platform ?? application?.platform ?? null,
     hash: mockHash(file.name, file.size),
-    suggestedVersion: version,
-    suggestedBuild: suggestBuild(version),
+    incrementedVersion,
+    incrementedBuild: suggestBuild(incrementedVersion),
+    detectedVersion,
+    suggestedVersion,
+    suggestedBuild: suggestBuild(suggestedVersion),
     suggestedPackageName: application?.packageName ?? '',
   }
 }

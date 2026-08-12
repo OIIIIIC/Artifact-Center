@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { MarkdownPreview } from '@/components/common/markdown-preview'
 import { CHANNEL_BADGE } from '@/features/upload/channel-meta'
 import { formatFileSize } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -122,9 +123,14 @@ export function StepReview({
           <dt className="text-[0.75rem] text-muted-foreground">
             {t('upload.reviewNotes')}
           </dt>
-          <dd className="mt-1.5 text-[0.875rem] leading-relaxed whitespace-pre-wrap text-foreground">
-            {version.releaseNotes.trim() || (
-              <span className="text-muted-foreground">—</span>
+          <dd className="mt-1.5">
+            {version.releaseNotes.trim() ? (
+              <MarkdownPreview
+                content={version.releaseNotes}
+                className="text-[0.875rem] text-foreground"
+              />
+            ) : (
+              <span className="text-[0.875rem] text-muted-foreground">—</span>
             )}
           </dd>
         </div>

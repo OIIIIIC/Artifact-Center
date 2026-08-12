@@ -57,15 +57,22 @@ describe('上传文件预解析', () => {
     expect(result.suggestedVersion).toBe('1.0.0')
   })
 
-  it('已有版本默认递增补丁号，并优先采用文件名中的版本', () => {
+  it('同时提供自动累加与文件名识别的版本候选', () => {
     const application = createApplication('1.2.3-beta')
 
-    expect(
-      mockParseFile({ name: 'artifact.apk', size: 1024 }, application).suggestedVersion,
-    ).toBe('1.2.4')
-    expect(
-      mockParseFile({ name: 'artifact-2.0.0.apk', size: 1024 }, application)
-        .suggestedVersion,
-    ).toBe('2.0.0')
+    const withoutFilenameVersion = mockParseFile(
+      { name: 'artifact.apk', size: 1024 },
+      application,
+    )
+    expect(withoutFilenameVersion.incrementedVersion).toBe('1.2.4')
+    expect(withoutFilenameVersion.detectedVersion).toBeNull()
+
+    const withFilenameVersion = mockParseFile(
+      { name: 'artifact-2.0.0.apk', size: 1024 },
+      application,
+    )
+    expect(withFilenameVersion.incrementedVersion).toBe('1.2.4')
+    expect(withFilenameVersion.detectedVersion).toBe('2.0.0')
+    expect(withFilenameVersion.suggestedVersion).toBe('2.0.0')
   })
 })

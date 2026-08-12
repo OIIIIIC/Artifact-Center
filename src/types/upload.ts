@@ -3,6 +3,7 @@ import type { ApplicationPlatform } from '@/types/application'
 export type UploadStep = 1 | 2 | 3 | 4
 
 export type UploadChannel = 'stable' | 'beta' | 'internal' | 'deprecated'
+export type VersionSuggestionMode = 'increment' | 'filename'
 
 export type UploadPhase =
   'idle' | 'uploading' | 'verifying' | 'hashing' | 'ready' | 'error'
@@ -45,6 +46,12 @@ export interface ParsedArtifactFile {
   kind: FileKind
   platform: ApplicationPlatform | null
   hash: string
+  /** 基于当前应用最新版本计算出的下一个补丁版本。 */
+  incrementedVersion: string
+  incrementedBuild: string
+  /** 从文件名识别出的版本；尚未读取 APK/AAB 内部 Manifest。 */
+  detectedVersion: string | null
+  /** 保持旧调用方兼容：文件名版本优先，否则使用自动累加版本。 */
   suggestedVersion: string
   suggestedBuild: string
   suggestedPackageName: string
