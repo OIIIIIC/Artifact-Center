@@ -568,7 +568,7 @@
     "referenceEmpty": "Start typing a name or package to compare."
   },
   "applications": {
-    "managersLabel": "People who can manage this application",
+    "membersLabel": "Members of this application",
     "title": "Applications",
     "description": "Manage and distribute your mobile applications in one place.",
     "stats": {

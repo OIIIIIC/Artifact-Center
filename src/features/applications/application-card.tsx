@@ -18,6 +18,7 @@ import {
 } from '@/features/applications/platform-meta'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth-store'
 import type { Application, ApplicationStatus } from '@/types/application'
 
 interface ApplicationCardProps {
@@ -38,17 +39,14 @@ function statusKey(status: ApplicationStatus): string | null {
 export function ApplicationCard({ application, className }: ApplicationCardProps) {
   const { t, i18n } = useTranslation()
   const location = useLocation()
+  const currentUser = useAuthStore((state) => state.user)
   const PlatformIcon = PLATFORM_ICON[application.platform]
 
   const sKey = statusKey(application.status)
-  const managers = application.managers ?? [
-    {
-      id: `owner-${application.id}`,
-      name: application.owner,
-      avatarUrl: null,
-    },
-  ]
-  const visibleManagers = managers.slice(0, 3)
+  const members = (application.members ?? []).filter(
+    (member) => member.id !== currentUser?.id,
+  )
+  const visibleMembers = members.slice(0, 2)
   const statusVariant =
     application.status === 'new'
       ? 'new'
@@ -140,20 +138,28 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
 
       <div className="mt-auto flex items-center justify-between gap-3 pt-5">
         <div className="flex min-w-0 items-center gap-2.5">
-          <AvatarGroup aria-label={t('applications.managersLabel')}>
-            {visibleManagers.map((manager) => (
-              <Avatar key={manager.id} size="sm" title={manager.name}>
-                {manager.avatarUrl ? (
-                  <AvatarImage src={manager.avatarUrl} alt="" />
+          <AvatarGroup aria-label={t('applications.membersLabel')}>
+            {currentUser ? (
+              <Avatar size="sm" title={currentUser.name}>
+                {currentUser.avatarUrl ? (
+                  <AvatarImage src={currentUser.avatarUrl} alt="" />
                 ) : null}
                 <AvatarFallback className="text-[0.625rem] font-medium">
-                  {manager.name.slice(0, 1).toUpperCase()}
+                  {currentUser.name.slice(0, 1).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            ) : null}
+            {visibleMembers.map((member) => (
+              <Avatar key={member.id} size="sm" title={member.name}>
+                {member.avatarUrl ? <AvatarImage src={member.avatarUrl} alt="" /> : null}
+                <AvatarFallback className="text-[0.625rem] font-medium">
+                  {member.name.slice(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             ))}
-            {managers.length > visibleManagers.length ? (
+            {members.length > visibleMembers.length ? (
               <AvatarGroupCount className="text-[0.625rem] font-medium">
-                +{managers.length - visibleManagers.length}
+                +{members.length - visibleMembers.length}
               </AvatarGroupCount>
             ) : null}
           </AvatarGroup>

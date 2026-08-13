@@ -568,7 +568,7 @@
     "referenceEmpty": "开始输入名称或包名即可对照。"
   },
   "applications": {
-    "managersLabel": "可管理此应用的成员",
+    "membersLabel": "此应用的成员",
     "title": "应用",
     "description": "统一管理和分发您的移动应用。",
     "stats": {

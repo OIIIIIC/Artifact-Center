@@ -31,8 +31,8 @@ export interface Application {
   updatedAt: string
   createdAt: string
   owner: string
-  /** 应用列表中的维护者预览，用于快速识别可管理该应用的人员。 */
-  managers?: Array<{
+  /** 应用列表中的成员预览，用于快速识别参与该应用的人员。 */
+  members?: Array<{
     id: string
     name: string
     avatarUrl: string | null

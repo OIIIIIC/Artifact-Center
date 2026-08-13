@@ -54,7 +54,7 @@ function mapRegion(row: typeof regions.$inferSelect) {
   }
 }
 
-type ApplicationManagerPreview = {
+type ApplicationMemberPreview = {
   id: string
   name: string
   avatarUrl: string | null
@@ -76,7 +76,7 @@ type ApplicationResponseRow = Pick<
   | 'createdAt'
   | 'updatedAt'
 > & {
-  latestArtifactUploadedAt?: Date | null
+  latestArtifactUploadedAt?: Date | string | null
 }
 
 /** 目录与搜索结果不读取 ownerId 等不会返回给客户端的列。 */
@@ -92,19 +92,19 @@ const applicationResponseColumns = {
   ownerName: applications.ownerName,
   latestVersion: applications.latestVersion,
   artifactCount: applications.artifactCount,
-  latestArtifactUploadedAt: sql<Date | null>`(
-    SELECT max(${artifacts.uploadedAt})
-    FROM ${artifacts}
-    WHERE ${artifacts.applicationId} = ${applications.id}
-  )`,
   createdAt: applications.createdAt,
   updatedAt: applications.updatedAt,
 }
 
-function mapApp(
+function toIsoTimestamp(value: Date | string | null | undefined) {
+  if (value == null) return null
+  return typeof value === 'string' ? new Date(value).toISOString() : value.toISOString()
+}
+
+export function mapApp(
   row: ApplicationResponseRow,
   region: typeof regions.$inferSelect,
-  managers: ApplicationManagerPreview[] = [],
+  members: ApplicationMemberPreview[] = [],
 ) {
   return {
     id: row.id,
@@ -116,10 +116,10 @@ function mapApp(
     repository: row.repository,
     status: row.status,
     owner: row.ownerName,
-    managers,
+    members,
     latestVersion: row.latestVersion,
     artifactCount: row.artifactCount,
-    latestArtifactUploadedAt: row.latestArtifactUploadedAt?.toISOString() ?? null,
+    latestArtifactUploadedAt: toIsoTimestamp(row.latestArtifactUploadedAt),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }
@@ -162,11 +162,13 @@ applicationRoutes.get('/', async (c) => {
   const user = c.get('user')
   const rows =
     user.role === 'admin'
-      ? await db
-          .select(applicationResponseColumns)
-          .from(applications)
-          .where(where)
-          .orderBy(order)
+      ? (
+          await db
+            .select({ application: applicationResponseColumns })
+            .from(applications)
+            .where(where)
+            .orderBy(order)
+        ).map((row) => row.application)
       : (
           await db
             .select({ application: applicationResponseColumns })
@@ -185,7 +187,22 @@ applicationRoutes.get('/', async (c) => {
   const regionRows = await db.select().from(regions)
   const regionById = new Map(regionRows.map((region) => [region.id, region]))
   const applicationIds = rows.map((row) => row.id)
-  const managerRows = applicationIds.length
+  const latestArtifactRows = applicationIds.length
+    ? await db
+        .select({
+          applicationId: artifacts.applicationId,
+          latestArtifactUploadedAt: sql<
+            Date | string | null
+          >`max(${artifacts.uploadedAt})`,
+        })
+        .from(artifacts)
+        .where(inArray(artifacts.applicationId, applicationIds))
+        .groupBy(artifacts.applicationId)
+    : []
+  const latestArtifactByApplication = new Map(
+    latestArtifactRows.map((row) => [row.applicationId, row.latestArtifactUploadedAt]),
+  )
+  const memberRows = applicationIds.length
     ? await db
         .select({
           applicationId: applicationMembers.applicationId,
@@ -195,28 +212,30 @@ applicationRoutes.get('/', async (c) => {
         })
         .from(applicationMembers)
         .innerJoin(users, eq(applicationMembers.userId, users.id))
-        .where(
-          and(
-            inArray(applicationMembers.applicationId, applicationIds),
-            eq(applicationMembers.role, 'maintainer'),
-          ),
-        )
+        .where(inArray(applicationMembers.applicationId, applicationIds))
         .orderBy(asc(users.name))
     : []
-  const managersByApplication = new Map<string, ApplicationManagerPreview[]>()
-  managerRows.forEach((manager) => {
-    const managers = managersByApplication.get(manager.applicationId) ?? []
-    managers.push({
-      id: manager.id,
-      name: manager.name,
-      avatarUrl: manager.avatarUrl,
+  const membersByApplication = new Map<string, ApplicationMemberPreview[]>()
+  memberRows.forEach((member) => {
+    const members = membersByApplication.get(member.applicationId) ?? []
+    members.push({
+      id: member.id,
+      name: member.name,
+      avatarUrl: member.avatarUrl,
     })
-    managersByApplication.set(manager.applicationId, managers)
+    membersByApplication.set(member.applicationId, members)
   })
 
   return c.json({
     items: rows.map((row) =>
-      mapApp(row, regionById.get(row.regionId)!, managersByApplication.get(row.id)),
+      mapApp(
+        {
+          ...row,
+          latestArtifactUploadedAt: latestArtifactByApplication.get(row.id) ?? null,
+        },
+        regionById.get(row.regionId)!,
+        membersByApplication.get(row.id),
+      ),
     ),
     total: rows.length,
   })
