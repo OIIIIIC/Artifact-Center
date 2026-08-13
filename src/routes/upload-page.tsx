@@ -159,7 +159,7 @@ export function UploadPage() {
           )}
         >
           <div className="mx-auto w-full max-w-[var(--content-max-width)] px-[var(--page-padding-x)]">
-            <div className="flex items-center justify-end gap-2.5 py-3.5">
+            <div className="flex items-center justify-start gap-2.5 py-3.5">
               <div className="flex shrink-0 items-center">
                 {flow.step > 1 ? (
                   <Button
@@ -185,7 +185,7 @@ export function UploadPage() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-end gap-2.5">
+              <div className="flex flex-wrap items-center justify-start gap-2.5">
                 {flow.step === 4 ? (
                   <Button
                     type="button"
