@@ -11,6 +11,26 @@ import type { Artifact } from '@/types/artifact'
 const CONCURRENCY = 4
 const MAX_PART_ATTEMPTS = 3
 
+/**
+ * Resume keys are an idempotency aid, not a security boundary. HTTP origins do
+ * not expose Web Crypto in every browser, so retain resumability with a
+ * deterministic local fingerprint when SHA-256 is unavailable.
+ */
+function fallbackResumeHash(source: string) {
+  let primary = 0x811c9dc5
+  let secondary = 0x9e3779b9
+
+  for (let index = 0; index < source.length; index += 1) {
+    const code = source.charCodeAt(index)
+    primary = Math.imul(primary ^ code, 0x01000193)
+    secondary = Math.imul(secondary ^ (code + index), 0x85ebca6b)
+  }
+
+  return `${(primary >>> 0).toString(16).padStart(8, '0')}${(secondary >>> 0)
+    .toString(16)
+    .padStart(8, '0')}`
+}
+
 export async function resumableUploadKey(file: File, fields: UploadArtifactFields) {
   const source = [
     'v1',
@@ -24,10 +44,17 @@ export async function resumableUploadKey(file: File, fields: UploadArtifactField
     fields.releaseNotes ?? '',
     fields.markLatest === false ? 'false' : 'true',
   ].join('|')
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(source))
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, '0'),
-  ).join('')
+  const subtle = globalThis.crypto?.subtle
+  if (!subtle) return fallbackResumeHash(source)
+
+  try {
+    const digest = await subtle.digest('SHA-256', new TextEncoder().encode(source))
+    return Array.from(new Uint8Array(digest), (byte) =>
+      byte.toString(16).padStart(2, '0'),
+    ).join('')
+  } catch {
+    return fallbackResumeHash(source)
+  }
 }
 
 function isRetryable(error: unknown) {

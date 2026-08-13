@@ -6,7 +6,7 @@ import {
   apiUploadDirectResumablePart,
   apiUploadResumablePart,
 } from '@/services/api'
-import { uploadArtifactResumable } from './resumable-upload'
+import { resumableUploadKey, uploadArtifactResumable } from './resumable-upload'
 
 vi.mock('@/services/api', () => ({
   apiCreateResumableUpload: vi.fn(),
@@ -16,7 +16,21 @@ vi.mock('@/services/api', () => ({
 }))
 
 describe('分片上传', () => {
-  afterEach(() => vi.clearAllMocks())
+  afterEach(() => {
+    vi.clearAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('在非安全 HTTP 页面中仍能生成稳定的断点续传标识', async () => {
+    vi.stubGlobal('crypto', undefined)
+    const file = new File(['123'], 'artifact.apk', { lastModified: 1 })
+    const fields = { version: '1.0.0', platform: 'android' as const }
+
+    await expect(resumableUploadKey(file, fields)).resolves.toMatch(/^[a-f0-9]{8,}$/)
+    await expect(resumableUploadKey(file, fields)).resolves.toBe(
+      await resumableUploadKey(file, fields),
+    )
+  })
 
   it('恢复上传时跳过已完成分片，并汇总进度后完成发布', async () => {
     vi.mocked(apiCreateResumableUpload).mockResolvedValue({
