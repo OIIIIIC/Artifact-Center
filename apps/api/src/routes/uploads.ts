@@ -33,6 +33,7 @@ import {
   storageKeyFor,
 } from '../lib/storage.js'
 import { reserveUploadCapacity } from '../lib/upload-capacity.js'
+import { selectUploadStorage } from '../lib/upload-storage-selection.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import {
   hasApplicationRole,
@@ -223,27 +224,29 @@ uploadRoutes.post(
     if (partCount > MAX_PART_COUNT)
       return jsonError(c, 400, 'too_large', 'Too many upload parts')
 
-    const storageBackend = objectStorageEnabled() ? 's3' : 'local'
-    const storageKey =
-      storageBackend === 's3'
-        ? objectStorageKeyFor(appId, input.data.filename)
-        : storageKeyFor(appId, input.data.filename)
-    let objectUploadId: string | null = null
-    try {
-      if (storageBackend === 's3') {
-        objectUploadId = await createObjectMultipartUpload(
-          storageKey,
-          input.data.filename,
+    const directStorageKey = objectStorageKeyFor(appId, input.data.filename)
+    const { storageBackend, storageKey, objectUploadId } = await selectUploadStorage({
+      objectStorageEnabled: objectStorageEnabled(),
+      localStorageKey: storageKeyFor(appId, input.data.filename),
+      objectStorageKey: directStorageKey,
+      createObjectMultipartUpload: () =>
+        createObjectMultipartUpload(directStorageKey, input.data.filename),
+      onDirectUploadUnavailable: (error) => {
+        const detail = error instanceof Error ? error : new Error(String(error))
+        console.warn(
+          '[upload-storage] direct multipart initialization failed; using proxy fallback',
+          {
+            applicationId: appId,
+            errorCode:
+              typeof error === 'object' && error !== null && 'Code' in error
+                ? String(error.Code)
+                : undefined,
+            errorMessage: detail.message,
+            errorName: detail.name,
+          },
         )
-      }
-    } catch {
-      return jsonError(
-        c,
-        503,
-        'object_storage_unavailable',
-        'Object storage is unavailable',
-      )
-    }
+      },
+    })
 
     let session: typeof uploadSessions.$inferSelect
     try {
