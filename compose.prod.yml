@@ -69,6 +69,9 @@ services:
     logging: *default-logging
     ports:
       - '${APP_PORT:-8080}:80'
+    environment:
+      ARTIFACT_CENTER_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+      OBJECT_STORAGE_PUBLIC_ENDPOINT: ${OBJECT_STORAGE_PUBLIC_ENDPOINT:-}
     depends_on:
       api:
         condition: service_healthy

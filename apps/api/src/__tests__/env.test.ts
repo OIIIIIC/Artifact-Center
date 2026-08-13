@@ -53,4 +53,17 @@ describe('生产环境配置', () => {
       'SHARE_TOKEN_PEPPER',
     )
   })
+
+  it('拒绝带路径前缀的对象存储公网地址，避免预签名路径失配', async () => {
+    await expect(
+      loadProductionEnv({
+        OBJECT_STORAGE_ENDPOINT: 'http://minio:9000',
+        OBJECT_STORAGE_PUBLIC_ENDPOINT:
+          'https://artifacts.example.internal/artifact-storage',
+        OBJECT_STORAGE_BUCKET: 'artifacts',
+        OBJECT_STORAGE_ACCESS_KEY: 'access-key',
+        OBJECT_STORAGE_SECRET_KEY: 'secret-key',
+      }),
+    ).rejects.toThrow('OBJECT_STORAGE_PUBLIC_ENDPOINT must not include a path prefix')
+  })
 })

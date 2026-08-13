@@ -1,0 +1,122 @@
+map $uri $diagnostic_uri {
+    ~^(?<share_prefix>/api/public/shares)/[^/]+(?<share_suffix>/.*)?$ $share_prefix/:token$share_suffix;
+    ~^(?<download_prefix>/api/downloads)/[^/]+$ $download_prefix/:ticket;
+    default $uri;
+}
+
+log_format artifact_json escape=json
+    '{"timestamp":"$time_iso8601",'
+    '"event":"nginx_request",'
+    '"requestId":"$sent_http_x_request_id",'
+    '"method":"$request_method",'
+    '"path":"$diagnostic_uri",'
+    '"status":$status,'
+    '"requestTime":"$request_time",'
+    '"upstreamConnectTime":"$upstream_connect_time",'
+    '"upstreamHeaderTime":"$upstream_header_time",'
+    '"upstreamResponseTime":"$upstream_response_time"}';
+
+server {
+    listen 80;
+    server_name _;
+    server_tokens off;
+    root /usr/share/nginx/html;
+    index index.html;
+    access_log /var/log/nginx/access.log artifact_json;
+    client_max_body_size 0;
+
+    location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    location /api/ {
+        proxy_pass http://api:3001/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ^~ /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location ^~ /fonts/ {
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        try_files $uri =404;
+    }
+
+    location ~* \.(?:svg|png|jpg|jpeg|gif|webp|ico)$ {
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800";
+        try_files $uri =404;
+    }
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy same-origin always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ${OBJECT_STORAGE_PUBLIC_ENDPOINT}" always;
+}
+
+# Keep the S3 request URI intact. Rewriting a path prefix changes the SigV4
+# canonical request and invalidates pre-signed multipart upload URLs.
+server {
+    listen 18081;
+    server_name _;
+    server_tokens off;
+    access_log /var/log/nginx/object-storage-access.log artifact_json;
+    client_max_body_size 0;
+
+    location / {
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin "${ARTIFACT_CENTER_ORIGIN}" always;
+            add_header Access-Control-Allow-Methods "PUT, GET, HEAD, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "*" always;
+            add_header Access-Control-Max-Age 3600 always;
+            add_header Content-Length 0;
+            add_header Content-Type text/plain;
+            return 204;
+        }
+
+        resolver 127.0.0.11 ipv6=off valid=10s;
+        set $object_storage_upstream plane-minio:9000;
+        proxy_pass http://$object_storage_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        # MinIO may emit its own CORS headers. Preserve one unambiguous policy
+        # from this proxy; duplicate Allow-Origin values are rejected by browsers.
+        proxy_hide_header Access-Control-Allow-Origin;
+        proxy_hide_header Access-Control-Allow-Credentials;
+        proxy_hide_header Access-Control-Allow-Headers;
+        proxy_hide_header Access-Control-Allow-Methods;
+        proxy_hide_header Access-Control-Expose-Headers;
+        add_header Access-Control-Allow-Origin "${ARTIFACT_CENTER_ORIGIN}" always;
+        add_header Access-Control-Allow-Methods "PUT, GET, HEAD, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "*" always;
+        add_header Access-Control-Expose-Headers "ETag" always;
+    }
+}

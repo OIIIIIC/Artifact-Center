@@ -58,6 +58,20 @@ if (
   )
 }
 
+if (objectStorageConfigured && objectStoragePublicEndpoint) {
+  let publicUrl: URL
+  try {
+    publicUrl = new URL(objectStoragePublicEndpoint)
+  } catch {
+    throw new Error('OBJECT_STORAGE_PUBLIC_ENDPOINT must be a valid URL')
+  }
+  if (publicUrl.pathname !== '/' || publicUrl.search || publicUrl.hash) {
+    throw new Error(
+      'OBJECT_STORAGE_PUBLIC_ENDPOINT must not include a path prefix because it breaks signed upload URLs',
+    )
+  }
+}
+
 if (production && !process.env.DATABASE_URL) {
   throw new Error('Missing env DATABASE_URL in production')
 }

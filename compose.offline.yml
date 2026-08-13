@@ -68,6 +68,10 @@ services:
     logging: *default-logging
     ports:
       - '${APP_PORT:-8080}:80'
+      - '${OBJECT_STORAGE_PUBLIC_PORT:-18081}:18081'
+    environment:
+      ARTIFACT_CENTER_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+      OBJECT_STORAGE_PUBLIC_ENDPOINT: ${OBJECT_STORAGE_PUBLIC_ENDPOINT:-}
     depends_on:
       api:
         condition: service_healthy
@@ -76,6 +80,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
+    networks:
+      - default
+      - plane-app_default
 
 volumes:
   postgres_data:
