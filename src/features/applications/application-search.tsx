@@ -1,4 +1,5 @@
 import { Search, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,22 @@ export function ApplicationSearch({
   className,
 }: ApplicationSearchProps) {
   const { t } = useTranslation()
+  const [draft, setDraft] = useState(value)
+  const isComposingRef = useRef(false)
+  const lastSubmittedRef = useRef(value)
+
+  useEffect(() => {
+    if (!isComposingRef.current) {
+      setDraft(value)
+      lastSubmittedRef.current = value
+    }
+  }, [value])
+
+  const submit = (nextValue: string) => {
+    if (nextValue === lastSubmittedRef.current) return
+    lastSubmittedRef.current = nextValue
+    onChange(nextValue)
+  }
 
   return (
     <div className={cn('group/search relative w-full', className)}>
@@ -32,14 +49,29 @@ export function ApplicationSearch({
         inputMode="search"
         enterKeyHint="search"
         maxLength={120}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={draft}
+        onCompositionStart={() => {
+          isComposingRef.current = true
+        }}
+        onCompositionEnd={(e) => {
+          isComposingRef.current = false
+          const nextValue = e.currentTarget.value
+          setDraft(nextValue)
+          submit(nextValue)
+        }}
+        onChange={(e) => {
+          const nextValue = e.target.value
+          setDraft(nextValue)
+          if (!isComposingRef.current) {
+            submit(nextValue)
+          }
+        }}
         placeholder={t('applications.searchPlaceholder')}
         aria-label={t('applications.searchAria')}
         className={cn(
           /* h-10 aligns with page action buttons (size lg) */
           'h-10 w-full rounded-xl bg-muted/35 pl-11',
-          value ? 'pr-12' : 'pr-4',
+          draft ? 'pr-12' : 'pr-4',
           'text-[0.875rem] text-foreground placeholder:text-muted-foreground/70',
           'ring-1 ring-border/60 outline-none',
           'transition-[background-color,box-shadow,ring-color] duration-[var(--duration-page)] ease-standard',
@@ -48,14 +80,17 @@ export function ApplicationSearch({
           'dark:bg-muted/20 dark:hover:bg-muted/30 dark:focus-visible:bg-card',
         )}
       />
-      {value ? (
+      {draft ? (
         <div className="absolute top-1/2 right-2.5 flex -translate-y-1/2 items-center">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="size-8 text-muted-foreground transition-colors duration-[var(--duration-hover)] hover:text-foreground"
-            onClick={() => onChange('')}
+            onClick={() => {
+              setDraft('')
+              submit('')
+            }}
             aria-label={t('applications.clearSearch')}
           >
             <X className="size-4" />

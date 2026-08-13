@@ -9,6 +9,13 @@ import { StatusBadge } from '@/components/common'
 import { FormError } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ApplicationMembersPanel } from '@/features/applications/application-members-panel'
 import { useRegions } from '@/features/regions/use-regions'
 import { APPLICATION_STATUS_CHIP } from '@/features/applications/application-status-meta'
@@ -456,22 +463,23 @@ function BasicSettings({
             <span className="text-[0.8125rem] font-medium text-foreground">
               {t('createApp.fieldRegion')}
             </span>
-            <select
-              value={values.regionId}
-              onChange={(event) => onRegionChange(event.target.value)}
-              className="h-8 w-full rounded-lg bg-muted/30 px-2.5 text-[0.8125rem] outline-none ring-1 ring-border/60 focus-visible:ring-[3px] focus-visible:ring-ring/30"
-            >
-              {regions.map((region) => (
-                <option
-                  key={region.id}
-                  value={region.id}
-                  disabled={!region.enabled && region.id !== application.region.id}
-                >
-                  {region.name}
-                  {!region.enabled ? ` · ${t('settings.regionInactive')}` : ''}
-                </option>
-              ))}
-            </select>
+            <Select value={values.regionId} onValueChange={onRegionChange}>
+              <SelectTrigger className="h-8 text-[0.8125rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {regions.map((region) => (
+                  <SelectItem
+                    key={region.id}
+                    value={region.id}
+                    disabled={!region.enabled && region.id !== application.region.id}
+                  >
+                    {region.name}
+                    {!region.enabled ? ` · ${t('settings.regionInactive')}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <TextField
             field="repository"

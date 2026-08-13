@@ -4,6 +4,13 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { ApplicationAccessGrantDto, TeamMemberDto } from '@/services/api'
 import type { Application } from '@/types/application'
 
@@ -136,18 +143,19 @@ export function AccessPermissionsWorkspace({
             placeholder={t('access.searchApplications')}
           />
         </label>
-        <select
-          value={regionId}
-          onChange={(event) => setRegionId(event.target.value)}
-          className="h-9 rounded-lg border border-border/70 bg-background px-2.5 text-[0.75rem] text-foreground outline-none focus:ring-2 focus:ring-ring/30"
-        >
-          <option value="all">{t('access.allRegions')}</option>
-          {regions.map((region) => (
-            <option key={region.id} value={region.id}>
-              {region.name}
-            </option>
-          ))}
-        </select>
+        <Select value={regionId} onValueChange={setRegionId}>
+          <SelectTrigger className="h-9 w-[10rem] bg-background text-[0.75rem]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('access.allRegions')}</SelectItem>
+            {regions.map((region) => (
+              <SelectItem key={region.id} value={region.id}>
+                {region.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
