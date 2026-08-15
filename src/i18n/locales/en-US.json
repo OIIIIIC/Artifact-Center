@@ -815,6 +815,7 @@
     "expiry7d": "7 days",
     "expiry30d": "30 days",
     "expiryNever": "Never",
+    "expiryRemaining": "Expires {{time}}",
     "createAndCopy": "Create & copy link",
     "createAnother": "Create another",
     "creating": "Creating…",

@@ -18,12 +18,14 @@ vi.mock('react-i18next', async (importOriginal) => {
     ...actual,
     useTranslation: () => ({
       i18n: { language: 'zh-CN' },
-      t: (key: string, options?: { version?: string }) =>
+      t: (key: string, options?: { version?: string; time?: string }) =>
         key === 'share.modePinnedVersion'
           ? `固定版本 · v${options?.version}`
-          : key === 'share.revoke'
-            ? '吊销'
-            : key,
+          : key === 'share.expiryRemaining'
+            ? `距到期 ${options?.time}`
+            : key === 'share.revoke'
+              ? '吊销'
+              : key,
     }),
   }
 })
@@ -51,7 +53,7 @@ describe('分享链接列表', () => {
         artifactVersion: '2.7.1',
         createdBy: '张盈睿',
         createdAt: new Date().toISOString(),
-        expiresAt: null,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         revokedAt: null,
         downloadCount: 1,
         itemCount: 1,
@@ -63,6 +65,7 @@ describe('分享链接列表', () => {
     })
 
     expect(await screen.findByText('固定版本 · v2.7.1')).toBeInTheDocument()
+    expect(screen.getByText(/距到期/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '吊销' })).toHaveClass('text-destructive')
   })
 })

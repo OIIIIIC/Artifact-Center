@@ -29,6 +29,7 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
   const query = useQuery({
     queryKey: ['shares', applicationId],
     queryFn: () => apiListShares(applicationId),
+    refetchInterval: 60_000,
   })
 
   const items = (query.data ?? []).filter((s) => !s.revokedAt)
@@ -123,7 +124,9 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
             <p className="mt-0.5 text-[0.75rem] text-muted-foreground">
               <time dateTime={s.createdAt}>{formatRelativeTime(s.createdAt)}</time>
               {s.expiresAt
-                ? ` · ${t('share.expiresAt', { date: new Date(s.expiresAt).toLocaleDateString() })}`
+                ? ` · ${t('share.expiryRemaining', {
+                    time: formatRelativeTime(s.expiresAt),
+                  })}`
                 : ` · ${t('share.expiryNever')}`}
               {typeof s.downloadCount === 'number'
                 ? ` · ${t('share.downloadCount', { count: s.downloadCount })}`

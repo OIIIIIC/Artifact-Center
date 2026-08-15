@@ -7,6 +7,7 @@ import { applications, artifacts, shareLinkItems, shareLinks } from '../db/schem
 import { writeAudit } from '../lib/audit.js'
 import { jsonError } from '../lib/errors.js'
 import { createShareToken, hashShareToken, shareTokenPrefix } from '../lib/share-token.js'
+import { revokeExpiredShares } from '../lib/share-expiration.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import {
   hasApplicationRole,
@@ -329,6 +330,7 @@ shareRoutes.get(
   requireApplicationRole('appId', 'maintainer'),
   async (c) => {
     const appId = c.req.param('appId')
+    await revokeExpiredShares()
     const rows = await db
       .select({
         share: shareLinks,

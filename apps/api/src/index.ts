@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 
 import { env } from './env.js'
 import { ensureRetentionSettings, runRetentionCleanup } from './lib/retention.js'
+import { revokeExpiredShares } from './lib/share-expiration.js'
 import { ensureStorageRoot } from './lib/storage.js'
 import {
   createRequestObservability,
@@ -37,6 +38,20 @@ setInterval(() => {
     })
     .catch((err) => console.error('[retention] cleanup failed', err))
 }, RETENTION_INTERVAL_MS)
+
+// Capability links are revoked promptly when their selected validity period ends.
+const SHARE_EXPIRATION_INTERVAL_MS = 60 * 1000
+function runShareExpirationCleanup() {
+  void revokeExpiredShares()
+    .then((result) => {
+      if (result.revoked > 0) {
+        console.log('[shares] expired links revoked', result)
+      }
+    })
+    .catch((err) => console.error('[shares] expiration cleanup failed', err))
+}
+runShareExpirationCleanup()
+setInterval(runShareExpirationCleanup, SHARE_EXPIRATION_INTERVAL_MS)
 
 const app = new Hono()
 

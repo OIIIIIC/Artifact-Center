@@ -58,10 +58,10 @@ export async function resolveShare(token: string): Promise<ShareResolution> {
   }
 
   if (!share) return { status: 'not_found' }
-  if (share.revokedAt) return { status: 'revoked' }
-  if (share.expiresAt && share.expiresAt.getTime() < Date.now()) {
+  if (share.expiresAt && share.expiresAt.getTime() <= Date.now()) {
     return { status: 'expired' }
   }
+  if (share.revokedAt) return { status: 'revoked' }
 
   const rows = await db
     .select({ item: shareLinkItems, application: applications, region: regions })

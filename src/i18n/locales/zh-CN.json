@@ -815,6 +815,7 @@
     "expiry7d": "7 天",
     "expiry30d": "30 天",
     "expiryNever": "永久",
+    "expiryRemaining": "距到期 {{time}}",
     "createAndCopy": "生成并复制链接",
     "createAnother": "再生成一条",
     "creating": "生成中…",
