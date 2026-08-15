@@ -774,7 +774,6 @@ export type PublicShareResolve = {
   ok: true
   share: {
     id: string
-    token: string
     kind: 'single' | 'collection'
     title: string
     regionId: string | null

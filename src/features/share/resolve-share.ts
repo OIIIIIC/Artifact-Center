@@ -7,7 +7,6 @@ export type ShareResolveOk = {
   ok: true
   link: {
     id: string
-    token: string
     kind: ShareKind
     title: string
     regionId: string | null
@@ -41,7 +40,9 @@ export async function resolveShareToken(token: string): Promise<ShareResolveResu
       region: data.region,
       items: data.items,
       sharedBy: data.share.createdBy?.trim() || null,
-      serverToken: data.share.token,
+      // The resolve API deliberately never echoes a capability credential.
+      // The URL is the source of truth for an anonymous share download.
+      serverToken: token.trim(),
     }
   } catch (error) {
     if (error instanceof ApiError && error.status === 410) {
