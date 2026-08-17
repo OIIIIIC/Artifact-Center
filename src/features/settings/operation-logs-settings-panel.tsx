@@ -72,11 +72,12 @@ export function OperationLogsSettingsPanel({
       {items.length > 0 ? (
         <div className="space-y-3">
           <div className="overflow-x-auto rounded-xl bg-card/70 ring-1 ring-border/70">
-            <table className="w-full min-w-[46rem] border-collapse text-left">
+            <table className="w-full min-w-[54rem] border-collapse text-left">
               <thead className="border-b border-border/60 bg-muted/30 text-[0.6875rem] font-medium text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 sm:px-5">{t('settings.auditAction')}</th>
                   <th className="px-4 py-3 sm:px-5">{t('settings.auditSummary')}</th>
+                  <th className="px-4 py-3 sm:px-5">{t('settings.auditApplication')}</th>
                   <th className="px-4 py-3 sm:px-5">{t('settings.auditActor')}</th>
                   <th className="px-4 py-3 sm:px-5">{t('settings.auditIp')}</th>
                   <th className="px-4 py-3 text-right sm:px-5">
@@ -92,6 +93,9 @@ export function OperationLogsSettingsPanel({
                     </td>
                     <td className="max-w-xl px-4 py-3.5 text-foreground sm:px-5">
                       {item.summary}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3.5 text-muted-foreground sm:px-5">
+                      {item.applicationName ?? '—'}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3.5 text-muted-foreground sm:px-5">
                       {item.actorName}

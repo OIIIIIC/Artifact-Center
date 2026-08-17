@@ -49,16 +49,27 @@ const auditRow = {
 describe('全局审计流权限', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    const chain = {
+    const auditChain = {
       from: vi.fn(),
       innerJoin: database.innerJoin,
       orderBy: vi.fn(),
       offset: vi.fn(),
       limit: database.limit,
     }
-    Object.values(chain).forEach((method) => method.mockReturnValue(chain))
-    database.select.mockReturnValue(chain)
+    Object.values(auditChain).forEach((method) => method.mockReturnValue(auditChain))
     database.limit.mockResolvedValue([{ audit: auditRow }])
+
+    const applicationChain = {
+      from: vi.fn(),
+      where: vi.fn(),
+    }
+    applicationChain.from.mockReturnValue(applicationChain)
+    applicationChain.where.mockResolvedValue([
+      { id: 'app-allowed', name: '允许访问的应用' },
+    ])
+    database.select.mockImplementation((fields?: { audit?: unknown }) =>
+      fields?.audit ? auditChain : applicationChain,
+    )
   })
 
   it('非管理员通过应用成员关系查询审计记录', async () => {
@@ -76,6 +87,7 @@ describe('全局审计流权限', () => {
       expect.objectContaining({
         id: 'audit-1',
         applicationId: 'app-allowed',
+        applicationName: '允许访问的应用',
       }),
     ])
   })

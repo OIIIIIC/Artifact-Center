@@ -95,6 +95,7 @@ export type AuditLogItem = {
   objectType: string
   objectId: string | null
   applicationId: string | null
+  applicationName: string | null
   summary: string
   meta: Record<string, unknown> | null
   ip: string | null

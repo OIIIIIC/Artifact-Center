@@ -134,8 +134,9 @@ async function streamItem(
     objectType: 'artifact',
     objectId: artifact.id,
     applicationId: artifact.applicationId,
-    summary: `分享下载 ${artifact.filename} (v${artifact.version})`,
+    summary: `分享下载 ${entry.application.name} · ${artifact.filename}（v${artifact.version}）`,
     meta: {
+      applicationName: entry.application.name,
       via: 'share_token',
       shareId: share.id,
       shareItemId: entry.item.id,

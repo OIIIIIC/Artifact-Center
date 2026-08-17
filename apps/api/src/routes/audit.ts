@@ -1,8 +1,8 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '../db/client.js'
-import { applicationMembers, auditLogs } from '../db/schema.js'
+import { applicationMembers, applications, auditLogs } from '../db/schema.js'
 import { jsonError } from '../lib/errors.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import { hasApplicationRole } from '../middleware/application-access.js'
@@ -72,13 +72,32 @@ auditRoutes.get('/', async (c) => {
     rows = memberRows.map((row) => row.audit)
   }
 
+  const applicationIds = [
+    ...new Set(rows.flatMap((row) => (row.applicationId ? [row.applicationId] : []))),
+  ]
+  const applicationNameById = new Map<string, string>()
+  if (applicationIds.length > 0) {
+    const applicationRows = await db
+      .select({ id: applications.id, name: applications.name })
+      .from(applications)
+      .where(inArray(applications.id, applicationIds))
+    for (const application of applicationRows) {
+      applicationNameById.set(application.id, application.name)
+    }
+  }
+
   return c.json({
-    items: rows.map(mapRow),
+    items: rows.map((row) =>
+      mapRow(
+        row,
+        row.applicationId ? (applicationNameById.get(row.applicationId) ?? null) : null,
+      ),
+    ),
     nextOffset: rows.length === limit ? offset + rows.length : null,
   })
 })
 
-function mapRow(r: typeof auditLogs.$inferSelect) {
+function mapRow(r: typeof auditLogs.$inferSelect, applicationName: string | null) {
   return {
     id: r.id,
     actorId: r.actorId,
@@ -87,6 +106,7 @@ function mapRow(r: typeof auditLogs.$inferSelect) {
     objectType: r.objectType,
     objectId: r.objectId,
     applicationId: r.applicationId,
+    applicationName,
     summary: r.summary,
     meta: r.meta,
     ip: r.ip,

@@ -34,6 +34,7 @@ describe('操作日志设置面板', () => {
           objectType: 'artifact',
           objectId: 'artifact-1',
           applicationId: 'app-1',
+          applicationName: 'Mobile Banking',
           summary: '上传 Mobile Banking 2.1.0',
           meta: null,
           ip: '10.0.0.8',
@@ -52,6 +53,7 @@ describe('操作日志设置面板', () => {
 
     await screen.findByText('上传 Mobile Banking 2.1.0')
     expect(screen.getByText('管理员')).toBeInTheDocument()
+    expect(screen.getByText('Mobile Banking')).toBeInTheDocument()
     expect(screen.getByText('10.0.0.8')).toBeInTheDocument()
     await waitFor(() => {
       expect(listAudit).toHaveBeenCalledWith({ limit: 50, offset: 0 })

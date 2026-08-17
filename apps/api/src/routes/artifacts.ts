@@ -79,6 +79,17 @@ function mapArtifact(r: typeof artifacts.$inferSelect) {
   }
 }
 
+async function findArtifactForDownload(id: string) {
+  const [row] = await db
+    .select({ artifact: artifacts, applicationName: applications.name })
+    .from(artifacts)
+    .innerJoin(applications, eq(artifacts.applicationId, applications.id))
+    .where(eq(artifacts.id, id))
+    .limit(1)
+
+  return row ? { ...row.artifact, applicationName: row.applicationName } : undefined
+}
+
 function resolveArtifactType(filename: string): ArtifactType | null {
   const ext = filename.split('.').pop()?.toLowerCase()
   if (ext === 'apk' || ext === 'aab' || ext === 'exe' || ext === 'zip') return ext
@@ -417,7 +428,7 @@ artifactRoutes.get('/artifacts/:id', requireAuth, async (c) => {
 /** GET /artifacts/:id/download — stream file */
 artifactRoutes.get('/artifacts/:id/download', requireAuth, async (c) => {
   const id = c.req.param('id')
-  const [row] = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
+  const row = await findArtifactForDownload(id)
   if (!row) return jsonError(c, 404, 'not_found', 'Artifact not found')
   if (!(await hasApplicationRole(c.get('user'), row.applicationId, 'viewer'))) {
     return jsonError(c, 403, 'forbidden', 'Insufficient application role')
@@ -437,8 +448,12 @@ artifactRoutes.get('/artifacts/:id/download', requireAuth, async (c) => {
     objectType: 'artifact',
     objectId: row.id,
     applicationId: row.applicationId,
-    summary: `下载 ${row.filename} (v${row.version})`,
-    meta: { version: row.version, sizeBytes: row.sizeBytes },
+    summary: `下载 ${row.applicationName} · ${row.filename}（v${row.version}）`,
+    meta: {
+      applicationName: row.applicationName,
+      version: row.version,
+      sizeBytes: row.sizeBytes,
+    },
   })
 
   return c.body(Readable.toWeb(stream) as ReadableStream)
@@ -471,11 +486,7 @@ artifactRoutes.get('/downloads/:ticket', async (c) => {
     return jsonError(c, 401, 'unauthorized', 'Invalid or expired download ticket')
   }
 
-  const [row] = await db
-    .select()
-    .from(artifacts)
-    .where(eq(artifacts.id, ticket.artifactId))
-    .limit(1)
+  const row = await findArtifactForDownload(ticket.artifactId)
   if (!row) return jsonError(c, 404, 'not_found', 'Artifact not found')
   if (!(await hasApplicationRole(ticket, row.applicationId, 'viewer'))) {
     return jsonError(c, 403, 'forbidden', 'Insufficient application role')
@@ -493,8 +504,13 @@ artifactRoutes.get('/downloads/:ticket', async (c) => {
     objectType: 'artifact',
     objectId: row.id,
     applicationId: row.applicationId,
-    summary: `下载 ${row.filename} (v${row.version})`,
-    meta: { version: row.version, sizeBytes: row.sizeBytes, via: 'download_ticket' },
+    summary: `下载 ${row.applicationName} · ${row.filename}（v${row.version}）`,
+    meta: {
+      applicationName: row.applicationName,
+      version: row.version,
+      sizeBytes: row.sizeBytes,
+      via: 'download_ticket',
+    },
     actorId: ticket.sub,
     actorName: ticket.name,
   })

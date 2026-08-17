@@ -381,6 +381,7 @@
     "auditDesc": "Review key platform operations and access records in chronological order.",
     "auditAction": "Action",
     "auditSummary": "Details",
+    "auditApplication": "Application",
     "auditActor": "Actor",
     "auditIp": "IP address",
     "auditTime": "Time",

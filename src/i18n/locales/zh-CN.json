@@ -381,6 +381,7 @@
     "auditDesc": "按时间查看平台内的关键操作与访问记录。",
     "auditAction": "操作",
     "auditSummary": "内容",
+    "auditApplication": "项目",
     "auditActor": "操作人",
     "auditIp": "IP 地址",
     "auditTime": "时间",
