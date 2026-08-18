@@ -41,6 +41,7 @@ function scoreText(haystack: string, needle: string): number {
 function scoreApplication(app: Application, q: string): number {
   return Math.max(
     scoreText(app.name, q),
+    scoreText(app.applicationCode, q) * 0.98,
     scoreText(app.packageName, q) * 0.95,
     scoreText(app.description, q) * 0.6,
     scoreText(app.owner, q) * 0.55,
@@ -53,6 +54,7 @@ function scoreArtifact(art: Artifact, app: Application, q: string): number {
   return Math.max(
     scoreText(art.version, q),
     scoreText(art.filename, q) * 0.9,
+    scoreText(art.originalFilename ?? '', q) * 0.8,
     scoreText(art.buildNumber, q) * 0.75,
     scoreText(art.uploader, q) * 0.5,
     scoreText(art.releaseNotes, q) * 0.4,

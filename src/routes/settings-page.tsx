@@ -3,6 +3,7 @@ import {
   HardDrive,
   MapPinned,
   Palette,
+  Bot,
   ShieldCheck,
   UserRound,
   Users,
@@ -17,18 +18,32 @@ import { AppearanceSettingsPanel } from '@/features/settings/appearance-settings
 import { MembersSettingsPanel } from '@/features/settings/members-settings-panel'
 import { OperationLogsSettingsPanel } from '@/features/settings/operation-logs-settings-panel'
 import { ProfileSecurityPanel } from '@/features/settings/profile-security-panel'
+import { ReleaseRobotsSettingsPanel } from '@/features/settings/release-robots-settings-panel'
 import { RegionsSettingsPanel } from '@/features/settings/regions-settings-panel'
 import { RetentionSettingsPanel } from '@/features/settings/retention-settings-panel'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
 type SettingsSection =
-  'general' | 'appearance' | 'retention' | 'members' | 'regions' | 'access' | 'audit'
+  | 'general'
+  | 'appearance'
+  | 'retention'
+  | 'robots'
+  | 'members'
+  | 'regions'
+  | 'access'
+  | 'audit'
 type SettingsStandalone = Extract<SettingsSection, 'members' | 'regions' | 'access'>
 
 const PERSONAL_SECTIONS: SettingsSection[] = ['general', 'appearance']
 const PLATFORM_SECTIONS: SettingsSection[] = ['retention']
-const MANAGEMENT_SECTIONS: SettingsSection[] = ['members', 'regions', 'access', 'audit']
+const MANAGEMENT_SECTIONS: SettingsSection[] = [
+  'robots',
+  'members',
+  'regions',
+  'access',
+  'audit',
+]
 
 export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }) {
   const { t } = useTranslation()
@@ -43,6 +58,7 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
     general: { label: t('settings.navGeneral'), icon: UserRound },
     appearance: { label: t('settings.navAppearance'), icon: Palette },
     retention: { label: t('settings.navRetention'), icon: HardDrive },
+    robots: { label: t('settings.navReleaseRobots'), icon: Bot },
     members: { label: t('settings.navMembers'), icon: Users },
     regions: { label: t('settings.navRegions'), icon: MapPinned },
     access: { label: t('settings.navAccess'), icon: ShieldCheck },
@@ -118,6 +134,9 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
             ) : null}
             {isAdmin && section === 'members' ? (
               <MembersSettingsPanel hideHeader />
+            ) : null}
+            {isAdmin && section === 'robots' ? (
+              <ReleaseRobotsSettingsPanel hideHeader />
             ) : null}
             {isAdmin && section === 'regions' ? (
               <RegionsSettingsPanel isAdmin={isAdmin} hideHeader />

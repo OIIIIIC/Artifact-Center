@@ -4,12 +4,13 @@ import { Readable } from 'node:stream'
 import { z } from 'zod'
 
 import { db } from '../db/client.js'
-import { applications, artifacts, releases } from '../db/schema.js'
+import { applications, artifacts, regions, releases } from '../db/schema.js'
 import {
   refreshApplicationArtifactStats,
   statusFromChannel,
 } from '../lib/artifact-helpers.js'
 import { writeAudit } from '../lib/audit.js'
+import { distributionFilename } from '../lib/artifact-filename.js'
 import { attachmentDisposition } from '../lib/download-response.js'
 import { enforceRetentionAfterUpload } from '../lib/retention.js'
 import { reserveUploadCapacity } from '../lib/upload-capacity.js'
@@ -68,6 +69,7 @@ function mapArtifact(r: typeof artifacts.$inferSelect) {
     type: r.type,
     channel: r.channel,
     status: r.status,
+    originalFilename: r.originalFilename,
     filename: r.filename,
     sizeBytes: r.sizeBytes,
     sha256: r.sha256,
@@ -124,12 +126,14 @@ artifactRoutes.post(
     const appId = c.req.param('appId')
     const user = c.get('user')
 
-    const [app] = await db
-      .select()
+    const [target] = await db
+      .select({ application: applications, regionCode: regions.code })
       .from(applications)
+      .innerJoin(regions, eq(regions.id, applications.regionId))
       .where(eq(applications.id, appId))
       .limit(1)
-    if (!app) return jsonError(c, 404, 'not_found', 'Application not found')
+    if (!target) return jsonError(c, 404, 'not_found', 'Application not found')
+    const app = target.application
     if (app.status === 'archived') {
       return jsonError(c, 409, 'archived_application', 'Application is archived')
     }
@@ -296,6 +300,15 @@ artifactRoutes.post(
     }
 
     const channel = channelParsed.data
+    const finalBuildNumber = buildNumber || '1'
+    const finalFilename = distributionFilename({
+      regionCode: target.regionCode,
+      applicationCode: app.applicationCode,
+      version,
+      buildNumber: finalBuildNumber,
+      channel,
+      originalFilename: filename,
+    })
     const status = markLatest
       ? ('latest' as const)
       : channel === 'beta'
@@ -344,12 +357,13 @@ artifactRoutes.post(
             applicationId: appId,
             releaseId: release.id,
             version,
-            buildNumber: buildNumber || '1',
+            buildNumber: finalBuildNumber,
             platform,
             type: artifactType,
             channel,
             status,
-            filename,
+            originalFilename: filename,
+            filename: finalFilename,
             sizeBytes,
             sha256,
             storageKey,
@@ -393,8 +407,10 @@ artifactRoutes.post(
       objectType: 'artifact',
       objectId: row.id,
       applicationId: appId,
-      summary: `上传 ${app.name} v${version}（${file.filename}）`,
+      summary: `上传 ${app.name} v${version}（${finalFilename}）`,
       meta: {
+        originalFilename: file.filename,
+        filename: finalFilename,
         version,
         channel,
         sizeBytes,

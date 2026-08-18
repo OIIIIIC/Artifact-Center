@@ -27,6 +27,7 @@ vi.mock('sonner', () => ({
 const application: Application = {
   id: 'app-test',
   name: '测试应用',
+  applicationCode: 'test-app',
   description: '上传任务测试',
   packageName: 'com.example.test',
   platform: 'android',

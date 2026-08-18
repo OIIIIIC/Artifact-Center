@@ -253,6 +253,16 @@ export function ArtifactsTable({
                     <p className="mt-0.5 text-[0.6875rem] text-muted-foreground/75">
                       {t('detail.build', { number: art.buildNumber })}
                     </p>
+                    <p
+                      className="mt-1 max-w-[16rem] truncate font-mono text-[0.6875rem] text-muted-foreground/70"
+                      title={
+                        art.originalFilename && art.originalFilename !== art.filename
+                          ? `${art.filename}\n${t('upload.reviewOriginalFilename')}: ${art.originalFilename}`
+                          : art.filename
+                      }
+                    >
+                      {art.filename}
+                    </p>
                     <p className="mt-1 flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground sm:hidden">
                       <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} />
                       <span>{t(`platform.${art.platform}`)}</span>

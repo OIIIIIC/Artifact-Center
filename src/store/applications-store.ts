@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 import { MOCK_APPLICATIONS } from '@/mocks/applications'
+import { suggestApplicationCode } from '@/lib/application-code'
 import type {
   Application,
   ApplicationPlatform,
@@ -10,6 +11,7 @@ import type {
 
 export type CreateApplicationInput = {
   name: string
+  applicationCode: string
   description: string
   packageName: string
   platform: ApplicationPlatform
@@ -20,6 +22,7 @@ export type CreateApplicationInput = {
 
 export type UpdateApplicationInput = {
   name?: string
+  applicationCode?: string
   description?: string
   packageName?: string
   platform?: ApplicationPlatform
@@ -58,8 +61,12 @@ function slugify(name: string): string {
 }
 
 function applyOverride(app: Application, override?: Partial<Application>): Application {
-  if (!override) return app
-  return { ...app, ...override, id: app.id }
+  const merged = override ? { ...app, ...override, id: app.id } : app
+  return {
+    ...merged,
+    applicationCode:
+      merged.applicationCode || suggestApplicationCode(merged.name, merged.packageName),
+  }
 }
 
 export const useApplicationsStore = create<ApplicationsState>()(
@@ -89,6 +96,7 @@ export const useApplicationsStore = create<ApplicationsState>()(
         const app: Application = {
           id,
           name: input.name.trim(),
+          applicationCode: input.applicationCode.trim(),
           description: input.description.trim(),
           packageName: input.packageName.trim(),
           platform: input.platform,
@@ -110,6 +118,7 @@ export const useApplicationsStore = create<ApplicationsState>()(
         if (!current) return { ok: false, code: 'not_found' }
 
         const name = input.name?.trim()
+        const applicationCode = input.applicationCode?.trim()
         const description = input.description?.trim()
         const packageName = input.packageName?.trim()
         const repository = input.repository?.trim()
@@ -117,6 +126,7 @@ export const useApplicationsStore = create<ApplicationsState>()(
 
         if (
           (input.name !== undefined && !name) ||
+          (input.applicationCode !== undefined && !applicationCode) ||
           (input.description !== undefined && !description) ||
           (input.packageName !== undefined && !packageName)
         ) {
@@ -127,6 +137,7 @@ export const useApplicationsStore = create<ApplicationsState>()(
           updatedAt: new Date().toISOString(),
         }
         if (name !== undefined) patch.name = name
+        if (applicationCode !== undefined) patch.applicationCode = applicationCode
         if (description !== undefined) patch.description = description
         if (packageName !== undefined) patch.packageName = packageName
         if (input.platform !== undefined) patch.platform = input.platform

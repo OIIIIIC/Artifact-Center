@@ -28,9 +28,17 @@ export type AuditAction =
   | 'auth.login'
   | 'auth.change_password'
   | 'auth.profile_update'
+  | 'release_credential.create'
+  | 'release_credential.revoke'
 
 export type AuditObjectType =
-  'application' | 'artifact' | 'region' | 'user' | 'session' | 'system'
+  | 'application'
+  | 'artifact'
+  | 'region'
+  | 'release_credential'
+  | 'user'
+  | 'session'
+  | 'system'
 
 export type WriteAuditInput = {
   action: AuditAction

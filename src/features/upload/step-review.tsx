@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { MarkdownPreview } from '@/components/common/markdown-preview'
 import { CHANNEL_BADGE } from '@/features/upload/channel-meta'
 import { formatFileSize } from '@/lib/format'
+import { previewDistributionFilename } from '@/lib/artifact-filename'
 import { cn } from '@/lib/utils'
 import type { Application } from '@/types/application'
 import type { ParsedArtifactFile, PublishError, VersionDraft } from '@/types/upload'
@@ -49,6 +50,13 @@ export function StepReview({
   publishError,
 }: StepReviewProps) {
   const { t } = useTranslation()
+  const distributionFilename = previewDistributionFilename({
+    application,
+    version: version.version,
+    buildNumber: version.buildNumber,
+    channel: version.channel,
+    originalFilename: parsed.name,
+  })
 
   return (
     <div className="w-full space-y-4">
@@ -112,7 +120,12 @@ export function StepReview({
           label={t('upload.reviewLatest')}
           value={version.markLatest ? t('common.yes') : t('common.no')}
         />
-        <Row label={t('upload.reviewFile')} value={parsed.name} mono />
+        <Row
+          label={t('upload.reviewDistributionFilename')}
+          value={distributionFilename}
+          mono
+        />
+        <Row label={t('upload.reviewOriginalFilename')} value={parsed.name} mono />
         <Row label={t('upload.reviewSize')} value={formatFileSize(parsed.sizeBytes)} />
         <Row
           label={t('upload.reviewHash')}

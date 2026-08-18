@@ -21,6 +21,8 @@ export interface Region {
 export interface Application {
   id: string
   name: string
+  /** Stable short identifier used in distribution filenames. */
+  applicationCode: string
   description: string
   packageName: string
   platform: ApplicationPlatform

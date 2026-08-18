@@ -16,6 +16,7 @@ import { auditRoutes } from './routes/audit.js'
 import { authRoutes } from './routes/auth.js'
 import { healthRoutes } from './routes/health.js'
 import { publicRoutes } from './routes/public.js'
+import { releaseCredentialRoutes } from './routes/release-credentials.js'
 import { searchRoutes } from './routes/search.js'
 import { settingsRoutes } from './routes/settings.js'
 import { shareRoutes } from './routes/shares.js'
@@ -74,8 +75,11 @@ app.route('/users', userRoutes)
 app.route('/audit', auditRoutes)
 app.route('/search', searchRoutes)
 app.route('/settings', settingsRoutes)
-app.route('/applications', applicationRoutes)
+// Upload routes include /applications/:appId/uploads and must be registered before
+// the ordinary /applications tree so its user-only middleware cannot intercept robots.
 app.route('/', uploadRoutes)
+app.route('/applications', applicationRoutes)
+app.route('/settings/release-credentials', releaseCredentialRoutes)
 app.route('/', shareRoutes)
 app.route('/', artifactRoutes)
 

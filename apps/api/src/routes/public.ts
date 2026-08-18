@@ -53,6 +53,7 @@ function mapApp(entry: ResolvedShareItem) {
   return {
     id: application.id,
     name: application.name,
+    applicationCode: application.applicationCode,
     description: application.description,
     packageName: application.packageName,
     platform: application.platform,
@@ -78,6 +79,7 @@ function mapArt(artifact: NonNullable<ResolvedShareItem['artifact']>) {
     type: artifact.type,
     channel: artifact.channel,
     status: artifact.status,
+    originalFilename: artifact.originalFilename,
     filename: artifact.filename,
     sizeBytes: artifact.sizeBytes,
     sha256: artifact.sha256,

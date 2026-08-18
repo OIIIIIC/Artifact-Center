@@ -124,7 +124,10 @@ export type SearchApiResult = {
   applications: Application[]
   artifacts: Array<{
     artifact: Artifact
-    application: Pick<Application, 'id' | 'name' | 'packageName' | 'platform' | 'region'>
+    application: Pick<
+      Application,
+      'id' | 'name' | 'applicationCode' | 'packageName' | 'platform' | 'region'
+    >
   }>
   total: number
 }
@@ -208,6 +211,7 @@ export async function apiAdminResetPassword(id: string, password: string): Promi
 type ApiApplication = {
   id: string
   name: string
+  applicationCode: string
   description: string
   packageName: string
   platform: ApplicationPlatform
@@ -231,6 +235,7 @@ function mapApp(a: ApiApplication): Application {
   return {
     id: a.id,
     name: a.name,
+    applicationCode: a.applicationCode,
     description: a.description,
     packageName: a.packageName,
     platform: a.platform,
@@ -278,6 +283,7 @@ export async function apiGetApplication(id: string): Promise<Application> {
 
 export type CreateApplicationBody = {
   name: string
+  applicationCode: string
   description: string
   packageName: string
   platform: ApplicationPlatform
@@ -297,6 +303,7 @@ export async function apiCreateApplication(
 
 export type UpdateApplicationBody = {
   name?: string
+  applicationCode?: string
   description?: string
   packageName?: string
   platform?: ApplicationPlatform
@@ -460,6 +467,7 @@ type ApiArtifact = {
   type?: Artifact['type']
   channel: UploadChannel
   status: ArtifactStatus
+  originalFilename?: string
   filename: string
   sizeBytes: number
   sha256?: string | null
@@ -481,6 +489,7 @@ function mapArtifact(a: ApiArtifact): Artifact {
     type: a.type,
     channel: a.channel,
     status: a.status,
+    originalFilename: a.originalFilename,
     filename: a.filename,
     sizeBytes: a.sizeBytes,
     sha256: a.sha256 ?? undefined,
@@ -696,6 +705,38 @@ export async function apiRunRetentionCleanup(): Promise<{
   retention: RetentionPolicyDto
 }> {
   return request('/settings/retention/run', { method: 'POST' })
+}
+
+/* ── Platform release robots / settings ──────────────── */
+
+export type ReleaseRobotDto = {
+  id: string
+  name: string
+  channels: Array<'beta' | 'stable'>
+  expiresAt: string | null
+  lastUsedAt: string | null
+  revokedAt: string | null
+  createdAt: string
+}
+
+export async function apiListReleaseRobots(): Promise<ReleaseRobotDto[]> {
+  const data = await request<{ items: ReleaseRobotDto[] }>(
+    '/settings/release-credentials',
+  )
+  return data.items
+}
+
+export async function apiCreateReleaseRobot(body: {
+  name: string
+  expiresAt?: string
+}): Promise<{ credential: ReleaseRobotDto; token: string }> {
+  return request('/settings/release-credentials', { method: 'POST', body })
+}
+
+export async function apiRevokeReleaseRobot(id: string): Promise<void> {
+  await request<{ ok: true }>(`/settings/release-credentials/${id}`, {
+    method: 'DELETE',
+  })
 }
 
 /* ── Shares (server-issued) ───────────────────────────── */

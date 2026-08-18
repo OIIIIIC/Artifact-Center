@@ -9,6 +9,7 @@ import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 const applicationSearchColumns = {
   id: applications.id,
   name: applications.name,
+  applicationCode: applications.applicationCode,
   description: applications.description,
   packageName: applications.packageName,
   platform: applications.platform,
@@ -45,6 +46,7 @@ searchRoutes.get('/', async (c) => {
   const user = c.get('user')
   const appFilter = or(
     ilike(applications.name, pattern),
+    ilike(applications.applicationCode, pattern),
     ilike(applications.packageName, pattern),
     ilike(applications.description, pattern),
     ilike(applications.ownerName, pattern),
@@ -54,10 +56,12 @@ searchRoutes.get('/', async (c) => {
   const artifactFilter = or(
     ilike(artifacts.version, pattern),
     ilike(artifacts.filename, pattern),
+    ilike(artifacts.originalFilename, pattern),
     ilike(artifacts.buildNumber, pattern),
     ilike(artifacts.uploaderName, pattern),
     ilike(artifacts.releaseNotes, pattern),
     ilike(applications.name, pattern),
+    ilike(applications.applicationCode, pattern),
     ilike(applications.packageName, pattern),
   )
 
@@ -96,12 +100,14 @@ searchRoutes.get('/', async (c) => {
       type: artifacts.type,
       channel: artifacts.channel,
       status: artifacts.status,
+      originalFilename: artifacts.originalFilename,
       filename: artifacts.filename,
       sizeBytes: artifacts.sizeBytes,
       releaseNotes: artifacts.releaseNotes,
       uploader: artifacts.uploaderName,
       uploadedAt: artifacts.uploadedAt,
       appName: applications.name,
+      appApplicationCode: applications.applicationCode,
       appPackageName: applications.packageName,
       appPlatform: applications.platform,
       regionId: regions.id,
@@ -140,6 +146,7 @@ searchRoutes.get('/', async (c) => {
   const applicationsOut = appRows.map((row) => ({
     id: row.id,
     name: row.name,
+    applicationCode: row.applicationCode,
     description: row.description,
     packageName: row.packageName,
     platform: row.platform,
@@ -175,6 +182,7 @@ searchRoutes.get('/', async (c) => {
       type: r.type,
       channel: r.channel,
       status: r.status,
+      originalFilename: r.originalFilename,
       filename: r.filename,
       sizeBytes: r.sizeBytes,
       releaseNotes: r.releaseNotes,
@@ -184,6 +192,7 @@ searchRoutes.get('/', async (c) => {
     application: {
       id: r.applicationId,
       name: r.appName,
+      applicationCode: r.appApplicationCode,
       packageName: r.appPackageName,
       platform: r.appPlatform,
       region: {

@@ -7,13 +7,16 @@ import { db } from '../db/client.js'
 import {
   applications,
   artifacts,
+  regions,
   releases,
   uploadParts,
   uploadSessions,
 } from '../db/schema.js'
 import { refreshApplicationArtifactStats } from '../lib/artifact-helpers.js'
+import { distributionFilename } from '../lib/artifact-filename.js'
 import { writeAudit } from '../lib/audit.js'
 import { jsonError } from '../lib/errors.js'
+import { releaseCredentialAllowsUpload } from '../lib/release-credential.js'
 import { enforceRetentionAfterUpload } from '../lib/retention.js'
 import {
   abortObjectMultipartUpload,
@@ -29,12 +32,17 @@ import {
   assembleUploadParts,
   deleteStorageFile,
   deleteUploadSessionFiles,
+  openArtifactDownloadStream,
   saveUploadPart,
   storageKeyFor,
 } from '../lib/storage.js'
 import { reserveUploadCapacity } from '../lib/upload-capacity.js'
 import { selectUploadStorage } from '../lib/upload-storage-selection.js'
-import { requireAuth, type AuthVariables } from '../middleware/auth.js'
+import {
+  requireUploadAuth,
+  type UploadAuthVariables,
+  type UploadCredential,
+} from '../middleware/upload-auth.js'
 import {
   hasApplicationRole,
   requireApplicationRole,
@@ -124,6 +132,7 @@ function mapArtifact(row: typeof artifacts.$inferSelect) {
     type: row.type,
     channel: row.channel,
     status: row.status,
+    originalFilename: row.originalFilename,
     filename: row.filename,
     sizeBytes: row.sizeBytes,
     sha256: row.sha256,
@@ -135,7 +144,11 @@ function mapArtifact(row: typeof artifacts.$inferSelect) {
   }
 }
 
-async function getSessionForUser(id: string, user: { sub: string; role: string }) {
+async function getSessionForUser(
+  id: string,
+  user: { sub: string; role: string },
+  credential: UploadCredential,
+) {
   const [session] = await db
     .select()
     .from(uploadSessions)
@@ -144,15 +157,23 @@ async function getSessionForUser(id: string, user: { sub: string; role: string }
   if (!session) return null
   const ownsSession = session.uploaderId === user.sub
   const canMaintain = await hasApplicationRole(user, session.applicationId, 'maintainer')
+  if (credential.kind === 'release-credential') {
+    const allowed = releaseCredentialAllowsUpload({
+      channel: session.fields.channel,
+      markLatest: session.fields.markLatest !== 'false',
+      buildNumber: session.fields.buildNumber ?? '',
+    })
+    return allowed && canMaintain ? session : undefined
+  }
   return ownsSession || canMaintain ? session : undefined
 }
 
-export const uploadRoutes = new Hono<{ Variables: AuthVariables }>()
+export const uploadRoutes = new Hono<{ Variables: UploadAuthVariables }>()
 
 /** Create or recover a resumable transfer. The same resumeKey is safe to retry. */
 uploadRoutes.post(
   '/applications/:appId/uploads',
-  requireAuth,
+  requireUploadAuth,
   requireMinRole('maintainer'),
   requireApplicationRole('appId', 'maintainer'),
   async (c) => {
@@ -162,12 +183,30 @@ uploadRoutes.post(
 
     const appId = c.req.param('appId')
     const user = c.get('user')
-    const [app] = await db
-      .select()
+    const credential = c.get('uploadCredential')
+    if (
+      credential.kind === 'release-credential' &&
+      !releaseCredentialAllowsUpload({
+        channel: input.data.channel,
+        markLatest: input.data.markLatest,
+        buildNumber: input.data.buildNumber,
+      })
+    ) {
+      return jsonError(
+        c,
+        403,
+        'release_credential_scope',
+        'Release credential requires a build number, permits beta without replacing latest, and permits stable releases',
+      )
+    }
+    const [target] = await db
+      .select({ application: applications, regionCode: regions.code })
       .from(applications)
+      .innerJoin(regions, eq(regions.id, applications.regionId))
       .where(eq(applications.id, appId))
       .limit(1)
-    if (!app) return jsonError(c, 404, 'not_found', 'Application not found')
+    if (!target) return jsonError(c, 404, 'not_found', 'Application not found')
+    const app = target.application
     if (app.status === 'archived') {
       return jsonError(c, 409, 'archived_application', 'Application is archived')
     }
@@ -224,13 +263,21 @@ uploadRoutes.post(
     if (partCount > MAX_PART_COUNT)
       return jsonError(c, 400, 'too_large', 'Too many upload parts')
 
+    const finalFilename = distributionFilename({
+      regionCode: target.regionCode,
+      applicationCode: app.applicationCode,
+      version: input.data.version,
+      buildNumber: input.data.buildNumber || '1',
+      channel: input.data.channel,
+      originalFilename: input.data.filename,
+    })
     const directStorageKey = objectStorageKeyFor(appId, input.data.filename)
     const { storageBackend, storageKey, objectUploadId } = await selectUploadStorage({
       objectStorageEnabled: objectStorageEnabled(),
       localStorageKey: storageKeyFor(appId, input.data.filename),
       objectStorageKey: directStorageKey,
       createObjectMultipartUpload: () =>
-        createObjectMultipartUpload(directStorageKey, input.data.filename),
+        createObjectMultipartUpload(directStorageKey, finalFilename),
       onDirectUploadUnavailable: (error) => {
         const detail = error instanceof Error ? error : new Error(String(error))
         console.warn(
@@ -258,7 +305,10 @@ uploadRoutes.post(
           resumeKey: input.data.resumeKey,
           filename: input.data.filename,
           sizeBytes: input.data.sizeBytes,
-          fields: fieldsFromInput(input.data),
+          fields: {
+            ...fieldsFromInput(input.data),
+            distributionFilename: finalFilename,
+          },
           storageKey,
           storageBackend,
           objectUploadId,
@@ -276,8 +326,12 @@ uploadRoutes.post(
   },
 )
 
-uploadRoutes.get('/uploads/:id', requireAuth, async (c) => {
-  const session = await getSessionForUser(c.req.param('id'), c.get('user'))
+uploadRoutes.get('/uploads/:id', requireUploadAuth, async (c) => {
+  const session = await getSessionForUser(
+    c.req.param('id'),
+    c.get('user'),
+    c.get('uploadCredential'),
+  )
   if (session === null) return jsonError(c, 404, 'not_found', 'Upload session not found')
   if (!session) return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   if (session.status !== 'active' || session.expiresAt <= new Date()) {
@@ -297,8 +351,12 @@ uploadRoutes.get('/uploads/:id', requireAuth, async (c) => {
 })
 
 /** Upload or retry exactly one chunk. A chunk is stored atomically and can be retried safely. */
-uploadRoutes.put('/uploads/:id/parts/:partNumber', requireAuth, async (c) => {
-  const session = await getSessionForUser(c.req.param('id'), c.get('user'))
+uploadRoutes.put('/uploads/:id/parts/:partNumber', requireUploadAuth, async (c) => {
+  const session = await getSessionForUser(
+    c.req.param('id'),
+    c.get('user'),
+    c.get('uploadCredential'),
+  )
   if (session === null) return jsonError(c, 404, 'not_found', 'Upload session not found')
   if (!session) return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   if (session.status !== 'active' || session.expiresAt <= new Date()) {
@@ -363,8 +421,12 @@ uploadRoutes.put('/uploads/:id/parts/:partNumber', requireAuth, async (c) => {
 })
 
 /** Short-lived URL for a browser-direct S3/MinIO part upload. */
-uploadRoutes.post('/uploads/:id/parts/:partNumber/sign', requireAuth, async (c) => {
-  const session = await getSessionForUser(c.req.param('id'), c.get('user'))
+uploadRoutes.post('/uploads/:id/parts/:partNumber/sign', requireUploadAuth, async (c) => {
+  const session = await getSessionForUser(
+    c.req.param('id'),
+    c.get('user'),
+    c.get('uploadCredential'),
+  )
   if (session === null) return jsonError(c, 404, 'not_found', 'Upload session not found')
   if (!session) return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   if (session.status !== 'active' || session.expiresAt <= new Date()) {
@@ -395,69 +457,84 @@ uploadRoutes.post('/uploads/:id/parts/:partNumber/sign', requireAuth, async (c) 
 })
 
 /** Record a browser-direct part after S3/MinIO has returned its ETag. */
-uploadRoutes.post('/uploads/:id/parts/:partNumber/complete', requireAuth, async (c) => {
-  const session = await getSessionForUser(c.req.param('id'), c.get('user'))
-  if (session === null) return jsonError(c, 404, 'not_found', 'Upload session not found')
-  if (!session) return jsonError(c, 403, 'forbidden', 'Insufficient application role')
-  if (
-    session.storageBackend !== 's3' ||
-    session.status !== 'active' ||
-    session.expiresAt <= new Date()
-  ) {
-    return jsonError(c, 409, 'upload_expired', 'Upload session is no longer active')
-  }
-  const partNumber = Number(c.req.param('partNumber'))
-  const input = directPartSchema.safeParse(await c.req.json().catch(() => null))
-  const expectedSize = Math.min(
-    session.partSize,
-    session.sizeBytes - (partNumber - 1) * session.partSize,
-  )
-  if (
-    !Number.isInteger(partNumber) ||
-    partNumber < 1 ||
-    partNumber > session.partCount ||
-    !input.success ||
-    input.data.sizeBytes !== expectedSize
-  ) {
-    return jsonError(c, 400, 'invalid_part', 'Invalid direct upload part')
-  }
-  await db
-    .insert(uploadParts)
-    .values({
-      sessionId: session.id,
-      partNumber,
-      sizeBytes: input.data.sizeBytes,
-      sha256: '',
-      etag: input.data.etag,
-    })
-    .onConflictDoUpdate({
-      target: [uploadParts.sessionId, uploadParts.partNumber],
-      set: {
+uploadRoutes.post(
+  '/uploads/:id/parts/:partNumber/complete',
+  requireUploadAuth,
+  async (c) => {
+    const session = await getSessionForUser(
+      c.req.param('id'),
+      c.get('user'),
+      c.get('uploadCredential'),
+    )
+    if (session === null)
+      return jsonError(c, 404, 'not_found', 'Upload session not found')
+    if (!session) return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+    if (
+      session.storageBackend !== 's3' ||
+      session.status !== 'active' ||
+      session.expiresAt <= new Date()
+    ) {
+      return jsonError(c, 409, 'upload_expired', 'Upload session is no longer active')
+    }
+    const partNumber = Number(c.req.param('partNumber'))
+    const input = directPartSchema.safeParse(await c.req.json().catch(() => null))
+    const expectedSize = Math.min(
+      session.partSize,
+      session.sizeBytes - (partNumber - 1) * session.partSize,
+    )
+    if (
+      !Number.isInteger(partNumber) ||
+      partNumber < 1 ||
+      partNumber > session.partCount ||
+      !input.success ||
+      input.data.sizeBytes !== expectedSize
+    ) {
+      return jsonError(c, 400, 'invalid_part', 'Invalid direct upload part')
+    }
+    await db
+      .insert(uploadParts)
+      .values({
+        sessionId: session.id,
+        partNumber,
         sizeBytes: input.data.sizeBytes,
         sha256: '',
         etag: input.data.etag,
-        createdAt: new Date(),
-      },
-    })
-  return c.json({ part: { number: partNumber, sizeBytes: input.data.sizeBytes } }, 201)
-})
+      })
+      .onConflictDoUpdate({
+        target: [uploadParts.sessionId, uploadParts.partNumber],
+        set: {
+          sizeBytes: input.data.sizeBytes,
+          sha256: '',
+          etag: input.data.etag,
+          createdAt: new Date(),
+        },
+      })
+    return c.json({ part: { number: partNumber, sizeBytes: input.data.sizeBytes } }, 201)
+  },
+)
 
 /** Assemble persisted chunks, verify total bytes + SHA-256, then publish the artifact atomically. */
-uploadRoutes.post('/uploads/:id/complete', requireAuth, async (c) => {
-  const session = await getSessionForUser(c.req.param('id'), c.get('user'))
+uploadRoutes.post('/uploads/:id/complete', requireUploadAuth, async (c) => {
+  const session = await getSessionForUser(
+    c.req.param('id'),
+    c.get('user'),
+    c.get('uploadCredential'),
+  )
   if (session === null) return jsonError(c, 404, 'not_found', 'Upload session not found')
   if (!session) return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   if (session.status !== 'active' || session.expiresAt <= new Date()) {
     return jsonError(c, 409, 'upload_expired', 'Upload session is no longer active')
   }
-  const [app] = await db
-    .select()
+  const [target] = await db
+    .select({ application: applications, regionCode: regions.code })
     .from(applications)
+    .innerJoin(regions, eq(regions.id, applications.regionId))
     .where(eq(applications.id, session.applicationId))
     .limit(1)
-  if (!app || app.status === 'archived') {
+  if (!target || target.application.status === 'archived') {
     return jsonError(c, 409, 'archived_application', 'Application is archived')
   }
+  const app = target.application
 
   const parts = await db
     .select()
@@ -513,6 +590,17 @@ uploadRoutes.post('/uploads/:id/complete', requireAuth, async (c) => {
   const artifactType = resolveArtifactType(session.filename)
   const channel = channelEnum.parse(fields.channel)
   const platform = platformEnum.parse(fields.platform)
+  const finalBuildNumber = fields.buildNumber || '1'
+  const finalFilename =
+    fields.distributionFilename ||
+    distributionFilename({
+      regionCode: target.regionCode,
+      applicationCode: app.applicationCode,
+      version: fields.version,
+      buildNumber: finalBuildNumber,
+      channel,
+      originalFilename: session.filename,
+    })
   const markLatest = fields.markLatest !== 'false'
   const status = markLatest
     ? 'latest'
@@ -566,12 +654,13 @@ uploadRoutes.post('/uploads/:id/complete', requireAuth, async (c) => {
           applicationId: session.applicationId,
           releaseId: release.id,
           version: fields.version,
-          buildNumber: fields.buildNumber || '1',
+          buildNumber: finalBuildNumber,
           platform,
           type: artifactType,
           channel,
           status,
-          filename: session.filename,
+          originalFilename: session.filename,
+          filename: finalFilename,
           sizeBytes: assembled.sizeBytes,
           sha256: assembled.sha256,
           storageKey: session.storageKey,
@@ -609,8 +698,10 @@ uploadRoutes.post('/uploads/:id/complete', requireAuth, async (c) => {
     objectType: 'artifact',
     objectId: created.id,
     applicationId: session.applicationId,
-    summary: `上传 ${app.name} v${fields.version}（${session.filename}）`,
+    summary: `上传 ${app.name} v${fields.version}（${finalFilename}）`,
     meta: {
+      originalFilename: session.filename,
+      filename: finalFilename,
       version: fields.version,
       channel,
       sizeBytes: assembled.sizeBytes,
@@ -622,8 +713,117 @@ uploadRoutes.post('/uploads/:id/complete', requireAuth, async (c) => {
   return c.json({ artifact: mapArtifact(created) }, 201)
 })
 
-uploadRoutes.delete('/uploads/:id', requireAuth, async (c) => {
-  const session = await getSessionForUser(c.req.param('id'), c.get('user'))
+/** Resolve the exact Application + Region bound to an upload credential. */
+uploadRoutes.get('/release/applications/:appId/target', requireUploadAuth, async (c) => {
+  const applicationId = c.req.param('appId')
+  if (!(await hasApplicationRole(c.get('user'), applicationId, 'viewer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
+
+  const [row] = await db
+    .select({
+      applicationId: applications.id,
+      applicationName: applications.name,
+      applicationCode: applications.applicationCode,
+      packageName: applications.packageName,
+      platform: applications.platform,
+      status: applications.status,
+      regionId: regions.id,
+      regionCode: regions.code,
+      regionName: regions.name,
+    })
+    .from(applications)
+    .innerJoin(regions, eq(regions.id, applications.regionId))
+    .where(eq(applications.id, applicationId))
+    .limit(1)
+  if (!row) return jsonError(c, 404, 'not_found', 'Application not found')
+  if (row.status === 'archived') {
+    return jsonError(c, 409, 'archived_application', 'Application is archived')
+  }
+
+  return c.json({
+    target: {
+      applicationId: row.applicationId,
+      applicationName: row.applicationName,
+      applicationCode: row.applicationCode,
+      packageName: row.packageName,
+      platform: row.platform,
+      status: row.status,
+      region: {
+        id: row.regionId,
+        code: row.regionCode,
+        name: row.regionName,
+      },
+    },
+  })
+})
+
+/** Confirm that a published artifact is readable without exposing a download URL. */
+uploadRoutes.get('/release/artifacts/:id/verify', requireUploadAuth, async (c) => {
+  const [artifact] = await db
+    .select()
+    .from(artifacts)
+    .where(eq(artifacts.id, c.req.param('id')))
+    .limit(1)
+  if (!artifact) return jsonError(c, 404, 'not_found', 'Artifact not found')
+
+  const credential = c.get('uploadCredential')
+  if (
+    credential.kind === 'release-credential' &&
+    artifact.channel !== 'beta' &&
+    artifact.channel !== 'stable'
+  ) {
+    return jsonError(
+      c,
+      403,
+      'release_credential_scope',
+      'Artifact is outside credential scope',
+    )
+  }
+  if (!(await hasApplicationRole(c.get('user'), artifact.applicationId, 'viewer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
+
+  const stream = await openArtifactDownloadStream(
+    artifact.storageKey,
+    artifact.storageBackend,
+  )
+  if (!stream) return jsonError(c, 409, 'file_missing', 'Artifact file is unavailable')
+  stream.destroy()
+  const [target] = await db
+    .select({
+      applicationName: applications.name,
+      platform: applications.platform,
+      regionCode: regions.code,
+      regionName: regions.name,
+    })
+    .from(applications)
+    .innerJoin(regions, eq(regions.id, applications.regionId))
+    .where(eq(applications.id, artifact.applicationId))
+    .limit(1)
+  if (!target) {
+    return jsonError(c, 409, 'target_missing', 'Artifact target is unavailable')
+  }
+  return c.json({
+    available: true,
+    artifact: mapArtifact(artifact),
+    target: {
+      applicationId: artifact.applicationId,
+      applicationName: target.applicationName,
+      platform: target.platform,
+      region: { code: target.regionCode, name: target.regionName },
+    },
+    pagePath: `/applications/${artifact.applicationId}`,
+    verifiedAt: new Date().toISOString(),
+  })
+})
+
+uploadRoutes.delete('/uploads/:id', requireUploadAuth, async (c) => {
+  const session = await getSessionForUser(
+    c.req.param('id'),
+    c.get('user'),
+    c.get('uploadCredential'),
+  )
   if (session === null) return jsonError(c, 404, 'not_found', 'Upload session not found')
   if (!session) return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   await db.delete(uploadSessions).where(eq(uploadSessions.id, session.id))

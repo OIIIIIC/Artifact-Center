@@ -1,0 +1,1 @@
+ALTER TABLE "release_credentials" DROP COLUMN "channel";

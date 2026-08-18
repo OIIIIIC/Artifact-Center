@@ -26,6 +26,9 @@ export interface Artifact {
   /** Release channel — always kept so Latest + Beta can show together */
   channel?: UploadChannel
   releaseNotes: string
+  /** Filename supplied by the uploader, retained for provenance. */
+  originalFilename?: string
+  /** Immutable distribution filename used for downloads and shares. */
   filename: string
   /** SHA-256 when provided by API */
   sha256?: string

@@ -7,6 +7,7 @@ function createApplication(latestVersion: string): Application {
   return {
     id: 'app-test',
     name: '测试应用',
+    applicationCode: 'test-app',
     description: '用于上传解析测试',
     packageName: 'com.example.test',
     platform: 'android',

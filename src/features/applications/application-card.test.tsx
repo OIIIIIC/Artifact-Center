@@ -30,6 +30,7 @@ vi.mock('react-i18next', async (importOriginal) => {
 const application: Application = {
   id: 'app-1',
   name: '制品中心',
+  applicationCode: 'artifact-center',
   description: '应用卡片测试',
   packageName: 'com.example.artifact',
   platform: 'android',

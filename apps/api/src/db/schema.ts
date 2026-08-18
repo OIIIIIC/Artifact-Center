@@ -100,24 +100,36 @@ export const regions = pgTable(
   ],
 )
 
-export const applications = pgTable('applications', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  name: varchar('name', { length: 200 }).notNull(),
-  description: text('description').notNull().default(''),
-  packageName: varchar('package_name', { length: 255 }).notNull(),
-  platform: appPlatformEnum('platform').notNull(),
-  regionId: uuid('region_id')
-    .notNull()
-    .references(() => regions.id, { onDelete: 'restrict' }),
-  repository: varchar('repository', { length: 500 }).notNull().default(''),
-  status: appStatusEnum('status').notNull().default('new'),
-  ownerId: uuid('owner_id').references(() => users.id),
-  ownerName: varchar('owner_name', { length: 120 }).notNull().default(''),
-  latestVersion: varchar('latest_version', { length: 64 }).notNull().default(''),
-  artifactCount: integer('artifact_count').notNull().default(0),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const applications = pgTable(
+  'applications',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: varchar('name', { length: 200 }).notNull(),
+    /** Stable short identifier used in distribution filenames. */
+    applicationCode: varchar('application_code', { length: 48 }).notNull(),
+    description: text('description').notNull().default(''),
+    packageName: varchar('package_name', { length: 255 }).notNull(),
+    platform: appPlatformEnum('platform').notNull(),
+    regionId: uuid('region_id')
+      .notNull()
+      .references(() => regions.id, { onDelete: 'restrict' }),
+    repository: varchar('repository', { length: 500 }).notNull().default(''),
+    status: appStatusEnum('status').notNull().default('new'),
+    ownerId: uuid('owner_id').references(() => users.id),
+    ownerName: varchar('owner_name', { length: 120 }).notNull().default(''),
+    latestVersion: varchar('latest_version', { length: 64 }).notNull().default(''),
+    artifactCount: integer('artifact_count').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('applications_region_code_uidx').on(t.regionId, t.applicationCode),
+    check(
+      'applications_application_code_format',
+      sql`${t.applicationCode} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
+    ),
+  ],
+)
 
 /** 应用内成员关系；平台管理员不需要显式成员记录。 */
 export const applicationMembers = pgTable(
@@ -140,6 +152,27 @@ export const applicationMembers = pgTable(
     ),
     index('application_members_user_application_idx').on(t.userId, t.applicationId),
   ],
+)
+
+/**
+ * 平台级发布机器人凭据。
+ * 可向任意 Application 的 beta/stable 渠道上传；数据库只保存高熵 Token 摘要。
+ */
+export const releaseCredentials = pgTable(
+  'release_credentials',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    actorUserId: uuid('actor_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 120 }).notNull(),
+    tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('release_credentials_actor_idx').on(t.actorUserId)],
 )
 
 /**
@@ -186,6 +219,9 @@ export const artifacts = pgTable(
     type: artifactTypeEnum('type').notNull(),
     channel: channelEnum('channel').notNull().default('stable'),
     status: artifactStatusEnum('status').notNull().default('stable'),
+    /** Filename supplied by the uploader; retained for provenance. */
+    originalFilename: varchar('original_filename', { length: 500 }).notNull(),
+    /** Immutable distribution filename returned to downloaders. */
     filename: varchar('filename', { length: 500 }).notNull(),
     sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull().default(0),
     sha256: varchar('sha256', { length: 64 }),

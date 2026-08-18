@@ -14,6 +14,7 @@ function createApplication(
   return {
     id,
     name: id,
+    applicationCode: id,
     description: '',
     packageName: `com.example.${id}`,
     platform: 'android',

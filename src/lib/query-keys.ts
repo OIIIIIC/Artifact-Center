@@ -35,5 +35,8 @@ export const queryKeys = {
     byApp: (appId: string) => ['audit', 'app', appId] as const,
     global: ['audit', 'global'] as const,
   },
+  releaseRobots: {
+    all: ['release-robots'] as const,
+  },
   me: ['auth', 'me'] as const,
 }

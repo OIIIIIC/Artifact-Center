@@ -21,9 +21,16 @@ import { requireMinRole, requireRoles } from '../middleware/require-role.js'
 const platformEnum = z.enum(['android', 'windows', 'zip'])
 const statusEnum = z.enum(['active', 'new', 'beta', 'deprecated', 'archived'])
 const sortEnum = z.enum(['updated', 'name', 'created'])
+const applicationCodeSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(48)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
+  applicationCode: applicationCodeSchema,
   description: z.string().min(1).max(4000),
   packageName: z.string().min(1).max(255),
   platform: platformEnum,
@@ -33,6 +40,7 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
+  applicationCode: applicationCodeSchema.optional(),
   description: z.string().min(1).max(4000).optional(),
   packageName: z.string().min(1).max(255).optional(),
   platform: platformEnum.optional(),
@@ -64,6 +72,7 @@ type ApplicationResponseRow = Pick<
   typeof applications.$inferSelect,
   | 'id'
   | 'name'
+  | 'applicationCode'
   | 'description'
   | 'packageName'
   | 'platform'
@@ -83,6 +92,7 @@ type ApplicationResponseRow = Pick<
 const applicationResponseColumns = {
   id: applications.id,
   name: applications.name,
+  applicationCode: applications.applicationCode,
   description: applications.description,
   packageName: applications.packageName,
   platform: applications.platform,
@@ -109,6 +119,7 @@ export function mapApp(
   return {
     id: row.id,
     name: row.name,
+    applicationCode: row.applicationCode,
     description: row.description,
     packageName: row.packageName,
     platform: row.platform,
@@ -141,6 +152,7 @@ applicationRoutes.get('/', async (c) => {
     conditions.push(
       or(
         ilike(applications.name, pattern),
+        ilike(applications.applicationCode, pattern),
         ilike(applications.packageName, pattern),
         ilike(applications.ownerName, pattern),
       )!,
@@ -273,6 +285,7 @@ applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
   const user = c.get('user')
   const data = parsed.data
   const packageName = data.packageName.trim()
+  const applicationCode = data.applicationCode.trim()
 
   const [region] = await db
     .select()
@@ -283,11 +296,31 @@ applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
     return jsonError(c, 400, 'region_unavailable', 'Region is unavailable')
   }
 
+  const [codeConflict] = await db
+    .select({ id: applications.id })
+    .from(applications)
+    .where(
+      and(
+        eq(applications.regionId, data.regionId),
+        eq(applications.applicationCode, applicationCode),
+      ),
+    )
+    .limit(1)
+  if (codeConflict) {
+    return jsonError(
+      c,
+      409,
+      'application_code_taken',
+      'Application code already exists in this region',
+    )
+  }
+
   const row = await db.transaction(async (tx) => {
     const [created] = await tx
       .insert(applications)
       .values({
         name: data.name.trim(),
+        applicationCode,
         description: data.description.trim(),
         packageName,
         platform: data.platform,
@@ -316,7 +349,11 @@ applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
     objectId: row.id,
     applicationId: row.id,
     summary: `创建应用 ${row.name}`,
-    meta: { packageName: row.packageName, platform: row.platform },
+    meta: {
+      applicationCode: row.applicationCode,
+      packageName: row.packageName,
+      platform: row.platform,
+    },
   })
 
   return c.json({ application: mapApp(row, region) }, 201)
@@ -348,6 +385,16 @@ applicationRoutes.patch(
     if (!current) return jsonError(c, 404, 'not_found', 'Application not found')
 
     const data = parsed.data
+    const nextApplicationCode = data.applicationCode?.trim() ?? current.applicationCode
+
+    if (nextApplicationCode !== current.applicationCode && current.artifactCount > 0) {
+      return jsonError(
+        c,
+        409,
+        'application_code_locked',
+        'Application code cannot change after the first artifact is published',
+      )
+    }
 
     let targetRegion: typeof regions.$inferSelect | undefined
     if (data.regionId !== undefined) {
@@ -369,10 +416,38 @@ applicationRoutes.patch(
       targetRegion = region
     }
 
+    if (
+      data.applicationCode !== undefined ||
+      (data.regionId !== undefined && data.regionId !== current.regionId)
+    ) {
+      const [codeConflict] = await db
+        .select({ id: applications.id })
+        .from(applications)
+        .where(
+          and(
+            eq(applications.regionId, data.regionId ?? current.regionId),
+            eq(applications.applicationCode, nextApplicationCode),
+            ne(applications.id, id),
+          ),
+        )
+        .limit(1)
+      if (codeConflict) {
+        return jsonError(
+          c,
+          409,
+          'application_code_taken',
+          'Application code already exists in this region',
+        )
+      }
+    }
+
     const [row] = await db
       .update(applications)
       .set({
         ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+        ...(data.applicationCode !== undefined
+          ? { applicationCode: nextApplicationCode }
+          : {}),
         ...(data.description !== undefined
           ? { description: data.description.trim() }
           : {}),
@@ -465,6 +540,7 @@ applicationRoutes.get(
         type: r.type,
         channel: r.channel,
         status: r.status,
+        originalFilename: r.originalFilename,
         filename: r.filename,
         sizeBytes: r.sizeBytes,
         sha256: r.sha256,

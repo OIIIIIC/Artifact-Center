@@ -38,6 +38,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-mobile-banking',
     name: 'Mobile Banking',
+    applicationCode: 'mobile-banking',
     description: '零售银行核心客户端，柜面与客户经理联调用包。',
     packageName: 'com.enterprise.banking',
     repository: 'git.enterprise.local/mobile/banking',
@@ -53,6 +54,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-crm-desktop',
     name: 'CRM Desktop',
+    applicationCode: 'crm-desktop',
     description: '销售桌面端，Windows x64 安装包与静默升级脚本。',
     packageName: 'Enterprise.CRM.Desktop',
     repository: 'git.enterprise.local/desktop/crm',
@@ -68,6 +70,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-attendance-service',
     name: 'Attendance Service',
+    applicationCode: 'attendance-service',
     description: '考勤与排班服务配套安装包，含本地缓存组件。',
     packageName: 'com.enterprise.attendance',
     repository: 'git.enterprise.local/hr/attendance',
@@ -83,6 +86,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-pos-terminal',
     name: 'POS Terminal',
+    applicationCode: 'pos-terminal',
     description: '门店收银终端，按渠道与门店变体打包。',
     packageName: 'com.enterprise.pos',
     repository: 'git.enterprise.local/retail/pos',
@@ -98,6 +102,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-device-agent',
     name: 'Device Agent',
+    applicationCode: 'device-agent',
     description: '产线采集代理，支持静默安装与回滚。',
     packageName: 'Enterprise.DeviceAgent',
     repository: 'git.enterprise.local/iot/device-agent',
@@ -113,6 +118,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-ota-manager',
     name: 'OTA Manager',
+    applicationCode: 'ota-manager',
     description: '固件与补丁编排工具包，产线刷写流程使用。',
     packageName: 'ota-manager',
     repository: 'git.enterprise.local/firmware/ota-manager',
@@ -128,6 +134,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-field-service',
     name: 'Field Service',
+    applicationCode: 'field-service',
     description: '外勤工单与现场签到，测试环境每日构建。',
     packageName: 'com.enterprise.fieldservice',
     repository: 'git.enterprise.local/ops/field-service',
@@ -143,6 +150,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-kiosk-player',
     name: 'Kiosk Player',
+    applicationCode: 'kiosk-player',
     description: '门店大屏播放器，全屏锁定模式。',
     packageName: 'com.enterprise.kiosk',
     repository: 'git.enterprise.local/retail/kiosk-player',
@@ -158,6 +166,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-report-exporter',
     name: 'Report Exporter',
+    applicationCode: 'report-exporter',
     description: '离线报表导出，内嵌运行时依赖。',
     packageName: 'Enterprise.ReportExporter',
     repository: 'git.enterprise.local/bi/report-exporter',
@@ -173,6 +182,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-edge-gateway',
     name: 'Edge Gateway Bundle',
+    applicationCode: 'edge-gateway',
     description: '边缘网关配置与补丁合集。',
     packageName: 'edge-gateway-bundle',
     repository: 'git.enterprise.local/edge/gateway-bundle',
@@ -188,6 +198,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-partner-sdk',
     name: 'Partner SDK Demo',
+    applicationCode: 'partner-sdk-demo',
     description: '合作方集成演示包，仅内测渠道可见。',
     packageName: 'com.enterprise.partner.demo',
     repository: 'git.enterprise.local/partner/sdk-demo',
@@ -203,6 +214,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-legacy-attendance',
     name: 'Legacy Attendance',
+    applicationCode: 'legacy-attendance',
     description: '旧版考勤客户端，仅保留热修构建。',
     packageName: 'com.enterprise.attendance.legacy',
     repository: 'git.enterprise.local/hr/attendance-legacy',
@@ -218,6 +230,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-config-presets',
     name: 'Config Presets',
+    applicationCode: 'config-presets',
     description: '环境配置模板，按项目解压使用。',
     packageName: 'config-presets',
     repository: 'git.enterprise.local/platform/config-presets',
@@ -233,6 +246,7 @@ export const MOCK_APPLICATIONS: Application[] = [
   {
     id: 'app-ops-toolkit',
     name: 'Ops Toolkit',
+    applicationCode: 'ops-toolkit',
     description: '运维诊断脚本与小工具合集。',
     packageName: 'ops-toolkit',
     repository: 'git.enterprise.local/ops/toolkit',

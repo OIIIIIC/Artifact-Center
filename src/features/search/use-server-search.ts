@@ -55,6 +55,7 @@ export function useServerSearch(
       application,
       score: Math.max(
         scoreText(application.name, debounced),
+        scoreText(application.applicationCode, debounced),
         scoreText(application.packageName, debounced),
       ),
     }))
@@ -64,6 +65,7 @@ export function useServerSearch(
       const application = {
         id: row.application.id,
         name: row.application.name,
+        applicationCode: row.application.applicationCode,
         description: '',
         packageName: row.application.packageName,
         platform: row.application.platform,
@@ -84,6 +86,7 @@ export function useServerSearch(
         score: Math.max(
           scoreText(artifact.version, debounced),
           scoreText(artifact.filename, debounced),
+          scoreText(artifact.originalFilename ?? '', debounced),
         ),
       }
     })

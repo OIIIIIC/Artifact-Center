@@ -7,6 +7,7 @@ describe('应用列表响应映射', () => {
     const row = {
       id: 'application-1',
       name: 'Viewer application',
+      applicationCode: 'viewer-application',
       description: 'Visible to a viewer',
       packageName: 'com.example.viewer',
       platform: 'android',

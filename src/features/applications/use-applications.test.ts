@@ -20,6 +20,7 @@ vi.mock('@/services/api', () => ({
 const application: Application = {
   id: 'app-1',
   name: '移动银行',
+  applicationCode: 'mobile-bank',
   description: '',
   packageName: 'com.example.bank',
   platform: 'android',

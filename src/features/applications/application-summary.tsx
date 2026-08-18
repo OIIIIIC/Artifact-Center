@@ -43,7 +43,7 @@ export function ApplicationSummary({
         className,
       )}
     >
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-5 p-5 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-4 lg:p-6">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-5 p-5 sm:grid-cols-3 lg:grid-cols-7 lg:gap-x-4 lg:p-6">
         <Cell label={t('detail.latestVersion')}>
           {/*
             Context is already "latest version" — only show version + channel.
@@ -73,6 +73,14 @@ export function ApplicationSummary({
             title={application.packageName}
           >
             {application.packageName}
+          </span>
+        </Cell>
+        <Cell label={t('detail.applicationCode')}>
+          <span
+            className="block min-w-0 truncate font-mono text-[0.75rem] text-muted-foreground"
+            title={application.applicationCode}
+          >
+            {application.applicationCode}
           </span>
         </Cell>
         <Cell label={t('detail.repository')}>

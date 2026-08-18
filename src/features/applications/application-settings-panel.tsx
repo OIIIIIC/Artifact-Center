@@ -24,10 +24,12 @@ import {
   type ApplicationEditableField,
 } from '@/lib/application-fields'
 import { queryKeys } from '@/lib/query-keys'
+import { isApplicationCode, normalizeApplicationCode } from '@/lib/application-code'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { canDeleteApplication } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { apiDeleteApplication, apiUpdateApplication } from '@/services/api'
+import { ApiError } from '@/services/http'
 import { useAuthStore } from '@/store/auth-store'
 import type {
   Application,
@@ -61,6 +63,7 @@ export function ApplicationSettingsPanel({
   const [view, setView] = useState<SettingsView>(autoOpenMembers ? 'members' : 'basic')
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(application.name)
+  const [applicationCode, setApplicationCode] = useState(application.applicationCode)
   const [description, setDescription] = useState(application.description)
   const [packageName, setPackageName] = useState(application.packageName)
   const [platform, setPlatform] = useState(application.platform)
@@ -78,6 +81,7 @@ export function ApplicationSettingsPanel({
 
   const infoDirty =
     name.trim() !== application.name ||
+    applicationCode.trim() !== application.applicationCode ||
     description.trim() !== application.description ||
     packageName.trim() !== application.packageName ||
     platform !== application.platform ||
@@ -89,6 +93,7 @@ export function ApplicationSettingsPanel({
 
   const resetDraft = () => {
     setName(application.name)
+    setApplicationCode(application.applicationCode)
     setDescription(application.description)
     setPackageName(application.packageName)
     setPlatform(application.platform)
@@ -118,6 +123,7 @@ export function ApplicationSettingsPanel({
     const errors: Partial<Record<EditableField, string>> = {}
     const required = [
       ['name', name, t('createApp.fieldName')],
+      ['applicationCode', applicationCode, t('createApp.fieldApplicationCode')],
       ['description', description, t('createApp.fieldDescription')],
       ['packageName', packageName, t('createApp.fieldPackage')],
     ] as const
@@ -126,6 +132,7 @@ export function ApplicationSettingsPanel({
     }
     const values: Record<EditableField, string> = {
       name,
+      applicationCode,
       description,
       packageName,
       repository,
@@ -136,6 +143,9 @@ export function ApplicationSettingsPanel({
           max: APPLICATION_FIELD_LIMITS[field],
         })
       }
+    }
+    if (applicationCode.trim() && !isApplicationCode(applicationCode.trim())) {
+      errors.applicationCode = t('appSettings.applicationCodeInvalid')
     }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
@@ -155,6 +165,7 @@ export function ApplicationSettingsPanel({
     try {
       const updated = await apiUpdateApplication(application.id, {
         name: name.trim(),
+        applicationCode: applicationCode.trim(),
         description: description.trim(),
         packageName: packageName.trim(),
         platform,
@@ -167,6 +178,20 @@ export function ApplicationSettingsPanel({
       setEditing(false)
       toast.success(t('appSettings.saved'))
     } catch (caught) {
+      if (
+        caught instanceof ApiError &&
+        (caught.code === 'application_code_taken' ||
+          caught.code === 'application_code_locked')
+      ) {
+        setError(
+          t(
+            caught.code === 'application_code_taken'
+              ? 'appSettings.applicationCodeTaken'
+              : 'appSettings.applicationCodeLocked',
+          ),
+        )
+        return
+      }
       setError(
         getRequestErrorMessage(caught, {
           offline: t('common.requestFailedOffline'),
@@ -257,6 +282,7 @@ export function ApplicationSettingsPanel({
             fieldErrors={fieldErrors}
             values={{
               name,
+              applicationCode,
               description,
               packageName,
               platform,
@@ -273,6 +299,8 @@ export function ApplicationSettingsPanel({
             onFieldChange={(field, value) => {
               const setters: Record<EditableField, (next: string) => void> = {
                 name: setName,
+                applicationCode: (value) =>
+                  setApplicationCode(normalizeApplicationCode(value)),
                 description: setDescription,
                 packageName: setPackageName,
                 repository: setRepository,
@@ -340,6 +368,7 @@ function BasicSettings({
   regions: Region[]
   values: {
     name: string
+    applicationCode: string
     description: string
     packageName: string
     platform: ApplicationPlatform
@@ -389,6 +418,9 @@ function BasicSettings({
       {!editing ? (
         <div className="grid gap-x-8 gap-y-5 rounded-xl bg-muted/20 p-5 ring-1 ring-border/60 sm:grid-cols-2">
           <InfoCell label={t('createApp.fieldName')}>{application.name}</InfoCell>
+          <InfoCell label={t('createApp.fieldApplicationCode')} mono>
+            {application.applicationCode}
+          </InfoCell>
           <InfoCell label={t('createApp.fieldPackage')} mono>
             {application.packageName}
           </InfoCell>
@@ -413,6 +445,20 @@ function BasicSettings({
             value={values.name}
             error={fieldErrors.name}
             onChange={(value) => onFieldChange('name', value)}
+          />
+          <TextField
+            field="applicationCode"
+            label={t('createApp.fieldApplicationCode')}
+            value={values.applicationCode}
+            error={fieldErrors.applicationCode}
+            mono
+            disabled={application.artifactCount > 0}
+            hint={
+              application.artifactCount > 0
+                ? t('appSettings.applicationCodeLocked')
+                : t('createApp.applicationCodeHint')
+            }
+            onChange={(value) => onFieldChange('applicationCode', value)}
           />
           <TextField
             field="packageName"
@@ -635,6 +681,8 @@ function TextField({
   error,
   mono,
   optional,
+  disabled,
+  hint,
   onChange,
 }: {
   field: EditableField
@@ -643,6 +691,8 @@ function TextField({
   error?: string
   mono?: boolean
   optional?: boolean
+  disabled?: boolean
+  hint?: string
   onChange: (value: string) => void
 }) {
   return (
@@ -655,6 +705,7 @@ function TextField({
       />
       <Input
         value={value}
+        disabled={disabled}
         maxLength={APPLICATION_FIELD_LIMITS[field]}
         onChange={(event) => onChange(event.target.value)}
         className={cn(
@@ -664,6 +715,11 @@ function TextField({
         aria-invalid={Boolean(error) || undefined}
       />
       <FormError message={error} className="[&_p]:text-[0.75rem]" />
+      {!error && hint ? (
+        <span className="block text-[0.75rem] leading-relaxed text-muted-foreground">
+          {hint}
+        </span>
+      ) : null}
     </label>
   )
 }

@@ -18,10 +18,16 @@ import { useApplicationCatalog } from '@/features/applications/use-applications'
 import { useRegions } from '@/features/regions/use-regions'
 import { queryKeys } from '@/lib/query-keys'
 import { APPLICATION_FIELD_LIMITS } from '@/lib/application-fields'
+import {
+  isApplicationCode,
+  normalizeApplicationCode,
+  suggestApplicationCode,
+} from '@/lib/application-code'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { apiCreateApplication } from '@/services/api'
+import { ApiError } from '@/services/http'
 import { useAuthStore } from '@/store/auth-store'
 import type { Application, ApplicationPlatform } from '@/types/application'
 
@@ -64,6 +70,8 @@ export function CreateApplicationPage() {
   const { enabledRegions, loading: regionsLoading } = useRegions()
 
   const [name, setName] = useState('')
+  const [applicationCode, setApplicationCode] = useState('')
+  const [applicationCodeEdited, setApplicationCodeEdited] = useState(false)
   const [description, setDescription] = useState('')
   const [packageName, setPackageName] = useState('')
   const [platform, setPlatform] = useState<ApplicationPlatform>('android')
@@ -85,14 +93,24 @@ export function CreateApplicationPage() {
   )
 
   const selectedRegion = enabledRegions.find((region) => region.id === regionId)
-  const canSubmit = !submitting && !regionsLoading && Boolean(selectedRegion)
+  const canSubmit =
+    !submitting &&
+    !regionsLoading &&
+    Boolean(selectedRegion) &&
+    isApplicationCode(applicationCode)
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
     const continueToMembers = submitter?.value === 'members'
     setError(null)
 
-    if (!name.trim() || !description.trim() || !packageName.trim() || !regionId) {
+    if (
+      !name.trim() ||
+      !isApplicationCode(applicationCode) ||
+      !description.trim() ||
+      !packageName.trim() ||
+      !regionId
+    ) {
       setError(t('createApp.errorRequired'))
       return
     }
@@ -101,6 +119,7 @@ export function CreateApplicationPage() {
     try {
       const app = await apiCreateApplication({
         name: name.trim(),
+        applicationCode,
         description: description.trim(),
         packageName: packageName.trim(),
         platform,
@@ -116,6 +135,10 @@ export function CreateApplicationPage() {
         { replace: true },
       )
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'application_code_taken') {
+        setError(t('createApp.applicationCodeTaken'))
+        return
+      }
       setError(
         getRequestErrorMessage(err, {
           offline: t('common.requestFailedOffline'),
@@ -186,7 +209,13 @@ export function CreateApplicationPage() {
                     <Input
                       value={name}
                       onChange={(e) => {
-                        setName(e.target.value)
+                        const nextName = e.target.value
+                        setName(nextName)
+                        if (!applicationCodeEdited) {
+                          setApplicationCode(
+                            suggestApplicationCode(nextName, packageName),
+                          )
+                        }
                         if (error) setError(null)
                       }}
                       placeholder={t('createApp.namePlaceholder')}
@@ -204,12 +233,41 @@ export function CreateApplicationPage() {
 
                   <label className="block space-y-1.5">
                     <span className="text-[0.8125rem] font-medium text-foreground">
+                      {t('createApp.fieldApplicationCode')}
+                    </span>
+                    <Input
+                      value={applicationCode}
+                      onChange={(e) => {
+                        setApplicationCodeEdited(true)
+                        setApplicationCode(normalizeApplicationCode(e.target.value))
+                        if (error) setError(null)
+                      }}
+                      placeholder={t('createApp.applicationCodePlaceholder')}
+                      className="h-10 rounded-lg font-mono text-[0.8125rem]"
+                      disabled={submitting}
+                      maxLength={APPLICATION_FIELD_LIMITS.applicationCode}
+                      required
+                      autoComplete="off"
+                    />
+                    <span className="block text-[0.75rem] leading-relaxed text-muted-foreground">
+                      {t('createApp.applicationCodeHint')}
+                    </span>
+                  </label>
+
+                  <label className="block space-y-1.5 sm:col-span-2">
+                    <span className="text-[0.8125rem] font-medium text-foreground">
                       {t('createApp.fieldPackage')}
                     </span>
                     <Input
                       value={packageName}
                       onChange={(e) => {
-                        setPackageName(e.target.value)
+                        const nextPackageName = e.target.value
+                        setPackageName(nextPackageName)
+                        if (!applicationCodeEdited) {
+                          setApplicationCode(
+                            suggestApplicationCode(name, nextPackageName),
+                          )
+                        }
                         if (error) setError(null)
                       }}
                       placeholder={t('createApp.packagePlaceholder')}

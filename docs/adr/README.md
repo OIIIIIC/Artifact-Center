@@ -29,6 +29,7 @@ ADR (Architecture Decision Record) 是一种轻量级的架构决策文档，由
 | [0013](0013-testing-strategy.md)                  | 测试策略                                     | accepted |
 | [0014](0014-region-application-classification.md) | Region 作为 Application 的可维护分类         | accepted |
 | [0015](0015-share-collection.md)                  | Share Collection 承载同地域多制品交付        | accepted |
+| [0016](0016-platform-beta-release-robot.md)       | 平台级发布机器人                             | accepted |
 
 ## 状态标记
 

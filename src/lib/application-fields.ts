@@ -1,5 +1,6 @@
 export const APPLICATION_FIELD_LIMITS = {
   name: 200,
+  applicationCode: 48,
   description: 4000,
   packageName: 255,
   repository: 500,

@@ -13,6 +13,7 @@ export function filterApplications(
     if (!q) return true
     return (
       app.name.toLowerCase().includes(q) ||
+      app.applicationCode.toLowerCase().includes(q) ||
       app.packageName.toLowerCase().includes(q) ||
       app.owner.toLowerCase().includes(q) ||
       app.description.toLowerCase().includes(q)
