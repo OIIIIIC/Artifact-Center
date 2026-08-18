@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
 import { BlankLayout } from '@/components/layout'
+import { MarkdownPreview } from '@/components/common/markdown-preview'
 import { Button } from '@/components/ui/button'
 import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
@@ -184,9 +185,10 @@ export function ShareDownloadPage() {
                       </span>
                     </div>
                     {artifact.releaseNotes.trim() ? (
-                      <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                        {artifact.releaseNotes.trim()}
-                      </p>
+                      <MarkdownPreview
+                        content={artifact.releaseNotes}
+                        className="mt-2 text-xs"
+                      />
                     ) : null}
                   </div>
                 ) : null}
