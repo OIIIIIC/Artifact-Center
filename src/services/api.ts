@@ -324,6 +324,16 @@ export async function apiUpdateApplication(
   return mapApp(data.application)
 }
 
+export async function apiBulkUpdateApplicationCodes(
+  updates: Array<{ id: string; applicationCode: string }>,
+): Promise<number> {
+  const data = await request<{ updated: number }>('/applications/bulk-codes', {
+    method: 'PATCH',
+    body: { updates },
+  })
+  return data.updated
+}
+
 export async function apiDeleteApplication(id: string): Promise<void> {
   await request<{ ok: true }>(`/applications/${id}`, { method: 'DELETE' })
 }

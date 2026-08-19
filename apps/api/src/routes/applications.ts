@@ -50,6 +50,18 @@ const updateSchema = z.object({
   ownerName: z.string().max(120).optional(),
 })
 
+export const bulkApplicationCodesSchema = z.object({
+  updates: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        applicationCode: applicationCodeSchema,
+      }),
+    )
+    .min(1)
+    .max(200),
+})
+
 function mapRegion(row: typeof regions.$inferSelect) {
   return {
     id: row.id,
@@ -253,6 +265,59 @@ applicationRoutes.get('/', async (c) => {
   })
 })
 
+applicationRoutes.patch('/bulk-codes', requireRoles('admin'), async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = bulkApplicationCodesSchema.safeParse(body)
+  if (!parsed.success) {
+    return jsonError(
+      c,
+      400,
+      'invalid_body',
+      'Invalid application code updates',
+      parsed.error.flatten(),
+    )
+  }
+
+  const updates = parsed.data.updates
+  const applicationIds = updates.map((update) => update.id)
+  if (new Set(applicationIds).size !== applicationIds.length) {
+    return jsonError(c, 400, 'duplicate_application', 'Application IDs must be unique')
+  }
+
+  const existing = await db
+    .select({ id: applications.id })
+    .from(applications)
+    .where(inArray(applications.id, applicationIds))
+  if (existing.length !== applicationIds.length) {
+    return jsonError(c, 404, 'not_found', 'One or more applications were not found')
+  }
+
+  const updatedAt = new Date()
+  await db.transaction(async (tx) => {
+    for (const update of updates) {
+      await tx
+        .update(applications)
+        .set({
+          applicationCode: update.applicationCode.trim(),
+          updatedAt,
+        })
+        .where(eq(applications.id, update.id))
+    }
+  })
+
+  await writeAudit(c, {
+    action: 'app.update',
+    objectType: 'system',
+    summary: `批量更新 ${updates.length} 个应用代码`,
+    meta: {
+      applicationIds,
+      fields: ['applicationCode'],
+    },
+  })
+
+  return c.json({ updated: updates.length })
+})
+
 applicationRoutes.get('/:id', requireApplicationRole('id', 'viewer'), async (c) => {
   const id = c.req.param('id')
   const [row] = await db
@@ -294,25 +359,6 @@ applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
     .limit(1)
   if (!region) {
     return jsonError(c, 400, 'region_unavailable', 'Region is unavailable')
-  }
-
-  const [codeConflict] = await db
-    .select({ id: applications.id })
-    .from(applications)
-    .where(
-      and(
-        eq(applications.regionId, data.regionId),
-        eq(applications.applicationCode, applicationCode),
-      ),
-    )
-    .limit(1)
-  if (codeConflict) {
-    return jsonError(
-      c,
-      409,
-      'application_code_taken',
-      'Application code already exists in this region',
-    )
   }
 
   const row = await db.transaction(async (tx) => {
@@ -387,15 +433,6 @@ applicationRoutes.patch(
     const data = parsed.data
     const nextApplicationCode = data.applicationCode?.trim() ?? current.applicationCode
 
-    if (nextApplicationCode !== current.applicationCode && current.artifactCount > 0) {
-      return jsonError(
-        c,
-        409,
-        'application_code_locked',
-        'Application code cannot change after the first artifact is published',
-      )
-    }
-
     let targetRegion: typeof regions.$inferSelect | undefined
     if (data.regionId !== undefined) {
       const [region] = await db
@@ -414,31 +451,6 @@ applicationRoutes.patch(
         .where(eq(regions.id, current.regionId))
         .limit(1)
       targetRegion = region
-    }
-
-    if (
-      data.applicationCode !== undefined ||
-      (data.regionId !== undefined && data.regionId !== current.regionId)
-    ) {
-      const [codeConflict] = await db
-        .select({ id: applications.id })
-        .from(applications)
-        .where(
-          and(
-            eq(applications.regionId, data.regionId ?? current.regionId),
-            eq(applications.applicationCode, nextApplicationCode),
-            ne(applications.id, id),
-          ),
-        )
-        .limit(1)
-      if (codeConflict) {
-        return jsonError(
-          c,
-          409,
-          'application_code_taken',
-          'Application code already exists in this region',
-        )
-      }
     }
 
     const [row] = await db

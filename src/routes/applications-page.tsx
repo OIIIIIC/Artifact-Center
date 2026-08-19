@@ -1,4 +1,5 @@
 import {
+  Braces,
   Inbox,
   Plus,
   RefreshCw,
@@ -15,6 +16,7 @@ import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { ApplicationFiltersBar } from '@/features/applications/application-filters'
+import { BulkApplicationCodeDialog } from '@/features/applications/bulk-application-code-dialog'
 import { ApplicationGridSkeleton } from '@/features/applications/application-grid-skeleton'
 import { ApplicationSearch } from '@/features/applications/application-search'
 import { ApplicationTimeline } from '@/features/applications/application-timeline'
@@ -37,6 +39,7 @@ export function ApplicationsPage() {
   const { regions } = useRegions()
   const { catalog } = useApplicationCatalog()
   const [shareRegionId, setShareRegionId] = useState<string | null>(null)
+  const [bulkCodesOpen, setBulkCodesOpen] = useState(false)
   const [regionScope, setRegionScope] = useState('all')
   const {
     loading,
@@ -121,6 +124,17 @@ export function ApplicationsPage() {
 
               {canWrite ? (
                 <div className="flex flex-wrap items-center gap-2">
+                  {role === 'admin' ? (
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="outline"
+                      onClick={() => setBulkCodesOpen(true)}
+                    >
+                      <Braces className="size-3.5" strokeWidth={1.75} />
+                      {t('applications.bulkCodeAction')}
+                    </Button>
+                  ) : null}
                   {resolvedRegionScope !== 'all' && resolvedRegionScope ? (
                     <Button
                       type="button"
@@ -278,6 +292,13 @@ export function ApplicationsPage() {
           applications={catalog.filter(
             (application) => application.region.id === shareRegion.id,
           )}
+        />
+      ) : null}
+      {bulkCodesOpen ? (
+        <BulkApplicationCodeDialog
+          open
+          onOpenChange={setBulkCodesOpen}
+          applications={catalog}
         />
       ) : null}
     </AppLayout>

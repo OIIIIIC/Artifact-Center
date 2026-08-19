@@ -10,6 +10,16 @@ export function normalizeApplicationCode(value: string): string {
     .replace(/-+$/g, '')
 }
 
+/** Cleans interactive input while preserving a trailing hyphen so users can keep typing. */
+export function sanitizeApplicationCodeInput(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 48)
+}
+
 /** Prefer a readable English name; fall back to the package identifier for Chinese names. */
 export function suggestApplicationCode(name: string, packageName: string): string {
   const fromName = normalizeApplicationCode(name)

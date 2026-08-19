@@ -105,7 +105,7 @@ export const applications = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     name: varchar('name', { length: 200 }).notNull(),
-    /** Stable short identifier used in distribution filenames. */
+    /** Editable short code used in distribution filenames; it is not an identity key. */
     applicationCode: varchar('application_code', { length: 48 }).notNull(),
     description: text('description').notNull().default(''),
     packageName: varchar('package_name', { length: 255 }).notNull(),
@@ -123,7 +123,7 @@ export const applications = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('applications_region_code_uidx').on(t.regionId, t.applicationCode),
+    index('applications_region_code_idx').on(t.regionId, t.applicationCode),
     check(
       'applications_application_code_format',
       sql`${t.applicationCode} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,

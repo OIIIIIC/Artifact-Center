@@ -20,14 +20,13 @@ import { queryKeys } from '@/lib/query-keys'
 import { APPLICATION_FIELD_LIMITS } from '@/lib/application-fields'
 import {
   isApplicationCode,
-  normalizeApplicationCode,
+  sanitizeApplicationCodeInput,
   suggestApplicationCode,
 } from '@/lib/application-code'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { apiCreateApplication } from '@/services/api'
-import { ApiError } from '@/services/http'
 import { useAuthStore } from '@/store/auth-store'
 import type { Application, ApplicationPlatform } from '@/types/application'
 
@@ -135,10 +134,6 @@ export function CreateApplicationPage() {
         { replace: true },
       )
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'application_code_taken') {
-        setError(t('createApp.applicationCodeTaken'))
-        return
-      }
       setError(
         getRequestErrorMessage(err, {
           offline: t('common.requestFailedOffline'),
@@ -239,7 +234,7 @@ export function CreateApplicationPage() {
                       value={applicationCode}
                       onChange={(e) => {
                         setApplicationCodeEdited(true)
-                        setApplicationCode(normalizeApplicationCode(e.target.value))
+                        setApplicationCode(sanitizeApplicationCodeInput(e.target.value))
                         if (error) setError(null)
                       }}
                       placeholder={t('createApp.applicationCodePlaceholder')}

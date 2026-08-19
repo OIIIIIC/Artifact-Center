@@ -13,7 +13,7 @@ artifact-center 是一个**企业内网软件制品管理平台**。核心使命
 | 术语                      | 定义                                                                                                               |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | **Application**           | 顶层对象，代表一个软件产品或交付分支。所有制品归属 Application；包名可重复。                                       |
-| **Application Code**      | Application 在制品分发命名中的稳定短标识；同一 Region 内唯一，首次发布制品后不可更改。                             |
+| **Application Code**      | Application 在制品分发命名中的可重复短代码；不用于唯一识别应用，可随时修改，修改后仅影响新发布制品的分发文件名。   |
 | **Region**                | 管理员维护的地域基础资料；每个 Application 必须归属一个 Region，用于目录组织与交付范围识别。                       |
 | **Artifact**              | 不可变的构建文件，类型 apk/aab/exe/zip。含 sha256、storage_key 等。                                                |
 | **Distribution Filename** | Artifact 面向下载和分享的规范文件名；由地域、Application Code、版本、构建号、渠道和文件类型组成，发布后不可变。    |

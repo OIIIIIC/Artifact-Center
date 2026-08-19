@@ -127,6 +127,13 @@
       "when": 1787054564649,
       "tag": "0017_brainy_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787117853343,
+      "tag": "0018_brainy_synch",
+      "breakpoints": true
     }
   ]
 }

@@ -24,12 +24,11 @@ import {
   type ApplicationEditableField,
 } from '@/lib/application-fields'
 import { queryKeys } from '@/lib/query-keys'
-import { isApplicationCode, normalizeApplicationCode } from '@/lib/application-code'
+import { isApplicationCode, sanitizeApplicationCodeInput } from '@/lib/application-code'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { canDeleteApplication } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { apiDeleteApplication, apiUpdateApplication } from '@/services/api'
-import { ApiError } from '@/services/http'
 import { useAuthStore } from '@/store/auth-store'
 import type {
   Application,
@@ -178,20 +177,6 @@ export function ApplicationSettingsPanel({
       setEditing(false)
       toast.success(t('appSettings.saved'))
     } catch (caught) {
-      if (
-        caught instanceof ApiError &&
-        (caught.code === 'application_code_taken' ||
-          caught.code === 'application_code_locked')
-      ) {
-        setError(
-          t(
-            caught.code === 'application_code_taken'
-              ? 'appSettings.applicationCodeTaken'
-              : 'appSettings.applicationCodeLocked',
-          ),
-        )
-        return
-      }
       setError(
         getRequestErrorMessage(caught, {
           offline: t('common.requestFailedOffline'),
@@ -300,7 +285,7 @@ export function ApplicationSettingsPanel({
               const setters: Record<EditableField, (next: string) => void> = {
                 name: setName,
                 applicationCode: (value) =>
-                  setApplicationCode(normalizeApplicationCode(value)),
+                  setApplicationCode(sanitizeApplicationCodeInput(value)),
                 description: setDescription,
                 packageName: setPackageName,
                 repository: setRepository,
@@ -452,12 +437,7 @@ function BasicSettings({
             value={values.applicationCode}
             error={fieldErrors.applicationCode}
             mono
-            disabled={application.artifactCount > 0}
-            hint={
-              application.artifactCount > 0
-                ? t('appSettings.applicationCodeLocked')
-                : t('createApp.applicationCodeHint')
-            }
+            hint={t('createApp.applicationCodeHint')}
             onChange={(value) => onFieldChange('applicationCode', value)}
           />
           <TextField
