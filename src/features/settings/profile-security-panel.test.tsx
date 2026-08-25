@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ProfileSecurityPanel } from './profile-security-panel'
@@ -73,5 +73,21 @@ describe('账户设置面板', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'settings.changePassword' }))
     expect(screen.getByLabelText('settings.fieldCurrentPassword')).toHaveValue('')
+  })
+
+  it('可以从内置头像库选择头像', async () => {
+    updateAvatar.mockResolvedValue({ ok: true })
+    render(<ProfileSecurityPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'settings.avatarLibrary' }))
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'settings.avatarLibraryOption' })[0],
+    )
+
+    await waitFor(() => {
+      expect(updateAvatar).toHaveBeenCalledWith(
+        expect.stringMatching(/^data:image\/svg\+xml/),
+      )
+    })
   })
 })

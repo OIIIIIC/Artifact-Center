@@ -119,13 +119,17 @@ export function ProfileSecurityPanel() {
         aria-label={t('settings.generalTitle')}
         className="min-w-0 rounded-2xl bg-card/60 p-5 ring-1 ring-border/70 sm:p-6 dark:bg-card/40 dark:ring-border/80"
       >
-        <div className="grid min-w-0 gap-6 sm:grid-cols-[9rem_minmax(0,1fr)] sm:items-start">
+        <div className="min-w-0 space-y-6">
           <AvatarUpload
+            userId={user?.id ?? 'current-user'}
             name={user?.name ?? profileName}
             avatarUrl={user?.avatarUrl}
             onChange={onAvatarChange}
             disabled={profileSaving}
-            className="sm:flex-col sm:items-start [&>button]:size-20 [&_[data-slot=avatar]]:size-20"
+            className={
+              'rounded-xl bg-muted/25 p-4 ring-1 ring-border/60 dark:bg-muted/10 ' +
+              '[&>button]:size-20 [&_[data-slot=avatar]]:size-20'
+            }
           />
 
           <form
@@ -135,31 +139,33 @@ export function ProfileSecurityPanel() {
               void saveProfile()
             }}
           >
-            <label className="block space-y-1.5">
-              <span className="text-[0.8125rem] font-medium text-foreground">
-                {t('settings.fieldName')}
-              </span>
-              <Input
-                value={profileName}
-                onChange={(event) => setProfileName(event.target.value)}
-                className="h-10 rounded-lg"
-                disabled={profileSaving}
-                autoComplete="name"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-[0.8125rem] font-medium text-foreground">
-                {t('settings.fieldEmail')}
-              </span>
-              <Input
-                type="email"
-                value={profileEmail}
-                onChange={(event) => setProfileEmail(event.target.value)}
-                className="h-10 rounded-lg"
-                disabled={profileSaving}
-                autoComplete="email"
-              />
-            </label>
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <label className="block min-w-0 space-y-1.5">
+                <span className="text-[0.8125rem] font-medium text-foreground">
+                  {t('settings.fieldName')}
+                </span>
+                <Input
+                  value={profileName}
+                  onChange={(event) => setProfileName(event.target.value)}
+                  className="h-10 rounded-lg"
+                  disabled={profileSaving}
+                  autoComplete="name"
+                />
+              </label>
+              <label className="block min-w-0 space-y-1.5">
+                <span className="text-[0.8125rem] font-medium text-foreground">
+                  {t('settings.fieldEmail')}
+                </span>
+                <Input
+                  type="email"
+                  value={profileEmail}
+                  onChange={(event) => setProfileEmail(event.target.value)}
+                  className="h-10 rounded-lg"
+                  disabled={profileSaving}
+                  autoComplete="email"
+                />
+              </label>
+            </div>
             <dl className="grid gap-3 rounded-xl bg-muted/25 px-4 py-3 ring-1 ring-border/50 sm:grid-cols-2 dark:bg-muted/10">
               <div className="min-w-0">
                 <dt className="text-[0.75rem] text-muted-foreground">

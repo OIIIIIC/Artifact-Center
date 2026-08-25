@@ -314,7 +314,17 @@
     "avatarUpload": "上传头像",
     "avatarChange": "更换头像",
     "avatarRemove": "移除",
-    "avatarHint": "支持 JPG / PNG / WebP，最大 2 MB。",
+    "avatarLibrary": "从头像库选择",
+    "avatarLibraryTitle": "选择默认头像",
+    "avatarLibraryStyleLabel": "头像风格",
+    "avatarLibraryGridLabel": "可选头像",
+    "avatarLibraryOption": "选择头像 {{number}}",
+    "avatarStyle": {
+      "notionists": "彩色插画",
+      "pixelArt": "像素风",
+      "lorelei": "线条风"
+    },
+    "avatarHint": "支持 JPG / PNG / WebP，最大 2 MB；也可从内置头像库选择。",
     "avatarErrorType": "请选择有效的图片文件。",
     "avatarErrorSize": "图片不能超过 2 MB。",
     "avatarSaved": "头像已更新",

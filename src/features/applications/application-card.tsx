@@ -2,16 +2,10 @@ import { MapPin, Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 
-import { StatusBadge } from '@/components/common/status-badge'
+import { StatusBadge, UserAvatar } from '@/components/common'
 import { ApplicationAvatar } from '@/features/applications/application-avatar'
 import { APPLICATION_STATUS_LABEL } from '@/features/applications/application-status-meta'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarGroup,
-  AvatarGroupCount,
-  AvatarImage,
-} from '@/components/ui/avatar'
+import { AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
 import { PLATFORM_ICON, PLATFORM_LABEL } from '@/features/applications/platform-meta'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -129,22 +123,21 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
         <div className="flex min-w-0 items-center gap-2.5">
           <AvatarGroup aria-label={t('applications.membersLabel')}>
             {currentUser ? (
-              <Avatar size="sm" title={currentUser.name}>
-                {currentUser.avatarUrl ? (
-                  <AvatarImage src={currentUser.avatarUrl} alt="" />
-                ) : null}
-                <AvatarFallback className="text-[0.625rem] font-medium">
-                  {currentUser.name.slice(0, 1).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                user={currentUser}
+                size="sm"
+                title={currentUser.name}
+                fallbackClassName="text-[0.625rem] font-medium"
+              />
             ) : null}
             {visibleMembers.map((member) => (
-              <Avatar key={member.id} size="sm" title={member.name}>
-                {member.avatarUrl ? <AvatarImage src={member.avatarUrl} alt="" /> : null}
-                <AvatarFallback className="text-[0.625rem] font-medium">
-                  {member.name.slice(0, 1).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                key={member.id}
+                user={member}
+                size="sm"
+                title={member.name}
+                fallbackClassName="text-[0.625rem] font-medium"
+              />
             ))}
             {members.length > visibleMembers.length ? (
               <AvatarGroupCount className="text-[0.625rem] font-medium">

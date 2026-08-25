@@ -1,10 +1,24 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Camera, Trash2 } from 'lucide-react'
+import { Camera, Sparkles, Trash2 } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { FormError } from '@/components/feedback'
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalTitle,
+} from '@/components/ui/modal'
+import {
+  AVATAR_LIBRARY_STYLES,
+  getGeneratedAvatarUrl,
+  getUserAvatarUrl,
+  type AvatarLibraryStyle,
+} from '@/components/common/user-avatar-url'
 import { cn } from '@/lib/utils'
 import { AvatarCropDialog, type AvatarCropSource } from './avatar-crop-dialog'
 
@@ -13,6 +27,7 @@ const ACCEPT = 'image/jpeg,image/png,image/webp'
 const SUPPORTED_TYPES = new Set(ACCEPT.split(','))
 
 interface AvatarUploadProps {
+  userId: string
   name: string
   avatarUrl?: string | null
   onChange: (dataUrl: string | null) => void | Promise<void>
@@ -24,6 +39,7 @@ interface AvatarUploadProps {
  * Avatar picker — uploads as data URL via profile API.
  */
 export function AvatarUpload({
+  userId,
   name,
   avatarUrl,
   onChange,
@@ -34,6 +50,9 @@ export function AvatarUpload({
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [cropSource, setCropSource] = useState<AvatarCropSource | null>(null)
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  const [libraryStyle, setLibraryStyle] = useState<AvatarLibraryStyle>('notionists')
+  const [saving, setSaving] = useState(false)
 
   useEffect(
     () => () => {
@@ -49,8 +68,31 @@ export function AvatarUpload({
     .join('')
     .toUpperCase()
 
+  const isDisabled = disabled || saving
+  const previewUrl = getUserAvatarUrl({ id: userId, avatarUrl })
+  const libraryAvatars = useMemo(
+    () =>
+      Array.from({ length: 30 }, (_, index) => ({
+        id: index,
+        url: getGeneratedAvatarUrl(
+          `${userId}:${libraryStyle}:avatar:${index + 1}`,
+          libraryStyle,
+        ),
+      })),
+    [libraryStyle, userId],
+  )
+
+  const saveAvatar = async (nextAvatarUrl: string | null) => {
+    setSaving(true)
+    try {
+      await onChange(nextAvatarUrl)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const onPick = () => {
-    if (disabled) return
+    if (isDisabled) return
     inputRef.current?.click()
   }
 
@@ -86,7 +128,7 @@ export function AvatarUpload({
       <button
         type="button"
         onClick={onPick}
-        disabled={disabled}
+        disabled={isDisabled}
         className={cn(
           'group relative size-16 shrink-0 overflow-hidden rounded-full',
           'ring-1 ring-border/70 outline-none',
@@ -96,7 +138,7 @@ export function AvatarUpload({
         aria-label={t('settings.avatarChange')}
       >
         <Avatar className="size-16">
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
+          <AvatarImage src={previewUrl} alt="" />
           <AvatarFallback className="text-[0.9375rem] font-medium">
             {initials || 'U'}
           </AvatarFallback>
@@ -119,20 +161,30 @@ export function AvatarUpload({
             type="button"
             variant="outline"
             className="border-0 bg-muted/40 ring-1 ring-border/60"
-            disabled={disabled}
+            disabled={isDisabled}
             onClick={onPick}
           >
             {t('settings.avatarUpload')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="border-0 bg-muted/40 ring-1 ring-border/60"
+            disabled={isDisabled}
+            onClick={() => setLibraryOpen(true)}
+          >
+            <Sparkles className="size-3.5" strokeWidth={1.75} />
+            {t('settings.avatarLibrary')}
           </Button>
           {avatarUrl ? (
             <Button
               type="button"
               variant="ghost"
               className="text-muted-foreground hover:text-foreground"
-              disabled={disabled}
+              disabled={isDisabled}
               onClick={() => {
                 setError(null)
-                onChange(null)
+                void saveAvatar(null)
               }}
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} />
@@ -149,7 +201,7 @@ export function AvatarUpload({
         type="file"
         accept={ACCEPT}
         className="sr-only"
-        disabled={disabled}
+        disabled={isDisabled}
         onChange={(e) => {
           onFile(e.target.files?.[0])
           e.target.value = ''
@@ -161,9 +213,85 @@ export function AvatarUpload({
         onClose={() => setCropSource(null)}
         onSave={async (dataUrl) => {
           setError(null)
-          await onChange(dataUrl)
+          await saveAvatar(dataUrl)
         }}
       />
+
+      <Modal open={libraryOpen} onOpenChange={setLibraryOpen}>
+        <ModalContent className="w-[min(34rem,calc(100vw-2rem))]">
+          <ModalHeader>
+            <ModalTitle>{t('settings.avatarLibraryTitle')}</ModalTitle>
+          </ModalHeader>
+          <ModalBody>
+            <div
+              className="mb-5 flex gap-2 overflow-x-auto pb-1"
+              role="tablist"
+              aria-label={t('settings.avatarLibraryStyleLabel')}
+            >
+              {AVATAR_LIBRARY_STYLES.map((style) => (
+                <button
+                  key={style.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={libraryStyle === style.id}
+                  disabled={isDisabled}
+                  className={cn(
+                    'shrink-0 rounded-full px-3 py-1.5 text-[0.75rem] font-medium',
+                    'transition-colors duration-[var(--duration-hover)]',
+                    libraryStyle === style.id
+                      ? 'bg-foreground text-background'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                  onClick={() => setLibraryStyle(style.id)}
+                >
+                  {t(style.labelKey)}
+                </button>
+              ))}
+            </div>
+            <div
+              className="grid grid-cols-4 gap-3 sm:grid-cols-6"
+              role="list"
+              aria-label={t('settings.avatarLibraryGridLabel')}
+            >
+              {libraryAvatars.map((avatar) => (
+                <div key={avatar.id} role="listitem">
+                  <button
+                    type="button"
+                    disabled={isDisabled}
+                    aria-label={t('settings.avatarLibraryOption', {
+                      number: avatar.id + 1,
+                    })}
+                    className={cn(
+                      'group aspect-square w-full overflow-hidden rounded-full outline-none ring-1 ring-border/70',
+                      'transition-transform duration-[var(--duration-hover)] hover:scale-105',
+                      'focus-visible:ring-2 focus-visible:ring-ring/50',
+                      'disabled:pointer-events-none disabled:opacity-60',
+                    )}
+                    onClick={() => {
+                      void (async () => {
+                        await saveAvatar(avatar.url)
+                        setLibraryOpen(false)
+                      })()
+                    }}
+                  >
+                    <img src={avatar.url} alt="" className="block size-full" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={saving}
+              onClick={() => setLibraryOpen(false)}
+            >
+              {t('common.close')}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   )
 }

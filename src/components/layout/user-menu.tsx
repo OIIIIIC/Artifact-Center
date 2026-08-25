@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/common/user-avatar'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
@@ -27,13 +27,6 @@ export function UserMenu({ className }: { className?: string }) {
 
   if (!user) return null
 
-  const initials = user.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase()
-
   return (
     <div ref={rootRef} className={cn('relative ml-1', className)}>
       <Button
@@ -46,12 +39,12 @@ export function UserMenu({ className }: { className?: string }) {
         aria-haspopup="menu"
         aria-label={t('auth.accountMenu')}
       >
-        <Avatar size="sm" className="size-7">
-          {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt="" /> : null}
-          <AvatarFallback className="text-[11px] font-medium">
-            {initials || 'U'}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          user={user}
+          size="sm"
+          className="size-7"
+          fallbackClassName="text-[11px] font-medium"
+        />
       </Button>
 
       {open ? (
@@ -64,12 +57,12 @@ export function UserMenu({ className }: { className?: string }) {
           )}
         >
           <div className="flex items-center gap-2.5 border-b border-border/60 px-3 py-2.5">
-            <Avatar size="sm" className="size-8 shrink-0">
-              {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt="" /> : null}
-              <AvatarFallback className="text-[10px] font-medium">
-                {initials || 'U'}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              user={user}
+              size="sm"
+              className="size-8 shrink-0"
+              fallbackClassName="text-[10px] font-medium"
+            />
             <div className="min-w-0">
               <p className="truncate text-[0.8125rem] font-medium text-foreground">
                 {user.name}
