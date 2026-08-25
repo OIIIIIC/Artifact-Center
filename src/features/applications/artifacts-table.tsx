@@ -32,10 +32,8 @@ import { useDownloadArtifact } from '@/features/applications/use-download-artifa
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
 import { getRequestErrorMessage } from '@/lib/request-error'
-import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { apiDeleteArtifact, apiUpdateArtifact } from '@/services/api'
-import { useAuthStore } from '@/store/auth-store'
 import type { ApplicationStatus } from '@/types/application'
 import { getArtifactRiskStatus, type Artifact } from '@/types/artifact'
 
@@ -45,6 +43,7 @@ interface ArtifactsTableProps {
   applicationId?: string
   applicationName?: string
   applicationStatus?: ApplicationStatus
+  canManage: boolean
   className?: string
 }
 
@@ -53,15 +52,14 @@ export function ArtifactsTable({
   applicationId,
   applicationName,
   applicationStatus,
+  canManage,
   className,
 }: ArtifactsTableProps) {
   const { t, i18n } = useTranslation()
   void i18n.language
   const queryClient = useQueryClient()
-  const role = useAuthStore((s) => s.user?.role)
-  const canWrite = canWriteContent(role)
   const applicationArchived = applicationStatus === 'archived'
-  const canManage = canWrite && !applicationArchived
+  const canModify = canManage && !applicationArchived
   const { download, isBusy, downloadConfirmation } = useDownloadArtifact()
   const [shareArt, setShareArt] = useState<Artifact | null>(null)
   const [menuId, setMenuId] = useState<string | null>(null)
@@ -184,12 +182,24 @@ export function ArtifactsTable({
         className="py-14"
         action={
           canManage ? (
-            <Button asChild size="lg">
-              <Link to={uploadTo}>
+            applicationArchived ? (
+              <Button
+                type="button"
+                size="lg"
+                disabled
+                title={t('artifactRisk.applicationArchivedApplicationDesc')}
+              >
                 <Upload className="size-3.5" strokeWidth={1.75} />
                 {t('detail.uploadArtifact')}
-              </Link>
-            </Button>
+              </Button>
+            ) : (
+              <Button asChild size="lg">
+                <Link to={uploadTo}>
+                  <Upload className="size-3.5" strokeWidth={1.75} />
+                  {t('detail.uploadArtifact')}
+                </Link>
+              </Button>
+            )
           ) : undefined
         }
       />
@@ -293,11 +303,17 @@ export function ArtifactsTable({
                 </TableCell>
                 <TableCell className="px-4 py-3.5 text-right">
                   <div className="relative inline-flex items-center justify-end gap-0.5">
-                    {applicationId && applicationName ? (
+                    {canManage && applicationId && applicationName ? (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
+                        disabled={applicationArchived}
+                        title={
+                          applicationArchived
+                            ? t('artifactRisk.applicationArchivedShareDesc')
+                            : undefined
+                        }
                         className="text-muted-foreground hover:text-foreground"
                         aria-label={`${t('share.action')} v${art.version}`}
                         onClick={() => setShareArt(art)}
@@ -334,7 +350,7 @@ export function ArtifactsTable({
                       <span className="hidden sm:inline">{t('common.download')}</span>
                     </Button>
 
-                    {canManage ? (
+                    {canModify ? (
                       <>
                         <Button
                           type="button"
@@ -474,7 +490,7 @@ export function ArtifactsTable({
         </TableBody>
       </Table>
 
-      {applicationId && applicationName && shareArt ? (
+      {canModify && applicationId && applicationName && shareArt ? (
         <ShareDialog
           open
           onOpenChange={(open) => {

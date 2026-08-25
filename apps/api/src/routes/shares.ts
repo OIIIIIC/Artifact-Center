@@ -13,7 +13,6 @@ import {
   hasApplicationRole,
   requireApplicationRole,
 } from '../middleware/application-access.js'
-import { requireMinRole } from '../middleware/require-role.js'
 
 const itemSchema = z.object({
   applicationId: z.string().uuid(),
@@ -111,7 +110,7 @@ async function resolvePinnedArtifact(applicationId: string, artifactId?: string)
 export const shareRoutes = new Hono<{ Variables: AuthVariables }>()
 
 /** POST /shares — 创建同一地域的 Share Collection。 */
-shareRoutes.post('/shares', requireAuth, requireMinRole('maintainer'), async (c) => {
+shareRoutes.post('/shares', requireAuth, async (c) => {
   const user = c.get('user')
   const body = await c.req.json().catch(() => null)
   const parsed = createCollectionSchema.safeParse(body)
@@ -230,7 +229,6 @@ shareRoutes.post('/shares', requireAuth, requireMinRole('maintainer'), async (c)
 shareRoutes.post(
   '/applications/:appId/shares',
   requireAuth,
-  requireMinRole('maintainer'),
   requireApplicationRole('appId', 'maintainer'),
   async (c) => {
     const appId = c.req.param('appId')
@@ -326,7 +324,6 @@ shareRoutes.post(
 shareRoutes.get(
   '/applications/:appId/shares',
   requireAuth,
-  requireMinRole('maintainer'),
   requireApplicationRole('appId', 'maintainer'),
   async (c) => {
     const appId = c.req.param('appId')
@@ -359,46 +356,47 @@ shareRoutes.get(
 )
 
 /** DELETE /shares/:id — revoke */
-shareRoutes.delete(
-  '/shares/:id',
-  requireAuth,
-  requireMinRole('maintainer'),
-  async (c) => {
-    const id = c.req.param('id')
-    const user = c.get('user')
-    const [row] = await db.select().from(shareLinks).where(eq(shareLinks.id, id)).limit(1)
-    if (!row) return jsonError(c, 404, 'not_found', 'Share not found')
-    if (user.role !== 'admin' && row.createdById && row.createdById !== user.sub) {
-      return jsonError(c, 403, 'forbidden', 'Only creator or admin can revoke')
-    }
-    if (
-      user.role !== 'admin' &&
-      !row.createdById &&
-      !(await hasApplicationRole(user, row.applicationId, 'maintainer'))
-    ) {
+shareRoutes.delete('/shares/:id', requireAuth, async (c) => {
+  const id = c.req.param('id')
+  const user = c.get('user')
+  const [row] = await db.select().from(shareLinks).where(eq(shareLinks.id, id)).limit(1)
+  if (!row) return jsonError(c, 404, 'not_found', 'Share not found')
+  const itemApplications = await db
+    .select({ applicationId: shareLinkItems.applicationId })
+    .from(shareLinkItems)
+    .where(eq(shareLinkItems.shareLinkId, id))
+  const applicationIds = [
+    ...new Set(
+      itemApplications.length
+        ? itemApplications.map((item) => item.applicationId)
+        : [row.applicationId],
+    ),
+  ]
+  for (const applicationId of applicationIds) {
+    if (!(await hasApplicationRole(user, applicationId, 'maintainer'))) {
       return jsonError(c, 403, 'forbidden', 'Insufficient application role')
     }
-    if (row.revokedAt) return c.json({ share: mapShare(row) })
+  }
+  if (row.revokedAt) return c.json({ share: mapShare(row) })
 
-    const [updated] = await db
-      .update(shareLinks)
-      .set({ revokedAt: new Date() })
-      .where(eq(shareLinks.id, id))
-      .returning()
+  const [updated] = await db
+    .update(shareLinks)
+    .set({ revokedAt: new Date() })
+    .where(eq(shareLinks.id, id))
+    .returning()
 
-    await writeAudit(c, {
-      action: 'share.revoke',
-      objectType: 'application',
-      objectId: updated.id,
-      applicationId: updated.applicationId,
-      summary: `吊销分享链接`,
-      meta: {
-        tokenPrefix: updated.token
-          ? shareTokenPrefix(updated.token)
-          : updated.tokenHash.slice(0, 8),
-        kind: updated.kind,
-      },
-    })
-    return c.json({ share: mapShare(updated) })
-  },
-)
+  await writeAudit(c, {
+    action: 'share.revoke',
+    objectType: 'application',
+    objectId: updated.id,
+    applicationId: updated.applicationId,
+    summary: `吊销分享链接`,
+    meta: {
+      tokenPrefix: updated.token
+        ? shareTokenPrefix(updated.token)
+        : updated.tokenHash.slice(0, 8),
+      kind: updated.kind,
+    },
+  })
+  return c.json({ share: mapShare(updated) })
+})

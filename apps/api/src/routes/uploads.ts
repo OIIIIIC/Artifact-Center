@@ -48,7 +48,6 @@ import {
   hasApplicationRole,
   requireApplicationRole,
 } from '../middleware/application-access.js'
-import { requireMinRole } from '../middleware/require-role.js'
 
 const MAX_UPLOAD_BYTES = 512 * 1024 * 1024
 const PART_SIZE_BYTES = 8 * 1024 * 1024
@@ -279,7 +278,6 @@ uploadRoutes.get('/release/applications', requireUploadAuth, async (c) => {
 uploadRoutes.post(
   '/applications/:appId/uploads',
   requireUploadAuth,
-  requireMinRole('maintainer'),
   requireApplicationRole('appId', 'maintainer'),
   async (c) => {
     const input = createUploadSchema.safeParse(await c.req.json().catch(() => null))

@@ -101,14 +101,29 @@ describe('批量应用权限接口', () => {
     expect(database.select).not.toHaveBeenCalled()
   })
 
-  it('不允许为平台只读账户授予应用维护者', async () => {
-    selectRows([
-      {
-        id: '4f5c81c9-6e4f-4faa-a65d-2a53a34ae9d1',
-        name: '只读账户',
-        role: 'viewer',
-      },
-    ])
+  it('允许为平台查看者授予应用维护者', async () => {
+    selectRows(
+      [
+        {
+          id: '4f5c81c9-6e4f-4faa-a65d-2a53a34ae9d1',
+          name: '平台查看者',
+          role: 'viewer',
+        },
+      ],
+      [
+        {
+          id: '98185fe8-e1a4-427d-b1db-6117c70b7f6c',
+          name: '移动银行',
+          ownerId: 'e1097804-c9dc-468a-993e-17b174089511',
+        },
+      ],
+    )
+    const upsert = { values: vi.fn(), onConflictDoUpdate: vi.fn() }
+    upsert.values.mockReturnValue(upsert)
+    upsert.onConflictDoUpdate.mockResolvedValue(undefined)
+    database.transaction.mockImplementation(async (callback) =>
+      callback({ insert: vi.fn(() => upsert) }),
+    )
     const app = new Hono()
     app.route('/settings', settingsRoutes)
 
@@ -123,10 +138,8 @@ describe('批量应用权限接口', () => {
       }),
     })
 
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toMatchObject({
-      error: { code: 'platform_role_insufficient' },
-    })
+    expect(response.status).toBe(200)
+    expect(upsert.onConflictDoUpdate).toHaveBeenCalledTimes(1)
   })
 
   it('不允许降级或移除应用负责人', async () => {

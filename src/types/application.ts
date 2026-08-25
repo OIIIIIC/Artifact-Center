@@ -7,6 +7,33 @@ export type ApplicationPlatform = 'android' | 'windows' | 'zip'
 export type ApplicationStatus = 'active' | 'new' | 'beta' | 'deprecated' | 'archived'
 
 export type ApplicationSort = 'updated' | 'name' | 'created'
+export type ApplicationAccessRole = 'admin' | 'maintainer' | 'viewer'
+
+export type ApplicationIconKey =
+  | 'auto'
+  | 'monitor'
+  | 'smartphone'
+  | 'tablet'
+  | 'heart-pulse'
+  | 'stethoscope'
+  | 'shield'
+  | 'package'
+  | 'radio'
+  | 'building'
+  | 'activity'
+  | 'settings'
+
+export type ApplicationIconColor =
+  | 'auto'
+  | 'mint'
+  | 'blue'
+  | 'violet'
+  | 'rose'
+  | 'amber'
+  | 'orange'
+  | 'slate'
+  | 'cyan'
+  | 'lime'
 
 export interface Region {
   id: string
@@ -23,6 +50,8 @@ export interface Application {
   name: string
   /** Stable short identifier used in distribution filenames. */
   applicationCode: string
+  iconKey?: ApplicationIconKey
+  iconColor?: ApplicationIconColor
   description: string
   packageName: string
   platform: ApplicationPlatform
@@ -33,6 +62,8 @@ export interface Application {
   updatedAt: string
   createdAt: string
   owner: string
+  /** 当前登录用户在该应用中的有效权限；平台管理员统一返回 admin。 */
+  accessRole?: ApplicationAccessRole
   /** 应用列表中的成员预览，用于快速识别参与该应用的人员。 */
   members?: Array<{
     id: string

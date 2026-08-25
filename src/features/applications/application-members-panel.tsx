@@ -251,7 +251,6 @@ export function ApplicationMembersPanel({
                   <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
                     <RoleControl
                       value={member.role}
-                      canMaintain={member.platformRole !== 'viewer'}
                       disabled={busy || member.isOwner}
                       onChange={(role) => void updateRole(member, role)}
                     />
@@ -469,12 +468,10 @@ function RoleFilterControl({
 
 function RoleControl({
   value,
-  canMaintain,
   disabled,
   onChange,
 }: {
   value: ApplicationMemberRole
-  canMaintain: boolean
   disabled: boolean
   onChange: (role: ApplicationMemberRole) => void
 }) {
@@ -489,13 +486,8 @@ function RoleControl({
         <button
           key={role}
           type="button"
-          disabled={disabled || (role === 'maintainer' && !canMaintain)}
+          disabled={disabled}
           aria-pressed={value === role}
-          title={
-            role === 'maintainer' && !canMaintain
-              ? t('appMembers.platformRoleInsufficient')
-              : undefined
-          }
           onClick={() => onChange(role)}
           className={cn(
             'rounded-md px-2 py-1 text-[0.6875rem] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45',

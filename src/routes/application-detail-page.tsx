@@ -17,6 +17,7 @@ import { OverviewRecentVersions } from '@/features/applications/overview-recent-
 import { ReleaseNotesPanel } from '@/features/applications/release-notes-panel'
 import { useApplicationDetail } from '@/features/applications/use-application-detail'
 import { ShareLinksPanel } from '@/features/share/share-links-panel'
+import { canMaintainApplication } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
@@ -30,17 +31,13 @@ export function ApplicationDetailPage() {
     application,
     artifacts,
     releases,
-    members,
     latest,
     recentVersions,
     notFound,
     loadError,
     refetch,
   } = useApplicationDetail(id)
-  const canWrite =
-    user?.role === 'admin' ||
-    (user?.role === 'maintainer' &&
-      members.some((member) => member.id === user.id && member.role === 'maintainer'))
+  const canWrite = canMaintainApplication(user?.role, application?.accessRole)
 
   if (loading) {
     return (
@@ -135,7 +132,11 @@ export function ApplicationDetailPage() {
           {application.status === 'archived' ? (
             <ArtifactRiskNotice risk="applicationArchived" context="application" />
           ) : null}
-          <ApplicationDetailHeader application={application} latest={latest} />
+          <ApplicationDetailHeader
+            application={application}
+            latest={latest}
+            canManage={canWrite}
+          />
 
           <ApplicationSummary
             application={application}
@@ -145,7 +146,7 @@ export function ApplicationDetailPage() {
 
           <Tabs
             defaultValue={
-              searchParams.get('tab') === 'settings' ? 'settings' : 'overview'
+              canWrite && searchParams.get('tab') === 'settings' ? 'settings' : 'overview'
             }
             className="gap-6"
           >
@@ -190,6 +191,7 @@ export function ApplicationDetailPage() {
                 applicationId={application.id}
                 applicationName={application.name}
                 applicationStatus={application.status}
+                canManage={canWrite}
               />
             </TabsContent>
 
@@ -207,6 +209,7 @@ export function ApplicationDetailPage() {
                 applicationId={application.id}
                 applicationName={application.name}
                 applicationStatus={application.status}
+                canManage={canWrite}
               />
             </TabsContent>
 
@@ -215,6 +218,7 @@ export function ApplicationDetailPage() {
                 releases={releases}
                 applicationId={application.id}
                 applicationStatus={application.status}
+                canManage={canWrite}
               />
             </TabsContent>
 

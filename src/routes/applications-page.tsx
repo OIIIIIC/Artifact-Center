@@ -1,5 +1,5 @@
 import {
-  Braces,
+  ListChecks,
   Inbox,
   Plus,
   RefreshCw,
@@ -16,7 +16,7 @@ import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { ApplicationFiltersBar } from '@/features/applications/application-filters'
-import { BulkApplicationCodeDialog } from '@/features/applications/bulk-application-code-dialog'
+import { BulkApplicationActionsDialog } from '@/features/applications/bulk-application-actions-dialog'
 import { ApplicationGridSkeleton } from '@/features/applications/application-grid-skeleton'
 import { ApplicationSearch } from '@/features/applications/application-search'
 import { ApplicationTimeline } from '@/features/applications/application-timeline'
@@ -28,14 +28,14 @@ import {
 } from '@/features/applications/use-applications'
 import { useRegions } from '@/features/regions/use-regions'
 import { useContentScrollRestoration } from '@/hooks/use-content-scroll-restoration'
-import { canWriteContent } from '@/lib/roles'
+import { canMaintainApplication, canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
 export function ApplicationsPage() {
   const { t } = useTranslation()
   const role = useAuthStore((s) => s.user?.role)
-  const canWrite = canWriteContent(role)
+  const canCreateApplication = canWriteContent(role)
   const { regions } = useRegions()
   const { catalog } = useApplicationCatalog()
   const [shareRegionId, setShareRegionId] = useState<string | null>(null)
@@ -55,6 +55,17 @@ export function ApplicationsPage() {
   } = useApplications()
 
   useContentScrollRestoration({ ready: !loading })
+
+  const maintainableCatalog = useMemo(
+    () =>
+      catalog.filter((application) =>
+        canMaintainApplication(role, application.accessRole),
+      ),
+    [catalog, role],
+  )
+  const canUpload = maintainableCatalog.some(
+    (application) => application.status !== 'archived',
+  )
 
   const changeRegionScope = (next: string) => {
     setRegionScope(next)
@@ -122,7 +133,7 @@ export function ApplicationsPage() {
                 </div>
               </div>
 
-              {canWrite ? (
+              {canCreateApplication || canUpload || role === 'admin' ? (
                 <div className="flex flex-wrap items-center gap-2">
                   {role === 'admin' ? (
                     <Button
@@ -131,11 +142,17 @@ export function ApplicationsPage() {
                       variant="outline"
                       onClick={() => setBulkCodesOpen(true)}
                     >
-                      <Braces className="size-3.5" strokeWidth={1.75} />
-                      {t('applications.bulkCodeAction')}
+                      <ListChecks className="size-3.5" strokeWidth={1.75} />
+                      {t('applications.bulkActionsAction')}
                     </Button>
                   ) : null}
-                  {resolvedRegionScope !== 'all' && resolvedRegionScope ? (
+                  {resolvedRegionScope !== 'all' &&
+                  resolvedRegionScope &&
+                  maintainableCatalog.some(
+                    (application) =>
+                      application.region.id === resolvedRegionScope &&
+                      application.status !== 'archived',
+                  ) ? (
                     <Button
                       type="button"
                       size="lg"
@@ -146,28 +163,32 @@ export function ApplicationsPage() {
                       {t('share.collectionAction')}
                     </Button>
                   ) : null}
-                  <Button asChild size="lg">
-                    <Link to="/applications/new">
-                      <Plus className="size-3.5" strokeWidth={1.75} />
-                      {t('applications.newApplication')}
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    size="lg"
-                    variant="outline"
-                    className={cn(
-                      'border-0 bg-background/75 font-medium text-muted-foreground',
-                      'ring-1 ring-border/60 backdrop-blur-sm',
-                      'hover:bg-muted/55 hover:text-foreground hover:ring-border',
-                      'dark:bg-muted/25 dark:hover:bg-muted/35',
-                    )}
-                  >
-                    <Link to="/upload">
-                      <Upload className="size-3.5" strokeWidth={1.75} />
-                      {t('applications.uploadArtifact')}
-                    </Link>
-                  </Button>
+                  {canCreateApplication ? (
+                    <Button asChild size="lg">
+                      <Link to="/applications/new">
+                        <Plus className="size-3.5" strokeWidth={1.75} />
+                        {t('applications.newApplication')}
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {canUpload ? (
+                    <Button
+                      asChild
+                      size="lg"
+                      variant="outline"
+                      className={cn(
+                        'border-0 bg-background/75 font-medium text-muted-foreground',
+                        'ring-1 ring-border/60 backdrop-blur-sm',
+                        'hover:bg-muted/55 hover:text-foreground hover:ring-border',
+                        'dark:bg-muted/25 dark:hover:bg-muted/35',
+                      )}
+                    >
+                      <Link to="/upload">
+                        <Upload className="size-3.5" strokeWidth={1.75} />
+                        {t('applications.uploadArtifact')}
+                      </Link>
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -235,7 +256,7 @@ export function ApplicationsPage() {
               title={t('applications.emptyTitle')}
               description={t('applications.emptyDescription')}
               action={
-                canWrite ? (
+                canCreateApplication ? (
                   <Button asChild size="lg">
                     <Link to="/applications/new">
                       <Plus className="size-3.5" strokeWidth={1.75} />
@@ -289,13 +310,15 @@ export function ApplicationsPage() {
             if (!open) setShareRegionId(null)
           }}
           region={shareRegion}
-          applications={catalog.filter(
-            (application) => application.region.id === shareRegion.id,
+          applications={maintainableCatalog.filter(
+            (application) =>
+              application.region.id === shareRegion.id &&
+              application.status !== 'archived',
           )}
         />
       ) : null}
       {bulkCodesOpen ? (
-        <BulkApplicationCodeDialog
+        <BulkApplicationActionsDialog
           open
           onOpenChange={setBulkCodesOpen}
           applications={catalog}

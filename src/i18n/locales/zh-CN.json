@@ -401,12 +401,12 @@
     "role": {
       "admin": "管理员",
       "maintainer": "维护者",
-      "viewer": "只读"
+      "viewer": "成员"
     },
     "roleDesc": {
       "admin": "可管理设置与成员，上传、编辑、下载、归档与删除",
-      "maintainer": "可上传、编辑元数据、下载与归档，不可改设置",
-      "viewer": "仅可下载制品，不可上传或修改"
+      "maintainer": "可创建应用；已有应用的操作由应用角色决定",
+      "viewer": "不可创建应用；已有应用的操作由应用角色决定"
     },
     "retentionTitle": "保留与存储",
     "retentionDesc": "设置制品保留规则并查看存储用量。",
@@ -476,6 +476,7 @@
   "appSettings": {
     "sectionNav": "应用设置分组",
     "navBasic": "基本信息",
+    "navAppearance": "应用外观",
     "navMembers": "成员权限",
     "navDanger": "危险操作",
     "basicDescription": "维护应用身份信息与生命周期状态。负责人由应用归属关系决定，不在此重复编辑。",
@@ -520,6 +521,45 @@
     "deleting": "删除中…",
     "deleted": "应用已删除"
   },
+  "appAppearance": {
+    "title": "应用外观",
+    "description": "分别设置看板头像的图标和背景颜色，并同步显示在应用列表与详情页。",
+    "previewHint": "头像预览",
+    "icon": "头像图标",
+    "iconHint": "选择自动时会跟随应用的主平台。",
+    "color": "背景颜色",
+    "colorHint": "背景色可以独立于图标修改。",
+    "save": "保存外观",
+    "saving": "保存中…",
+    "saved": "应用外观已保存",
+    "saveFailed": "未能保存应用外观，请重试。",
+    "icons": {
+      "auto": "自动",
+      "monitor": "显示器",
+      "smartphone": "手机",
+      "tablet": "平板",
+      "heart-pulse": "心电",
+      "stethoscope": "听诊器",
+      "shield": "盾牌",
+      "package": "安装包",
+      "radio": "信号塔",
+      "building": "机构",
+      "activity": "活动",
+      "settings": "设置"
+    },
+    "colors": {
+      "auto": "自动",
+      "mint": "薄荷绿",
+      "blue": "蓝色",
+      "violet": "紫色",
+      "rose": "玫红",
+      "amber": "琥珀",
+      "orange": "橙色",
+      "slate": "岩灰",
+      "cyan": "青色",
+      "lime": "青柠"
+    }
+  },
   "access": {
     "title": "地域权限",
     "description": "按账户和地域批量配置应用访问权。地域用于划定授权范围，权限仍会写入具体应用。",
@@ -538,7 +578,7 @@
     "platformRole": {
       "admin": "平台管理员",
       "maintainer": "平台维护者",
-      "viewer": "平台只读"
+      "viewer": "平台成员"
     },
     "searchApplications": "搜索应用名称或包名…",
     "allRegions": "全部地域",
@@ -578,7 +618,6 @@
     "addAsViewer": "设为查看者",
     "owner": "负责人",
     "ownerLocked": "应用负责人不可降级或移除",
-    "platformRoleInsufficient": "平台查看者不能成为应用维护者",
     "confirmRemove": "确认移除",
     "remove": "从应用中移除 {{name}}",
     "added": "成员已加入应用",
@@ -651,7 +690,9 @@
     },
     "uploadArtifact": "上传制品",
     "newApplication": "新建应用",
-    "bulkCodeAction": "批量设置代码",
+    "bulkActionsAction": "批量管理",
+    "bulkActionsTitle": "批量管理应用",
+    "bulkActionsDescription": "所有跨应用操作集中在这里，选择需要执行的批量任务。",
     "bulkCodeTitle": "批量设置应用代码",
     "bulkCodeDescription": "集中修改多个应用的代码。应用代码允许重复，保存后仅影响新上传制品的文件名。",
     "bulkCodeSearch": "搜索应用、地域、包名或代码…",
@@ -663,6 +704,18 @@
     "bulkCodeSaving": "正在保存…",
     "bulkCodeSaved": "已更新 {{count}} 个应用代码",
     "bulkCodeSaveFailed": "批量保存失败，请稍后重试。",
+    "bulkAvatarTitle": "批量设置应用头像",
+    "bulkAvatarDescription": "选择多个应用后，可单独修改头像图标、背景颜色，或同时修改。",
+    "bulkAvatarSearch": "搜索应用、地域或包名…",
+    "bulkAvatarSelected": "已选择 {{count}} 个应用",
+    "bulkAvatarSelectVisible": "选择当前结果",
+    "bulkAvatarChangeIcon": "修改头像图标",
+    "bulkAvatarChangeColor": "修改背景颜色",
+    "bulkAvatarHint": "只会更新已勾选的外观项；未勾选的图标或背景颜色保持不变。",
+    "bulkAvatarSave": "应用到所选应用",
+    "bulkAvatarSaving": "正在保存…",
+    "bulkAvatarSaved": "已更新 {{count}} 个应用头像",
+    "bulkAvatarSaveFailed": "批量保存应用头像失败，请稍后重试。",
     "searchPlaceholder": "按名称、包名或负责人搜索…",
     "searchAria": "搜索应用",
     "clearSearch": "清除搜索",

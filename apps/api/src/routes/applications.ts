@@ -27,6 +27,32 @@ const applicationCodeSchema = z
   .min(1)
   .max(48)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+const iconKeySchema = z.enum([
+  'auto',
+  'monitor',
+  'smartphone',
+  'tablet',
+  'heart-pulse',
+  'stethoscope',
+  'shield',
+  'package',
+  'radio',
+  'building',
+  'activity',
+  'settings',
+])
+const iconColorSchema = z.enum([
+  'auto',
+  'mint',
+  'blue',
+  'violet',
+  'rose',
+  'amber',
+  'orange',
+  'slate',
+  'cyan',
+  'lime',
+])
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
@@ -41,6 +67,8 @@ const createSchema = z.object({
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   applicationCode: applicationCodeSchema.optional(),
+  iconKey: iconKeySchema.optional(),
+  iconColor: iconColorSchema.optional(),
   description: z.string().min(1).max(4000).optional(),
   packageName: z.string().min(1).max(255).optional(),
   platform: platformEnum.optional(),
@@ -61,6 +89,16 @@ export const bulkApplicationCodesSchema = z.object({
     .min(1)
     .max(200),
 })
+
+export const bulkApplicationAppearanceSchema = z
+  .object({
+    applicationIds: z.array(z.string().uuid()).min(1).max(200),
+    iconKey: iconKeySchema.optional(),
+    iconColor: iconColorSchema.optional(),
+  })
+  .refine((value) => value.iconKey !== undefined || value.iconColor !== undefined, {
+    message: 'At least one appearance field is required',
+  })
 
 function mapRegion(row: typeof regions.$inferSelect) {
   return {
@@ -85,6 +123,8 @@ type ApplicationResponseRow = Pick<
   | 'id'
   | 'name'
   | 'applicationCode'
+  | 'iconKey'
+  | 'iconColor'
   | 'description'
   | 'packageName'
   | 'platform'
@@ -105,6 +145,8 @@ const applicationResponseColumns = {
   id: applications.id,
   name: applications.name,
   applicationCode: applications.applicationCode,
+  iconKey: applications.iconKey,
+  iconColor: applications.iconColor,
   description: applications.description,
   packageName: applications.packageName,
   platform: applications.platform,
@@ -127,11 +169,14 @@ export function mapApp(
   row: ApplicationResponseRow,
   region: typeof regions.$inferSelect,
   members: ApplicationMemberPreview[] = [],
+  accessRole: 'admin' | 'maintainer' | 'viewer' = 'viewer',
 ) {
   return {
     id: row.id,
     name: row.name,
     applicationCode: row.applicationCode,
+    iconKey: row.iconKey,
+    iconColor: row.iconColor,
     description: row.description,
     packageName: row.packageName,
     platform: row.platform,
@@ -140,6 +185,7 @@ export function mapApp(
     status: row.status,
     owner: row.ownerName,
     members,
+    accessRole,
     latestVersion: row.latestVersion,
     artifactCount: row.artifactCount,
     latestArtifactUploadedAt: toIsoTimestamp(row.latestArtifactUploadedAt),
@@ -184,7 +230,10 @@ applicationRoutes.get('/', async (c) => {
         : desc(applications.updatedAt)
 
   const user = c.get('user')
-  const rows =
+  const rows: Array<{
+    application: ApplicationResponseRow
+    accessRole: 'admin' | 'maintainer' | 'viewer'
+  }> =
     user.role === 'admin'
       ? (
           await db
@@ -192,10 +241,13 @@ applicationRoutes.get('/', async (c) => {
             .from(applications)
             .where(where)
             .orderBy(order)
-        ).map((row) => row.application)
+        ).map((row) => ({ application: row.application, accessRole: 'admin' }))
       : (
           await db
-            .select({ application: applicationResponseColumns })
+            .select({
+              application: applicationResponseColumns,
+              accessRole: applicationMembers.role,
+            })
             .from(applications)
             .innerJoin(
               applicationMembers,
@@ -206,11 +258,14 @@ applicationRoutes.get('/', async (c) => {
             )
             .where(where)
             .orderBy(order)
-        ).map((row) => row.application)
+        ).map((row) => ({
+          application: row.application,
+          accessRole: row.accessRole,
+        }))
 
   const regionRows = await db.select().from(regions)
   const regionById = new Map(regionRows.map((region) => [region.id, region]))
-  const applicationIds = rows.map((row) => row.id)
+  const applicationIds = rows.map(({ application }) => application.id)
   const latestArtifactRows = applicationIds.length
     ? await db
         .select({
@@ -251,7 +306,7 @@ applicationRoutes.get('/', async (c) => {
   })
 
   return c.json({
-    items: rows.map((row) =>
+    items: rows.map(({ application: row, accessRole }) =>
       mapApp(
         {
           ...row,
@@ -259,6 +314,7 @@ applicationRoutes.get('/', async (c) => {
         },
         regionById.get(row.regionId)!,
         membersByApplication.get(row.id),
+        accessRole,
       ),
     ),
     total: rows.length,
@@ -318,8 +374,58 @@ applicationRoutes.patch('/bulk-codes', requireRoles('admin'), async (c) => {
   return c.json({ updated: updates.length })
 })
 
+applicationRoutes.patch('/bulk-appearance', requireRoles('admin'), async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = bulkApplicationAppearanceSchema.safeParse(body)
+  if (!parsed.success) {
+    return jsonError(
+      c,
+      400,
+      'invalid_body',
+      'Invalid application appearance update',
+      parsed.error.flatten(),
+    )
+  }
+
+  const applicationIds = [...new Set(parsed.data.applicationIds)]
+  const existing = await db
+    .select({ id: applications.id })
+    .from(applications)
+    .where(inArray(applications.id, applicationIds))
+  if (existing.length !== applicationIds.length) {
+    return jsonError(c, 404, 'not_found', 'One or more applications were not found')
+  }
+
+  await db
+    .update(applications)
+    .set({
+      ...(parsed.data.iconKey !== undefined ? { iconKey: parsed.data.iconKey } : {}),
+      ...(parsed.data.iconColor !== undefined
+        ? { iconColor: parsed.data.iconColor }
+        : {}),
+      updatedAt: new Date(),
+    })
+    .where(inArray(applications.id, applicationIds))
+
+  await writeAudit(c, {
+    action: 'app.update',
+    objectType: 'system',
+    summary: `批量更新 ${applicationIds.length} 个应用头像`,
+    meta: {
+      applicationIds,
+      fields: [
+        ...(parsed.data.iconKey !== undefined ? ['iconKey'] : []),
+        ...(parsed.data.iconColor !== undefined ? ['iconColor'] : []),
+      ],
+    },
+  })
+
+  return c.json({ updated: applicationIds.length })
+})
+
 applicationRoutes.get('/:id', requireApplicationRole('id', 'viewer'), async (c) => {
   const id = c.req.param('id')
+  const user = c.get('user')
   const [row] = await db
     .select()
     .from(applications)
@@ -331,7 +437,20 @@ applicationRoutes.get('/:id', requireApplicationRole('id', 'viewer'), async (c) 
     .from(regions)
     .where(eq(regions.id, row.regionId))
     .limit(1)
-  return c.json({ application: mapApp(row, region) })
+  const [membership] =
+    user.role === 'admin'
+      ? [{ role: 'admin' as const }]
+      : await db
+          .select({ role: applicationMembers.role })
+          .from(applicationMembers)
+          .where(
+            and(
+              eq(applicationMembers.applicationId, id),
+              eq(applicationMembers.userId, user.sub),
+            ),
+          )
+          .limit(1)
+  return c.json({ application: mapApp(row, region, [], membership?.role ?? 'viewer') })
 })
 
 applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
@@ -405,89 +524,82 @@ applicationRoutes.post('/', requireMinRole('maintainer'), async (c) => {
   return c.json({ application: mapApp(row, region) }, 201)
 })
 
-applicationRoutes.patch(
-  '/:id',
-  requireMinRole('maintainer'),
-  requireApplicationRole('id', 'maintainer'),
-  async (c) => {
-    const id = c.req.param('id')
-    const body = await c.req.json().catch(() => null)
-    const parsed = updateSchema.safeParse(body)
-    if (!parsed.success) {
-      return jsonError(
-        c,
-        400,
-        'invalid_body',
-        'Invalid update payload',
-        parsed.error.flatten(),
-      )
-    }
+applicationRoutes.patch('/:id', requireApplicationRole('id', 'maintainer'), async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json().catch(() => null)
+  const parsed = updateSchema.safeParse(body)
+  if (!parsed.success) {
+    return jsonError(
+      c,
+      400,
+      'invalid_body',
+      'Invalid update payload',
+      parsed.error.flatten(),
+    )
+  }
 
-    const [current] = await db
+  const [current] = await db
+    .select()
+    .from(applications)
+    .where(eq(applications.id, id))
+    .limit(1)
+  if (!current) return jsonError(c, 404, 'not_found', 'Application not found')
+
+  const data = parsed.data
+  const nextApplicationCode = data.applicationCode?.trim() ?? current.applicationCode
+
+  let targetRegion: typeof regions.$inferSelect | undefined
+  if (data.regionId !== undefined) {
+    const [region] = await db
       .select()
-      .from(applications)
-      .where(eq(applications.id, id))
+      .from(regions)
+      .where(and(eq(regions.id, data.regionId), eq(regions.enabled, true)))
       .limit(1)
-    if (!current) return jsonError(c, 404, 'not_found', 'Application not found')
-
-    const data = parsed.data
-    const nextApplicationCode = data.applicationCode?.trim() ?? current.applicationCode
-
-    let targetRegion: typeof regions.$inferSelect | undefined
-    if (data.regionId !== undefined) {
-      const [region] = await db
-        .select()
-        .from(regions)
-        .where(and(eq(regions.id, data.regionId), eq(regions.enabled, true)))
-        .limit(1)
-      if (!region) {
-        return jsonError(c, 400, 'region_unavailable', 'Region is unavailable')
-      }
-      targetRegion = region
-    } else {
-      const [region] = await db
-        .select()
-        .from(regions)
-        .where(eq(regions.id, current.regionId))
-        .limit(1)
-      targetRegion = region
+    if (!region) {
+      return jsonError(c, 400, 'region_unavailable', 'Region is unavailable')
     }
+    targetRegion = region
+  } else {
+    const [region] = await db
+      .select()
+      .from(regions)
+      .where(eq(regions.id, current.regionId))
+      .limit(1)
+    targetRegion = region
+  }
 
-    const [row] = await db
-      .update(applications)
-      .set({
-        ...(data.name !== undefined ? { name: data.name.trim() } : {}),
-        ...(data.applicationCode !== undefined
-          ? { applicationCode: nextApplicationCode }
-          : {}),
-        ...(data.description !== undefined
-          ? { description: data.description.trim() }
-          : {}),
-        ...(data.packageName !== undefined
-          ? { packageName: data.packageName.trim() }
-          : {}),
-        ...(data.platform !== undefined ? { platform: data.platform } : {}),
-        ...(data.regionId !== undefined ? { regionId: data.regionId } : {}),
-        ...(data.repository !== undefined ? { repository: data.repository.trim() } : {}),
-        ...(data.status !== undefined ? { status: data.status } : {}),
-        ...(data.ownerName !== undefined ? { ownerName: data.ownerName.trim() } : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(applications.id, id))
-      .returning()
-
-    await writeAudit(c, {
-      action: 'app.update',
-      objectType: 'application',
-      objectId: row.id,
-      applicationId: row.id,
-      summary: `更新应用 ${row.name}`,
-      meta: { fields: Object.keys(data) },
+  const [row] = await db
+    .update(applications)
+    .set({
+      ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+      ...(data.applicationCode !== undefined
+        ? { applicationCode: nextApplicationCode }
+        : {}),
+      ...(data.iconKey !== undefined ? { iconKey: data.iconKey } : {}),
+      ...(data.iconColor !== undefined ? { iconColor: data.iconColor } : {}),
+      ...(data.description !== undefined ? { description: data.description.trim() } : {}),
+      ...(data.packageName !== undefined ? { packageName: data.packageName.trim() } : {}),
+      ...(data.platform !== undefined ? { platform: data.platform } : {}),
+      ...(data.regionId !== undefined ? { regionId: data.regionId } : {}),
+      ...(data.repository !== undefined ? { repository: data.repository.trim() } : {}),
+      ...(data.status !== undefined ? { status: data.status } : {}),
+      ...(data.ownerName !== undefined ? { ownerName: data.ownerName.trim() } : {}),
+      updatedAt: new Date(),
     })
+    .where(eq(applications.id, id))
+    .returning()
 
-    return c.json({ application: mapApp(row, targetRegion!) })
-  },
-)
+  await writeAudit(c, {
+    action: 'app.update',
+    objectType: 'application',
+    objectId: row.id,
+    applicationId: row.id,
+    summary: `更新应用 ${row.name}`,
+    meta: { fields: Object.keys(data) },
+  })
+
+  return c.json({ application: mapApp(row, targetRegion!) })
+})
 
 applicationRoutes.delete('/:id', requireRoles('admin'), async (c) => {
   const id = c.req.param('id')
@@ -647,7 +759,6 @@ const memberRoleSchema = z.object({ role: z.enum(['maintainer', 'viewer']) })
 /** 应用维护者可查询尚未加入应用的账号。 */
 applicationRoutes.get(
   '/:id/member-candidates',
-  requireMinRole('maintainer'),
   requireApplicationRole('id', 'maintainer'),
   async (c) => {
     const applicationId = c.req.param('id')
@@ -680,7 +791,6 @@ applicationRoutes.get(
 /** 应用维护者可添加或更新成员。 */
 applicationRoutes.put(
   '/:id/members/:userId',
-  requireMinRole('maintainer'),
   requireApplicationRole('id', 'maintainer'),
   async (c) => {
     const applicationId = c.req.param('id')
@@ -707,14 +817,6 @@ applicationRoutes.put(
         400,
         'invalid_body',
         'Administrators do not need application membership',
-      )
-    }
-    if (parsed.data.role === 'maintainer' && target.platformRole === 'viewer') {
-      return jsonError(
-        c,
-        400,
-        'platform_role_insufficient',
-        'Viewer cannot be application maintainer',
       )
     }
     const [app] = await db
@@ -745,7 +847,6 @@ applicationRoutes.put(
 
 applicationRoutes.delete(
   '/:id/members/:userId',
-  requireMinRole('maintainer'),
   requireApplicationRole('id', 'maintainer'),
   async (c) => {
     const applicationId = c.req.param('id')

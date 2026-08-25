@@ -12,19 +12,16 @@ import { StepReview } from '@/features/upload/step-review'
 import { StepSuccess } from '@/features/upload/step-success'
 import { StepVersion } from '@/features/upload/step-version'
 import { useUploadFlow } from '@/features/upload/use-upload-flow'
-import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/store/auth-store'
 
 const easeOut = [0.2, 0, 0, 1] as const
 
 export function UploadPage() {
   const { t } = useTranslation()
-  const role = useAuthStore((s) => s.user?.role)
   const flow = useUploadFlow()
   const reduceMotion = useReducedMotion()
 
-  if (!canWriteContent(role)) {
+  if (!flow.catalogLoading && !flow.hasUploadableApplications) {
     return <Navigate to="/" replace />
   }
 

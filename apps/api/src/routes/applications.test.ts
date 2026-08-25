@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { bulkApplicationCodesSchema, mapApp } from './applications.js'
+import {
+  bulkApplicationAppearanceSchema,
+  bulkApplicationCodesSchema,
+  mapApp,
+} from './applications.js'
 
 describe('应用列表响应映射', () => {
   it('接受应用成员查询中返回的最新制品上传时间字符串', () => {
@@ -8,6 +12,8 @@ describe('应用列表响应映射', () => {
       id: 'application-1',
       name: 'Viewer application',
       applicationCode: 'viewer-application',
+      iconKey: 'auto',
+      iconColor: 'auto',
       description: 'Visible to a viewer',
       packageName: 'com.example.viewer',
       platform: 'android',
@@ -51,5 +57,23 @@ describe('批量应用代码', () => {
     })
 
     expect(result.success).toBe(true)
+  })
+})
+
+describe('批量应用头像', () => {
+  it('允许只修改图标或只修改背景颜色', () => {
+    const applicationIds = ['11111111-1111-4111-8111-111111111111']
+    expect(
+      bulkApplicationAppearanceSchema.safeParse({
+        applicationIds,
+        iconKey: 'stethoscope',
+      }).success,
+    ).toBe(true)
+    expect(
+      bulkApplicationAppearanceSchema.safeParse({
+        applicationIds,
+        iconColor: 'mint',
+      }).success,
+    ).toBe(true)
   })
 })

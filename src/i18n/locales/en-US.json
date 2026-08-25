@@ -401,12 +401,12 @@
     "role": {
       "admin": "Admin",
       "maintainer": "Maintainer",
-      "viewer": "Viewer"
+      "viewer": "Member"
     },
     "roleDesc": {
       "admin": "Manage settings and members; upload, edit, download, archive, and delete",
-      "maintainer": "Upload, edit metadata, download, and archive — cannot change settings",
-      "viewer": "Download artifacts only — cannot upload or edit"
+      "maintainer": "Can create applications; actions in existing applications follow the application role",
+      "viewer": "Cannot create applications; actions in existing applications follow the application role"
     },
     "retentionTitle": "Retention & storage",
     "retentionDesc": "Set artifact retention rules and review storage usage.",
@@ -476,6 +476,7 @@
   "appSettings": {
     "sectionNav": "Application settings sections",
     "navBasic": "Basic info",
+    "navAppearance": "Appearance",
     "navMembers": "Member access",
     "navDanger": "Danger zone",
     "basicDescription": "Maintain application identity and lifecycle. Ownership comes from the application relationship and is not edited twice here.",
@@ -520,6 +521,45 @@
     "deleting": "Deleting…",
     "deleted": "Application deleted"
   },
+  "appAppearance": {
+    "title": "Application appearance",
+    "description": "Set the board avatar icon and background color independently across application lists and details.",
+    "previewHint": "Avatar preview",
+    "icon": "Avatar icon",
+    "iconHint": "Auto follows the application's primary platform.",
+    "color": "Background color",
+    "colorHint": "The background color can be changed independently from the icon.",
+    "save": "Save appearance",
+    "saving": "Saving…",
+    "saved": "Application appearance saved",
+    "saveFailed": "Could not save application appearance. Try again.",
+    "icons": {
+      "auto": "Auto",
+      "monitor": "Monitor",
+      "smartphone": "Phone",
+      "tablet": "Tablet",
+      "heart-pulse": "Heart pulse",
+      "stethoscope": "Stethoscope",
+      "shield": "Shield",
+      "package": "Package",
+      "radio": "Radio tower",
+      "building": "Building",
+      "activity": "Activity",
+      "settings": "Settings"
+    },
+    "colors": {
+      "auto": "Auto",
+      "mint": "Mint",
+      "blue": "Blue",
+      "violet": "Violet",
+      "rose": "Rose",
+      "amber": "Amber",
+      "orange": "Orange",
+      "slate": "Slate",
+      "cyan": "Cyan",
+      "lime": "Lime"
+    }
+  },
   "access": {
     "title": "Regional access",
     "description": "Configure application access in bulk by account and region. Regions define the scope; permissions are still recorded on each application.",
@@ -538,7 +578,7 @@
     "platformRole": {
       "admin": "Platform admin",
       "maintainer": "Platform maintainer",
-      "viewer": "Platform viewer"
+      "viewer": "Platform member"
     },
     "searchApplications": "Search application name or package…",
     "allRegions": "All regions",
@@ -578,7 +618,6 @@
     "addAsViewer": "Make viewer",
     "owner": "Owner",
     "ownerLocked": "The application owner cannot be downgraded or removed",
-    "platformRoleInsufficient": "A platform viewer cannot be an application maintainer",
     "confirmRemove": "Confirm remove",
     "remove": "Remove {{name}} from this application",
     "added": "Member added to application",
@@ -651,7 +690,9 @@
     },
     "uploadArtifact": "Upload Artifact",
     "newApplication": "New application",
-    "bulkCodeAction": "Set codes in bulk",
+    "bulkActionsAction": "Bulk manage",
+    "bulkActionsTitle": "Bulk manage applications",
+    "bulkActionsDescription": "All cross-application actions are grouped here. Choose a bulk task to continue.",
     "bulkCodeTitle": "Set application codes in bulk",
     "bulkCodeDescription": "Edit codes for multiple applications together. Codes may repeat; saved changes affect only filenames for newly uploaded artifacts.",
     "bulkCodeSearch": "Search applications, regions, packages, or codes…",
@@ -663,6 +704,18 @@
     "bulkCodeSaving": "Saving…",
     "bulkCodeSaved": "Updated codes for {{count}} applications",
     "bulkCodeSaveFailed": "Could not save application codes. Try again.",
+    "bulkAvatarTitle": "Set application avatars in bulk",
+    "bulkAvatarDescription": "Select applications, then change avatar icons, background colors, or both.",
+    "bulkAvatarSearch": "Search applications, regions, or packages…",
+    "bulkAvatarSelected": "{{count}} applications selected",
+    "bulkAvatarSelectVisible": "Select current results",
+    "bulkAvatarChangeIcon": "Change avatar icon",
+    "bulkAvatarChangeColor": "Change background color",
+    "bulkAvatarHint": "Only enabled appearance fields are updated; disabled icon or color settings stay unchanged.",
+    "bulkAvatarSave": "Apply to selected applications",
+    "bulkAvatarSaving": "Saving…",
+    "bulkAvatarSaved": "Updated avatars for {{count}} applications",
+    "bulkAvatarSaveFailed": "Could not save application avatars. Try again.",
     "searchPlaceholder": "Search by name, package, or owner…",
     "searchAria": "Search applications",
     "clearSearch": "Clear search",

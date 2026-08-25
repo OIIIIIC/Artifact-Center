@@ -14,6 +14,7 @@ interface ReleaseNotesPanelProps {
   releases: Release[]
   applicationId?: string
   applicationStatus?: ApplicationStatus
+  canManage: boolean
 }
 
 /**
@@ -24,6 +25,7 @@ export function ReleaseNotesPanel({
   releases,
   applicationId,
   applicationStatus,
+  canManage,
 }: ReleaseNotesPanelProps) {
   const { t } = useTranslation()
 
@@ -43,7 +45,17 @@ export function ReleaseNotesPanel({
         }
         className="py-14"
         action={
-          hasArtifacts || applicationStatus === 'archived' ? undefined : (
+          hasArtifacts || !canManage ? undefined : applicationStatus === 'archived' ? (
+            <Button
+              type="button"
+              size="lg"
+              disabled
+              title={t('artifactRisk.applicationArchivedApplicationDesc')}
+            >
+              <Upload className="size-3.5" strokeWidth={1.75} />
+              {t('detail.uploadArtifact')}
+            </Button>
+          ) : (
             <Button asChild size="lg">
               <Link to={uploadTo}>
                 <Upload className="size-3.5" strokeWidth={1.75} />

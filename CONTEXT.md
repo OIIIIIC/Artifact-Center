@@ -79,7 +79,7 @@ data/                # 本地制品文件存储
 - **存储**: 元数据 PostgreSQL + 二进制文件系统/对象存储分离 (ADR-0003)
 - **API**: REST，统一错误 `{code, message, details}` (ADR-0005)
 - **搜索**: ILIKE → pg_trgm → ES 渐进 (ADR-0006)
-- **权限**: Viewer/Maintainer/Admin 项目级角色 + Super Admin (ADR-0011)
+- **权限**: Application Viewer/Maintainer 决定应用操作；平台 Admin 全局管理，平台 Maintainer 可创建应用 (ADR-0011)
 - **下载**: 禁止公网永久链接，走预签名 URL 或受控流 (ADR-0012)
 - **部署**: Docker Compose 内网单机，单租户 MVP (ADR-0007)
 

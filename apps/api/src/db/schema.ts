@@ -107,6 +107,10 @@ export const applications = pgTable(
     name: varchar('name', { length: 200 }).notNull(),
     /** Editable short code used in distribution filenames; it is not an identity key. */
     applicationCode: varchar('application_code', { length: 48 }).notNull(),
+    /** Curated application avatar icon; auto follows the primary platform. */
+    iconKey: varchar('icon_key', { length: 32 }).notNull().default('auto'),
+    /** Curated application avatar background color; auto follows the primary platform. */
+    iconColor: varchar('icon_color', { length: 32 }).notNull().default('auto'),
     description: text('description').notNull().default(''),
     packageName: varchar('package_name', { length: 255 }).notNull(),
     platform: appPlatformEnum('platform').notNull(),

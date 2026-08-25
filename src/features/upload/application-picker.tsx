@@ -6,7 +6,9 @@ import { Link } from 'react-router-dom'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useApplicationCatalog } from '@/features/applications/use-applications'
 import { PINNED_APP_IDS, RECENT_APP_IDS } from '@/features/upload/upload-meta'
+import { canMaintainApplication, canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth-store'
 import type { Application } from '@/types/application'
 
 interface ApplicationPickerProps {
@@ -161,10 +163,14 @@ export function ApplicationPicker({
   const shellHeight = usePickerShellHeight(shellRef)
   const [query, setQuery] = useState('')
   const { catalog } = useApplicationCatalog()
+  const platformRole = useAuthStore((state) => state.user?.role)
 
   const filtered = (() => {
     const q = query.trim().toLowerCase()
-    const writableCatalog = catalog.filter((app) => app.status !== 'archived')
+    const writableCatalog = catalog.filter(
+      (app) =>
+        app.status !== 'archived' && canMaintainApplication(platformRole, app.accessRole),
+    )
     if (!q) return writableCatalog
     return writableCatalog.filter(
       (a) =>
@@ -222,18 +228,20 @@ export function ApplicationPicker({
             <p className="text-[0.8125rem] text-muted-foreground">
               {query.trim() ? t('upload.noMatch', { query }) : t('upload.noAppsYet')}
             </p>
-            <Link
-              to="/applications/new"
-              className={cn(
-                'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5',
-                'text-[0.8125rem] font-medium text-foreground',
-                'ring-1 ring-border/60 transition-colors duration-[var(--duration-hover)]',
-                'hover:bg-muted/50',
-              )}
-            >
-              <Plus className="size-3.5 opacity-70" strokeWidth={1.75} />
-              {t('upload.createApplication')}
-            </Link>
+            {canWriteContent(platformRole) ? (
+              <Link
+                to="/applications/new"
+                className={cn(
+                  'inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5',
+                  'text-[0.8125rem] font-medium text-foreground',
+                  'ring-1 ring-border/60 transition-colors duration-[var(--duration-hover)]',
+                  'hover:bg-muted/50',
+                )}
+              >
+                <Plus className="size-3.5 opacity-70" strokeWidth={1.75} />
+                {t('upload.createApplication')}
+              </Link>
+            ) : null}
           </div>
         ) : showGrouped ? (
           <>

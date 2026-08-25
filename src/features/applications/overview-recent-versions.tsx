@@ -19,6 +19,7 @@ interface OverviewRecentVersionsProps {
   applicationId?: string
   applicationName?: string
   applicationStatus?: ApplicationStatus
+  canManage: boolean
   className?: string
 }
 
@@ -31,6 +32,7 @@ export function OverviewRecentVersions({
   applicationId,
   applicationName,
   applicationStatus,
+  canManage,
   className,
 }: OverviewRecentVersionsProps) {
   const { t, i18n } = useTranslation()
@@ -48,14 +50,26 @@ export function OverviewRecentVersions({
         description={t('detail.noVersions')}
         className={cn('py-12', className)}
         action={
-          applicationArchived ? undefined : (
-            <Button asChild size="lg">
-              <Link to={uploadTo}>
+          canManage ? (
+            applicationArchived ? (
+              <Button
+                type="button"
+                size="lg"
+                disabled
+                title={t('artifactRisk.applicationArchivedApplicationDesc')}
+              >
                 <Upload className="size-3.5" strokeWidth={1.75} />
                 {t('detail.uploadArtifact')}
-              </Link>
-            </Button>
-          )
+              </Button>
+            ) : (
+              <Button asChild size="lg">
+                <Link to={uploadTo}>
+                  <Upload className="size-3.5" strokeWidth={1.75} />
+                  {t('detail.uploadArtifact')}
+                </Link>
+              </Button>
+            )
+          ) : undefined
         }
       />
     )
@@ -138,11 +152,17 @@ export function OverviewRecentVersions({
               </div>
 
               <div className="flex shrink-0 items-center gap-0.5 sm:pt-0.5">
-                {applicationId && applicationName ? (
+                {canManage && applicationId && applicationName ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
+                    disabled={applicationArchived}
+                    title={
+                      applicationArchived
+                        ? t('artifactRisk.applicationArchivedShareDesc')
+                        : undefined
+                    }
                     className="text-muted-foreground hover:text-foreground"
                     aria-label={`${t('share.action')} v${art.version}`}
                     onClick={() => setShareArt(art)}
@@ -183,7 +203,11 @@ export function OverviewRecentVersions({
           )
         })}
       </ul>
-      {applicationId && applicationName && shareArt ? (
+      {canManage &&
+      !applicationArchived &&
+      applicationId &&
+      applicationName &&
+      shareArt ? (
         <ShareDialog
           open
           onOpenChange={(open) => {

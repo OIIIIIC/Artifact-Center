@@ -2,6 +2,8 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useApplicationCatalog } from '@/features/applications/use-applications'
+import { canMaintainApplication } from '@/lib/roles'
+import { useAuthStore } from '@/store/auth-store'
 import {
   detectFileKind,
   isEnabledKind,
@@ -38,6 +40,11 @@ export function useUploadFlow() {
   const presetApp = params.get('app') ?? ''
   const { tasks, startUpload } = useUploadManager()
   const { catalog, loading: catalogLoading } = useApplicationCatalog()
+  const platformRole = useAuthStore((state) => state.user?.role)
+  const manageableCatalog = useMemo(
+    () => catalog.filter((app) => canMaintainApplication(platformRole, app.accessRole)),
+    [catalog, platformRole],
+  )
 
   /** Deep-link from detail (?app=) skips application pick when id is known. */
   const [step, setStep] = useState<UploadStep>(() => (presetApp ? 2 : 1))
@@ -61,8 +68,11 @@ export function useUploadFlow() {
   }
 
   const application: Application | undefined = useMemo(
-    () => (applicationId ? catalog.find((a) => a.id === applicationId) : undefined),
-    [applicationId, catalog],
+    () =>
+      applicationId
+        ? manageableCatalog.find((app) => app.id === applicationId)
+        : undefined,
+    [applicationId, manageableCatalog],
   )
 
   const selectApplication = useCallback((id: string) => {
@@ -274,5 +284,6 @@ export function useUploadFlow() {
     done: currentTask?.status === 'completed',
     resetAll,
     catalogLoading,
+    hasUploadableApplications: manageableCatalog.some((app) => app.status !== 'archived'),
   }
 }

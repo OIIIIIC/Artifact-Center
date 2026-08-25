@@ -118,9 +118,8 @@ export function AccessPermissionsWorkspace({
               <button
                 key={value}
                 type="button"
-                disabled={user.role === 'viewer' && value === 'maintainer'}
                 onClick={() => setRole(value)}
-                className={`rounded-md px-2.5 py-1.5 text-[0.6875rem] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                className={`rounded-md px-2.5 py-1.5 text-[0.6875rem] font-medium transition-colors ${
                   role === value
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground'

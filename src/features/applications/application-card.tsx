@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 
 import { StatusBadge } from '@/components/common/status-badge'
+import { ApplicationAvatar } from '@/features/applications/application-avatar'
 import { APPLICATION_STATUS_LABEL } from '@/features/applications/application-status-meta'
 import {
   Avatar,
@@ -11,11 +12,7 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from '@/components/ui/avatar'
-import {
-  PLATFORM_ICON,
-  PLATFORM_LABEL,
-  PLATFORM_TONE,
-} from '@/features/applications/platform-meta'
+import { PLATFORM_ICON, PLATFORM_LABEL } from '@/features/applications/platform-meta'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
@@ -82,15 +79,7 @@ export function ApplicationCard({ application, className }: ApplicationCardProps
       )}
     >
       <div className="flex items-start gap-3.5">
-        <div
-          className={cn(
-            'flex size-12 shrink-0 items-center justify-center rounded-xl',
-            PLATFORM_TONE[application.platform],
-          )}
-          aria-hidden
-        >
-          <PlatformIcon className="size-5" strokeWidth={1.75} />
-        </div>
+        <ApplicationAvatar application={application} className="size-12" />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">

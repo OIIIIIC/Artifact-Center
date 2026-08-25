@@ -38,7 +38,6 @@ import {
   hasApplicationRole,
   requireApplicationRole,
 } from '../middleware/application-access.js'
-import { requireMinRole } from '../middleware/require-role.js'
 
 /** Max artifact size — keep in sync with frontend UPLOAD_MAX_BYTES */
 const MAX_UPLOAD_BYTES = 512 * 1024 * 1024 // 512 MB
@@ -120,7 +119,6 @@ export const artifactRoutes = new Hono<{ Variables: AuthVariables }>()
 artifactRoutes.post(
   '/applications/:appId/artifacts',
   requireAuth,
-  requireMinRole('maintainer'),
   requireApplicationRole('appId', 'maintainer'),
   async (c) => {
     const appId = c.req.param('appId')
@@ -535,78 +533,70 @@ artifactRoutes.get('/downloads/:ticket', async (c) => {
 })
 
 /** PATCH /artifacts/:id — channel / status / notes / mark latest */
-artifactRoutes.patch(
-  '/artifacts/:id',
-  requireAuth,
-  requireMinRole('maintainer'),
-  async (c) => {
-    const id = c.req.param('id')
-    const body = await c.req.json().catch(() => null)
-    const parsed = patchSchema.safeParse(body)
-    if (!parsed.success) {
-      return jsonError(
-        c,
-        400,
-        'invalid_body',
-        'Invalid update payload',
-        parsed.error.flatten(),
-      )
-    }
+artifactRoutes.patch('/artifacts/:id', requireAuth, async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json().catch(() => null)
+  const parsed = patchSchema.safeParse(body)
+  if (!parsed.success) {
+    return jsonError(
+      c,
+      400,
+      'invalid_body',
+      'Invalid update payload',
+      parsed.error.flatten(),
+    )
+  }
 
-    const [current] = await db
-      .select()
-      .from(artifacts)
-      .where(eq(artifacts.id, id))
-      .limit(1)
-    if (!current) return jsonError(c, 404, 'not_found', 'Artifact not found')
-    if (!(await hasApplicationRole(c.get('user'), current.applicationId, 'maintainer'))) {
-      return jsonError(c, 403, 'forbidden', 'Insufficient application role')
-    }
-    const [currentApp] = await db
-      .select({ status: applications.status })
-      .from(applications)
-      .where(eq(applications.id, current.applicationId))
-      .limit(1)
-    if (currentApp?.status === 'archived') {
-      return jsonError(c, 409, 'archived_application', 'Application is archived')
-    }
+  const [current] = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
+  if (!current) return jsonError(c, 404, 'not_found', 'Artifact not found')
+  if (!(await hasApplicationRole(c.get('user'), current.applicationId, 'maintainer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
+  const [currentApp] = await db
+    .select({ status: applications.status })
+    .from(applications)
+    .where(eq(applications.id, current.applicationId))
+    .limit(1)
+  if (currentApp?.status === 'archived') {
+    return jsonError(c, 409, 'archived_application', 'Application is archived')
+  }
 
-    const data = parsed.data
-    if (
-      data.channel === undefined &&
-      data.status === undefined &&
-      data.releaseNotes === undefined &&
-      data.markLatest === undefined
-    ) {
-      return jsonError(c, 400, 'invalid_body', 'No fields to update')
-    }
+  const data = parsed.data
+  if (
+    data.channel === undefined &&
+    data.status === undefined &&
+    data.releaseNotes === undefined &&
+    data.markLatest === undefined
+  ) {
+    return jsonError(c, 400, 'invalid_body', 'No fields to update')
+  }
 
-    const nextChannel = data.channel ?? current.channel
-    let nextStatus = current.status
+  const nextChannel = data.channel ?? current.channel
+  let nextStatus = current.status
 
+  if (data.markLatest === true || data.status === 'latest') {
+    nextStatus = 'latest'
+  } else if (data.status !== undefined) {
+    nextStatus = data.status
+  } else if (data.channel !== undefined && current.status !== 'latest') {
+    // Channel change adjusts baseline status unless still "latest"
+    nextStatus = statusFromChannel(nextChannel)
+  }
+
+  const wasDeprecated =
+    current.status === 'deprecated' || current.channel === 'deprecated'
+  const willBeDeprecated = nextStatus === 'deprecated' || nextChannel === 'deprecated'
+  let deprecatedAt = current.deprecatedAt
+  if (willBeDeprecated && !wasDeprecated) {
+    deprecatedAt = new Date()
+  } else if (!willBeDeprecated && wasDeprecated) {
+    deprecatedAt = null
+  }
+
+  const row = await db.transaction(async (tx) => {
+    const now = new Date()
     if (data.markLatest === true || data.status === 'latest') {
-      nextStatus = 'latest'
-    } else if (data.status !== undefined) {
-      nextStatus = data.status
-    } else if (data.channel !== undefined && current.status !== 'latest') {
-      // Channel change adjusts baseline status unless still "latest"
-      nextStatus = statusFromChannel(nextChannel)
-    }
-
-    const wasDeprecated =
-      current.status === 'deprecated' || current.channel === 'deprecated'
-    const willBeDeprecated = nextStatus === 'deprecated' || nextChannel === 'deprecated'
-    let deprecatedAt = current.deprecatedAt
-    if (willBeDeprecated && !wasDeprecated) {
-      deprecatedAt = new Date()
-    } else if (!willBeDeprecated && wasDeprecated) {
-      deprecatedAt = null
-    }
-
-    const row = await db.transaction(async (tx) => {
-      const now = new Date()
-      if (data.markLatest === true || data.status === 'latest') {
-        await tx.execute(sql`
+      await tx.execute(sql`
           UPDATE artifacts
           SET status = CASE channel
             WHEN 'beta' THEN 'beta'::artifact_status
@@ -616,88 +606,78 @@ artifactRoutes.patch(
           updated_at = now()
           WHERE application_id = ${current.applicationId} AND status = 'latest'
         `)
-      }
+    }
 
-      if (data.releaseNotes !== undefined) {
-        await tx
-          .update(releases)
-          .set({ releaseNotes: data.releaseNotes, updatedAt: now })
-          .where(eq(releases.id, current.releaseId))
-        await tx
-          .update(artifacts)
-          .set({ releaseNotes: data.releaseNotes, updatedAt: now })
-          .where(eq(artifacts.releaseId, current.releaseId))
-      }
-
-      const [updated] = await tx
+    if (data.releaseNotes !== undefined) {
+      await tx
+        .update(releases)
+        .set({ releaseNotes: data.releaseNotes, updatedAt: now })
+        .where(eq(releases.id, current.releaseId))
+      await tx
         .update(artifacts)
-        .set({
-          channel: nextChannel,
-          status: nextStatus,
-          deprecatedAt,
-          updatedAt: now,
-        })
-        .where(eq(artifacts.id, id))
-        .returning()
-      return updated
-    })
+        .set({ releaseNotes: data.releaseNotes, updatedAt: now })
+        .where(eq(artifacts.releaseId, current.releaseId))
+    }
 
-    await writeAudit(c, {
-      action: 'artifact.update',
-      objectType: 'artifact',
-      objectId: row.id,
-      applicationId: row.applicationId,
-      summary: `更新制品 v${row.version}`,
-      meta: {
-        channel: row.channel,
-        status: row.status,
-        markLatest: data.markLatest === true || data.status === 'latest',
-        releaseNotes: data.releaseNotes !== undefined,
-      },
-    })
+    const [updated] = await tx
+      .update(artifacts)
+      .set({
+        channel: nextChannel,
+        status: nextStatus,
+        deprecatedAt,
+        updatedAt: now,
+      })
+      .where(eq(artifacts.id, id))
+      .returning()
+    return updated
+  })
 
-    return c.json({ artifact: mapArtifact(row) })
-  },
-)
+  await writeAudit(c, {
+    action: 'artifact.update',
+    objectType: 'artifact',
+    objectId: row.id,
+    applicationId: row.applicationId,
+    summary: `更新制品 v${row.version}`,
+    meta: {
+      channel: row.channel,
+      status: row.status,
+      markLatest: data.markLatest === true || data.status === 'latest',
+      releaseNotes: data.releaseNotes !== undefined,
+    },
+  })
+
+  return c.json({ artifact: mapArtifact(row) })
+})
 
 /** DELETE /artifacts/:id — remove metadata + file */
-artifactRoutes.delete(
-  '/artifacts/:id',
-  requireAuth,
-  requireMinRole('maintainer'),
-  async (c) => {
-    const id = c.req.param('id')
-    const [current] = await db
-      .select()
-      .from(artifacts)
-      .where(eq(artifacts.id, id))
-      .limit(1)
-    if (!current) return jsonError(c, 404, 'not_found', 'Artifact not found')
-    if (!(await hasApplicationRole(c.get('user'), current.applicationId, 'maintainer'))) {
-      return jsonError(c, 403, 'forbidden', 'Insufficient application role')
-    }
-    const [currentApp] = await db
-      .select({ status: applications.status })
-      .from(applications)
-      .where(eq(applications.id, current.applicationId))
-      .limit(1)
-    if (currentApp?.status === 'archived') {
-      return jsonError(c, 409, 'archived_application', 'Application is archived')
-    }
+artifactRoutes.delete('/artifacts/:id', requireAuth, async (c) => {
+  const id = c.req.param('id')
+  const [current] = await db.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
+  if (!current) return jsonError(c, 404, 'not_found', 'Artifact not found')
+  if (!(await hasApplicationRole(c.get('user'), current.applicationId, 'maintainer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  }
+  const [currentApp] = await db
+    .select({ status: applications.status })
+    .from(applications)
+    .where(eq(applications.id, current.applicationId))
+    .limit(1)
+  if (currentApp?.status === 'archived') {
+    return jsonError(c, 409, 'archived_application', 'Application is archived')
+  }
 
-    await db.delete(artifacts).where(eq(artifacts.id, id))
-    await deleteArtifactStorageFile(current.storageKey, current.storageBackend)
-    await refreshApplicationArtifactStats(current.applicationId)
+  await db.delete(artifacts).where(eq(artifacts.id, id))
+  await deleteArtifactStorageFile(current.storageKey, current.storageBackend)
+  await refreshApplicationArtifactStats(current.applicationId)
 
-    await writeAudit(c, {
-      action: 'artifact.delete',
-      objectType: 'artifact',
-      objectId: current.id,
-      applicationId: current.applicationId,
-      summary: `删除制品 v${current.version}（${current.filename}）`,
-      meta: { version: current.version, wasLatest: current.status === 'latest' },
-    })
+  await writeAudit(c, {
+    action: 'artifact.delete',
+    objectType: 'artifact',
+    objectId: current.id,
+    applicationId: current.applicationId,
+    summary: `删除制品 v${current.version}（${current.filename}）`,
+    meta: { version: current.version, wasLatest: current.status === 'latest' },
+  })
 
-    return c.json({ ok: true })
-  },
-)
+  return c.json({ ok: true })
+})

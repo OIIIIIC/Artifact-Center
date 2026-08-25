@@ -1,6 +1,15 @@
 import { useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Info, Loader2, Pencil, Trash2, Users, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  Info,
+  Loader2,
+  Palette,
+  Pencil,
+  Trash2,
+  Users,
+  X,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -17,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ApplicationMembersPanel } from '@/features/applications/application-members-panel'
+import { ApplicationAppearanceSettings } from '@/features/applications/application-appearance-settings'
 import { useRegions } from '@/features/regions/use-regions'
 import { APPLICATION_STATUS_CHIP } from '@/features/applications/application-status-meta'
 import {
@@ -37,7 +47,7 @@ import type {
   Region,
 } from '@/types/application'
 
-type SettingsView = 'basic' | 'members' | 'danger'
+type SettingsView = 'basic' | 'appearance' | 'members' | 'danger'
 type EditableField = Exclude<ApplicationEditableField, 'owner'>
 
 const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
@@ -216,6 +226,12 @@ export function ApplicationSettingsPanel({
     visible: boolean
   }> = [
     { id: 'basic', label: t('appSettings.navBasic'), icon: Info, visible: true },
+    {
+      id: 'appearance',
+      label: t('appSettings.navAppearance'),
+      icon: Palette,
+      visible: true,
+    },
     { id: 'members', label: t('appSettings.navMembers'), icon: Users, visible: true },
     {
       id: 'danger',
@@ -304,6 +320,10 @@ export function ApplicationSettingsPanel({
             applicationId={application.id}
             autoOpen={autoOpenMembers}
           />
+        ) : null}
+
+        {view === 'appearance' ? (
+          <ApplicationAppearanceSettings application={application} />
         ) : null}
 
         {view === 'danger' && canDelete ? (

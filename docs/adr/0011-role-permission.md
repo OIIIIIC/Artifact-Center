@@ -22,10 +22,16 @@ Artifact Center 需要权限控制来保证制品安全。不同角色对应用�
 
 实现细节：
 
-- `users.role` 存平台级角色
+- `users.role` 存平台级角色：`admin` 管理全局配置并自动访问所有应用；
+  `maintainer` 可创建应用；`viewer` 不可创建应用
 - `application_members` 存应用级关系，唯一键 `(application_id, user_id)`
+- 非管理员的上传、分享、编辑、制品管理和成员管理只依据
+  `application_members.role`，不再叠加平台角色门槛；因此平台 Viewer 可以成为指定应用的 Maintainer
 - 创建应用时创建者自动成为 Maintainer
 - 后端在应用、制品、分享、搜索和审计查询时执行应用级授权
+- 应用接口返回当前用户的有效 `accessRole`，前端据此隐藏长期无权限的操作；
+  归档等临时不可用操作保留禁用状态与原因说明
+- 前端隐藏不替代后端鉴权，直接请求仍必须通过应用级权限校验
 
 ## 替代方案
 

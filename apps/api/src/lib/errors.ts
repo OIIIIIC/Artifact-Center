@@ -36,7 +36,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   last_admin: '系统至少需要保留一名管理员',
   cannot_delete_self: '不能删除当前登录用户',
   owner_membership_required: '应用所有者必须保留成员身份',
-  platform_role_insufficient: '只读平台账号不能设置为应用维护者',
   region_in_use: '该地域仍被应用绑定，无法删除',
   internal_error: '服务器处理请求时发生错误',
 }

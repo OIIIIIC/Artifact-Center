@@ -1,6 +1,8 @@
 import { API_BASE_URL, request, requestBlob } from '@/services/http'
 import type {
   Application,
+  ApplicationIconColor,
+  ApplicationIconKey,
   ApplicationPlatform,
   ApplicationStatus,
   Region,
@@ -212,6 +214,8 @@ type ApiApplication = {
   id: string
   name: string
   applicationCode: string
+  iconKey: ApplicationIconKey
+  iconColor: ApplicationIconColor
   description: string
   packageName: string
   platform: ApplicationPlatform
@@ -219,6 +223,7 @@ type ApiApplication = {
   repository: string
   status: ApplicationStatus
   owner: string
+  accessRole?: Application['accessRole']
   members?: Array<{
     id: string
     name: string
@@ -236,6 +241,8 @@ function mapApp(a: ApiApplication): Application {
     id: a.id,
     name: a.name,
     applicationCode: a.applicationCode,
+    iconKey: a.iconKey,
+    iconColor: a.iconColor,
     description: a.description,
     packageName: a.packageName,
     platform: a.platform,
@@ -243,6 +250,7 @@ function mapApp(a: ApiApplication): Application {
     repository: a.repository,
     status: a.status,
     owner: a.owner,
+    accessRole: a.accessRole,
     members: a.members,
     latestVersion: a.latestVersion,
     artifactCount: a.artifactCount,
@@ -304,6 +312,8 @@ export async function apiCreateApplication(
 export type UpdateApplicationBody = {
   name?: string
   applicationCode?: string
+  iconKey?: ApplicationIconKey
+  iconColor?: ApplicationIconColor
   description?: string
   packageName?: string
   platform?: ApplicationPlatform
@@ -330,6 +340,18 @@ export async function apiBulkUpdateApplicationCodes(
   const data = await request<{ updated: number }>('/applications/bulk-codes', {
     method: 'PATCH',
     body: { updates },
+  })
+  return data.updated
+}
+
+export async function apiBulkUpdateApplicationAppearance(body: {
+  applicationIds: string[]
+  iconKey?: ApplicationIconKey
+  iconColor?: ApplicationIconColor
+}): Promise<number> {
+  const data = await request<{ updated: number }>('/applications/bulk-appearance', {
+    method: 'PATCH',
+    body,
   })
   return data.updated
 }

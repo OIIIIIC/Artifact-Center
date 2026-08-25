@@ -127,19 +127,6 @@ settingsRoutes.post('/access-grants', requireRoles('admin'), async (c) => {
       'Administrators already have access to every application',
     )
   }
-  if (
-    data.operation === 'set' &&
-    data.role === 'maintainer' &&
-    target.role === 'viewer'
-  ) {
-    return jsonError(
-      c,
-      400,
-      'platform_role_insufficient',
-      'Viewer cannot be application maintainer',
-    )
-  }
-
   const selectedApplications = await db
     .select({
       id: applications.id,

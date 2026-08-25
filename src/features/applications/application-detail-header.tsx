@@ -8,13 +8,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ArtifactReleaseBadges } from '@/features/applications/artifact-release-badges'
-import { PLATFORM_ICON, PLATFORM_TONE } from '@/features/applications/platform-meta'
+import { ApplicationAvatar } from '@/features/applications/application-avatar'
+import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { ShareDialog } from '@/features/share/share-dialog'
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
-import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/store/auth-store'
 import type { Application } from '@/types/application'
 import {
   getArtifactChannel,
@@ -26,6 +25,7 @@ interface ApplicationDetailHeaderProps {
   application: Application
   /** Prefer latest artifact for real filename/size when available */
   latest?: Artifact
+  canManage: boolean
   className?: string
 }
 
@@ -47,14 +47,13 @@ function extFor(platform: Application['platform']) {
 export function ApplicationDetailHeader({
   application,
   latest,
+  canManage,
   className,
 }: ApplicationDetailHeaderProps) {
   const { t, i18n } = useTranslation()
   const location = useLocation()
   const returnTo = getReturnTo(location.state)
   void i18n.language
-  const role = useAuthStore((s) => s.user?.role)
-  const canWrite = canWriteContent(role)
   const applicationArchived = application.status === 'archived'
   const { download, isBusy, downloadConfirmation } = useDownloadArtifact()
   const [shareOpen, setShareOpen] = useState(false)
@@ -62,14 +61,6 @@ export function ApplicationDetailHeader({
   const downloading = isBusy(latestKey)
 
   const PlatformIcon = PLATFORM_ICON[application.platform]
-  const initials = application.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-
   const ownerInitial = application.owner
     .split(/\s+/)
     .map((p) => p[0])
@@ -124,15 +115,11 @@ export function ApplicationDetailHeader({
       )}
     >
       <div className="flex min-w-0 items-start gap-4 sm:gap-5">
-        <div
-          className={cn(
-            'flex size-16 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold tracking-tight sm:size-[4.5rem] sm:text-xl',
-            PLATFORM_TONE[application.platform],
-          )}
-          aria-hidden
-        >
-          {initials}
-        </div>
+        <ApplicationAvatar
+          application={application}
+          className="size-16 rounded-2xl sm:size-[4.5rem]"
+          iconClassName="size-7 sm:size-8"
+        />
 
         <div className="min-w-0 space-y-2.5">
           {/* Title: app name + artifact version / latest / channel only */}
@@ -267,11 +254,17 @@ export function ApplicationDetailHeader({
               </TooltipContent>
             </Tooltip>
           ) : null}
-          {hasVersion ? (
+          {canManage && hasVersion ? (
             <Button
               type="button"
               size="lg"
               variant="outline"
+              disabled={applicationArchived}
+              title={
+                applicationArchived
+                  ? t('artifactRisk.applicationArchivedShareDesc')
+                  : undefined
+              }
               className="border-0 bg-muted/40 ring-1 ring-border/60"
               onClick={() => setShareOpen(true)}
             >
@@ -279,13 +272,25 @@ export function ApplicationDetailHeader({
               {t('share.action')}
             </Button>
           ) : null}
-          {canWrite && !applicationArchived ? (
-            <Button asChild size="lg">
-              <Link to={`/upload?app=${application.id}`}>
+          {canManage ? (
+            applicationArchived ? (
+              <Button
+                type="button"
+                size="lg"
+                disabled
+                title={t('artifactRisk.applicationArchivedApplicationDesc')}
+              >
                 <Upload className="size-3.5" strokeWidth={1.75} />
                 {t('detail.uploadArtifact')}
-              </Link>
-            </Button>
+              </Button>
+            ) : (
+              <Button asChild size="lg">
+                <Link to={`/upload?app=${application.id}`}>
+                  <Upload className="size-3.5" strokeWidth={1.75} />
+                  {t('detail.uploadArtifact')}
+                </Link>
+              </Button>
+            )
           ) : null}
           <Button
             asChild
@@ -309,14 +314,16 @@ export function ApplicationDetailHeader({
         ) : null}
       </div>
 
-      <ShareDialog
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        applicationId={application.id}
-        applicationName={application.name}
-        artifact={latest}
-        applicationArchived={applicationArchived}
-      />
+      {canManage ? (
+        <ShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          applicationId={application.id}
+          applicationName={application.name}
+          artifact={latest}
+          applicationArchived={applicationArchived}
+        />
+      ) : null}
       {downloadConfirmation}
     </header>
   )
