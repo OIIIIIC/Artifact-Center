@@ -718,6 +718,61 @@ applicationRoutes.get(
   },
 )
 
+/** 更新一个发布版本的说明，不修改任何制品事实。 */
+applicationRoutes.patch(
+  '/:id/releases/:releaseId',
+  requireApplicationRole('id', 'maintainer'),
+  async (c) => {
+    const parsed = z
+      .object({ releaseNotes: z.string().max(8000) })
+      .safeParse(await c.req.json().catch(() => null))
+    if (!parsed.success) {
+      return jsonError(c, 400, 'invalid_body', 'Invalid release notes')
+    }
+
+    const applicationId = c.req.param('id')
+    const releaseId = c.req.param('releaseId')
+    const [release] = await db
+      .select()
+      .from(releases)
+      .where(and(eq(releases.id, releaseId), eq(releases.applicationId, applicationId)))
+      .limit(1)
+    if (!release) return jsonError(c, 404, 'not_found', 'Release not found')
+
+    const [application] = await db
+      .select({ status: applications.status })
+      .from(applications)
+      .where(eq(applications.id, applicationId))
+      .limit(1)
+    if (application?.status === 'archived') {
+      return jsonError(c, 409, 'archived_application', 'Application is archived')
+    }
+
+    const updatedAt = new Date()
+    await db.transaction(async (tx) => {
+      await tx
+        .update(releases)
+        .set({ releaseNotes: parsed.data.releaseNotes, updatedAt })
+        .where(eq(releases.id, release.id))
+      await tx
+        .update(artifacts)
+        .set({ releaseNotes: parsed.data.releaseNotes, updatedAt })
+        .where(eq(artifacts.releaseId, release.id))
+    })
+
+    await writeAudit(c, {
+      action: 'release.update',
+      objectType: 'release',
+      objectId: release.id,
+      applicationId,
+      summary: `更新 v${release.version} 的发布说明`,
+      meta: { releaseNotes: true },
+    })
+
+    return c.json({ ok: true })
+  },
+)
+
 /** 应用成员列表；成员可查看。 */
 applicationRoutes.get(
   '/:id/members',

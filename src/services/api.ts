@@ -543,6 +543,17 @@ export async function apiListReleases(appId: string): Promise<Release[]> {
   return data.items
 }
 
+export async function apiUpdateReleaseNotes(
+  appId: string,
+  releaseId: string,
+  releaseNotes: string,
+): Promise<void> {
+  await request<{ ok: true }>(`/applications/${appId}/releases/${releaseId}`, {
+    method: 'PATCH',
+    body: { releaseNotes },
+  })
+}
+
 export async function apiGetArtifact(id: string): Promise<Artifact> {
   const data = await request<{ artifact: ApiArtifact }>(`/artifacts/${id}`)
   return mapArtifact(data.artifact)

@@ -12,6 +12,7 @@ export type AuditAction =
   | 'artifact.download'
   | 'artifact.update'
   | 'artifact.delete'
+  | 'release.update'
   | 'share.create'
   | 'share.revoke'
   | 'share.download'
@@ -34,6 +35,7 @@ export type AuditAction =
 export type AuditObjectType =
   | 'application'
   | 'artifact'
+  | 'release'
   | 'region'
   | 'release_credential'
   | 'user'
