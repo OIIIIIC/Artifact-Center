@@ -14,12 +14,13 @@ export type DownloadTarget = {
   artifactId?: string
   filename: string
   version?: string
+  buildNumber?: string
   sizeBytes?: number
   /** Server share token — preferred for /d/:token landing */
   shareToken?: string
   /** Share Collection 中的具体分享项。 */
   shareItemId?: string
-  /** 弃用或归档制品需要用户再次确认。 */
+  /** 非正式、弃用或归档的应用／制品需要用户再次确认。 */
   riskStatus?: ArtifactOperationRiskStatus | null
   /** Force failure for demo */
   forceError?: boolean
@@ -103,6 +104,9 @@ export function useDownloadArtifact() {
     ? createElement(ArtifactDownloadConfirmDialog, {
         risk: pendingTarget.riskStatus,
         version: pendingTarget.version,
+        buildNumber: pendingTarget.buildNumber,
+        filename: pendingTarget.filename,
+        sizeBytes: pendingTarget.sizeBytes,
         onCancel: () => setPendingTarget(null),
         onConfirm: () => {
           const target = pendingTarget

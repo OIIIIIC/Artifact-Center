@@ -11,7 +11,11 @@ import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
 import { resolveShareToken } from '@/features/share/resolve-share'
 import { formatAbsoluteDate, formatFileSize } from '@/lib/format'
-import { getArtifactChannel, getArtifactRiskStatus } from '@/types/artifact'
+import {
+  getApplicationDownloadRiskStatus,
+  getArtifactChannel,
+  getArtifactRiskStatus,
+} from '@/types/artifact'
 
 export function ShareDownloadPage() {
   const { token = '' } = useParams()
@@ -108,9 +112,8 @@ export function ShareDownloadPage() {
             const PlatformIcon = PLATFORM_ICON[item.application.platform]
             const busy = isBusy(`share:${item.id}`)
             const riskStatus = artifact
-              ? item.application.status === 'archived'
-                ? ('applicationArchived' as const)
-                : getArtifactRiskStatus(artifact)
+              ? (getApplicationDownloadRiskStatus(item.application.status) ??
+                getArtifactRiskStatus(artifact))
               : null
 
             return (
@@ -157,6 +160,7 @@ export function ShareDownloadPage() {
                           artifactId: artifact.id,
                           filename: artifact.filename,
                           version: artifact.version,
+                          buildNumber: artifact.buildNumber,
                           sizeBytes: artifact.sizeBytes,
                           shareToken: result.serverToken,
                           shareItemId: item.id,

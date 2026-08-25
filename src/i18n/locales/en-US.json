@@ -90,6 +90,9 @@
     "failedHint": "Please try again, or contact the project admin."
   },
   "artifactRisk": {
+    "betaTitle": "This is a test version",
+    "betaDownloadDesc": "Test versions may differ from formal releases in performance, stability, or functionality. Confirm the intended use before downloading.",
+    "betaContinue": "Download test version",
     "deprecatedTitle": "This version is deprecated",
     "deprecatedDownloadDesc": "This version may contain known issues and is not recommended for production. You can continue after confirming its purpose.",
     "deprecatedShareDesc": "A pinned link will keep distributing this deprecated version. Confirm that this is intentional.",
@@ -103,7 +106,13 @@
     "applicationArchivedDownloadDesc": "This application is no longer maintained. Download only for historical reference or issue reproduction.",
     "applicationArchivedShareDesc": "Archived applications cannot create new share links. Restore the application in Settings first.",
     "applicationArchivedContinue": "Download anyway",
-    "versionLine": "Target version: v{{version}}"
+    "applicationBetaTitle": "Application is in beta",
+    "applicationBetaDownloadDesc": "This application is currently for testing. Its package may not be suitable for on-site production use. Confirm the intended use before downloading.",
+    "applicationBetaContinue": "Download test package",
+    "applicationDeprecatedTitle": "Application is deprecated",
+    "applicationDeprecatedDownloadDesc": "This application is no longer recommended. Download only for historical reference or issue reproduction.",
+    "applicationDeprecatedContinue": "Download anyway",
+    "versionLine": "Target version: v{{version}} · Build {{build}}"
   },
   "auth": {
     "subtitle": "Sign in to Artifact Center",

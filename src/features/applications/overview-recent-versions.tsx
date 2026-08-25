@@ -12,7 +12,11 @@ import { useDownloadArtifact } from '@/features/applications/use-download-artifa
 import { formatFileSize, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { ApplicationStatus } from '@/types/application'
-import { getArtifactRiskStatus, type Artifact } from '@/types/artifact'
+import {
+  getApplicationDownloadRiskStatus,
+  getArtifactRiskStatus,
+  type Artifact,
+} from '@/types/artifact'
 
 interface OverviewRecentVersionsProps {
   artifacts: Artifact[]
@@ -40,6 +44,7 @@ export function OverviewRecentVersions({
   const { download, isBusy, downloadConfirmation } = useDownloadArtifact()
   const [shareArt, setShareArt] = useState<Artifact | null>(null)
   const applicationArchived = applicationStatus === 'archived'
+  const applicationDownloadRisk = getApplicationDownloadRiskStatus(applicationStatus)
 
   if (artifacts.length === 0) {
     const uploadTo = applicationId ? `/upload?app=${applicationId}` : '/upload'
@@ -184,9 +189,10 @@ export function OverviewRecentVersions({
                       artifactId: art.id,
                       filename: art.filename,
                       version: art.version,
+                      buildNumber: art.buildNumber,
                       sizeBytes: art.sizeBytes,
-                      riskStatus: applicationArchived
-                        ? 'applicationArchived'
+                      riskStatus: applicationDownloadRisk
+                        ? applicationDownloadRisk
                         : getArtifactRiskStatus(art),
                     })
                   }

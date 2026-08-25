@@ -90,6 +90,9 @@
     "failedHint": "请稍后重试，或联系项目管理员。"
   },
   "artifactRisk": {
+    "betaTitle": "这是测试版本",
+    "betaDownloadDesc": "测试版本可能与正式版本在性能、稳定性或功能上存在差异。确认用途后仍可继续下载。",
+    "betaContinue": "下载测试版本",
     "deprecatedTitle": "这是已弃用版本",
     "deprecatedDownloadDesc": "该版本可能存在已知问题，不建议用于生产环境。确认用途后仍可继续下载。",
     "deprecatedShareDesc": "固定分享会让接收者持续获取这个已弃用版本，请确认分享目的。",
@@ -103,7 +106,13 @@
     "applicationArchivedDownloadDesc": "该应用已停止维护，本次下载仅建议用于历史追溯或问题复现。",
     "applicationArchivedShareDesc": "已归档应用不能创建新的分享链接。请先在设置中恢复应用状态。",
     "applicationArchivedContinue": "仍然下载",
-    "versionLine": "目标版本：v{{version}}"
+    "applicationBetaTitle": "应用当前处于 Beta 阶段",
+    "applicationBetaDownloadDesc": "该应用当前用于测试验证，下载包可能不是适合现场正式使用的版本。确认用途后仍可继续下载。",
+    "applicationBetaContinue": "下载测试包",
+    "applicationDeprecatedTitle": "应用已弃用",
+    "applicationDeprecatedDownloadDesc": "该应用已停止推荐使用，下载包仅建议用于历史追溯或问题复现。",
+    "applicationDeprecatedContinue": "仍然下载",
+    "versionLine": "目标版本：v{{version}} · 构建号 {{build}}"
   },
   "auth": {
     "subtitle": "登录以访问制品中心",

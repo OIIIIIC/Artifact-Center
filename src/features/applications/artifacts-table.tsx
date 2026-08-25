@@ -35,7 +35,11 @@ import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { apiDeleteArtifact, apiUpdateArtifact } from '@/services/api'
 import type { ApplicationStatus } from '@/types/application'
-import { getArtifactRiskStatus, type Artifact } from '@/types/artifact'
+import {
+  getApplicationDownloadRiskStatus,
+  getArtifactRiskStatus,
+  type Artifact,
+} from '@/types/artifact'
 
 interface ArtifactsTableProps {
   artifacts: Artifact[]
@@ -59,6 +63,7 @@ export function ArtifactsTable({
   void i18n.language
   const queryClient = useQueryClient()
   const applicationArchived = applicationStatus === 'archived'
+  const applicationDownloadRisk = getApplicationDownloadRiskStatus(applicationStatus)
   const canModify = canManage && !applicationArchived
   const { download, isBusy, downloadConfirmation } = useDownloadArtifact()
   const [shareArt, setShareArt] = useState<Artifact | null>(null)
@@ -336,9 +341,10 @@ export function ArtifactsTable({
                           artifactId: art.id,
                           filename: art.filename,
                           version: art.version,
+                          buildNumber: art.buildNumber,
                           sizeBytes: art.sizeBytes,
-                          riskStatus: applicationArchived
-                            ? 'applicationArchived'
+                          riskStatus: applicationDownloadRisk
+                            ? applicationDownloadRisk
                             : getArtifactRiskStatus(art),
                         })
                       }

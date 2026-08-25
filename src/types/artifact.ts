@@ -1,11 +1,14 @@
-import type { ApplicationPlatform } from '@/types/application'
+import type { ApplicationPlatform, ApplicationStatus } from '@/types/application'
 import type { UploadChannel } from '@/types/upload'
 
 /** Version / build lifecycle on an artifact row */
 export type ArtifactStatus = 'latest' | 'stable' | 'beta' | 'deprecated' | 'archived'
 export type ArtifactType = 'apk' | 'aab' | 'exe' | 'zip'
-export type ArtifactRiskStatus = 'deprecated' | 'archived'
-export type ArtifactOperationRiskStatus = ArtifactRiskStatus | 'applicationArchived'
+export type ArtifactRiskStatus = 'beta' | 'deprecated' | 'archived'
+export type ApplicationDownloadRiskStatus =
+  'applicationBeta' | 'applicationDeprecated' | 'applicationArchived'
+export type ArtifactOperationRiskStatus =
+  ArtifactRiskStatus | ApplicationDownloadRiskStatus
 
 export interface Artifact {
   id: string
@@ -48,6 +51,17 @@ export function getArtifactChannel(art: Artifact): UploadChannel {
 export function getArtifactRiskStatus(art: Artifact): ArtifactRiskStatus | null {
   if (art.status === 'archived') return 'archived'
   if (art.status === 'deprecated' || art.channel === 'deprecated') return 'deprecated'
+  if (art.status === 'beta' || art.channel === 'beta') return 'beta'
+  return null
+}
+
+/** 应用处于非正式生命周期时，下载前需明确说明当前用途。 */
+export function getApplicationDownloadRiskStatus(
+  status: ApplicationStatus | undefined,
+): ApplicationDownloadRiskStatus | null {
+  if (status === 'archived') return 'applicationArchived'
+  if (status === 'deprecated') return 'applicationDeprecated'
+  if (status === 'beta') return 'applicationBeta'
   return null
 }
 

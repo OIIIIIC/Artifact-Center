@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 
 import { Button } from '@/components/ui/button'
+import { formatFileSize } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { ArtifactOperationRiskStatus } from '@/types/artifact'
 
@@ -19,13 +20,14 @@ export function ArtifactRiskNotice({
   titleId?: string
 }) {
   const { t } = useTranslation()
-  const Icon = risk === 'archived' ? Archive : TriangleAlert
+  const Icon =
+    risk === 'archived' || risk === 'applicationArchived' ? Archive : TriangleAlert
 
   return (
     <div
       className={cn(
         'flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-[0.8125rem] ring-1',
-        risk === 'archived'
+        risk === 'archived' || risk === 'applicationArchived'
           ? 'bg-muted/45 text-foreground ring-border-strong/60'
           : 'bg-warning/10 text-warning-foreground ring-warning/25',
         className,
@@ -50,11 +52,17 @@ export function ArtifactRiskNotice({
 export function ArtifactDownloadConfirmDialog({
   risk,
   version,
+  buildNumber,
+  filename,
+  sizeBytes,
   onCancel,
   onConfirm,
 }: {
   risk: ArtifactOperationRiskStatus
   version?: string
+  buildNumber?: string
+  filename?: string
+  sizeBytes?: number
   onCancel: () => void
   onConfirm: () => void
 }) {
@@ -84,10 +92,20 @@ export function ArtifactDownloadConfirmDialog({
           context="download"
           titleId="artifact-risk-title"
         />
-        {version ? (
-          <p className="mt-3 text-[0.75rem] text-muted-foreground">
-            {t('artifactRisk.versionLine', { version })}
-          </p>
+        {version || filename ? (
+          <div className="mt-3 space-y-1 text-[0.75rem] text-muted-foreground">
+            {version ? (
+              <p>
+                {t('artifactRisk.versionLine', { version, build: buildNumber ?? '—' })}
+              </p>
+            ) : null}
+            {filename ? (
+              <p className="truncate font-mono" title={filename}>
+                {filename}
+                {sizeBytes != null ? ` · ${formatFileSize(sizeBytes)}` : ''}
+              </p>
+            ) : null}
+          </div>
         ) : null}
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import type { Application } from '@/types/application'
 import {
   getArtifactChannel,
+  getApplicationDownloadRiskStatus,
   getArtifactRiskStatus,
   type Artifact,
 } from '@/types/artifact'
@@ -55,6 +56,7 @@ export function ApplicationDetailHeader({
   const returnTo = getReturnTo(location.state)
   void i18n.language
   const applicationArchived = application.status === 'archived'
+  const applicationDownloadRisk = getApplicationDownloadRiskStatus(application.status)
   const { download, isBusy, downloadConfirmation } = useDownloadArtifact()
   const [shareOpen, setShareOpen] = useState(false)
   const latestKey = `latest:${application.id}`
@@ -232,9 +234,10 @@ export function ApplicationDetailHeader({
                       artifactId: latest?.id,
                       filename,
                       version: latestVersion,
+                      buildNumber: latest?.buildNumber,
                       sizeBytes: latest?.sizeBytes,
-                      riskStatus: applicationArchived
-                        ? 'applicationArchived'
+                      riskStatus: applicationDownloadRisk
+                        ? applicationDownloadRisk
                         : latest
                           ? getArtifactRiskStatus(latest)
                           : null,
