@@ -401,6 +401,7 @@ export type ApplicationMemberDto = {
   id: string
   name: string
   email: string
+  avatarUrl: string | null
   role: 'maintainer' | 'viewer'
   platformRole: 'admin' | 'maintainer' | 'viewer'
   isOwner: boolean
@@ -411,6 +412,7 @@ export type ApplicationMemberCandidateDto = {
   id: string
   name: string
   email: string
+  avatarUrl: string | null
   platformRole: 'maintainer' | 'viewer'
 }
 

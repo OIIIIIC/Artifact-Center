@@ -789,6 +789,7 @@ applicationRoutes.get(
         id: users.id,
         name: users.name,
         email: users.email,
+        avatarUrl: users.avatarUrl,
         role: applicationMembers.role,
         platformRole: users.role,
         joinedAt: applicationMembers.createdAt,
@@ -826,6 +827,7 @@ applicationRoutes.get(
         id: users.id,
         name: users.name,
         email: users.email,
+        avatarUrl: users.avatarUrl,
         platformRole: users.role,
       })
       .from(users)

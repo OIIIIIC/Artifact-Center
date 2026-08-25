@@ -9,13 +9,12 @@ import {
   Plus,
   Search,
   Trash2,
-  UserRound,
   X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/common/user-avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -413,15 +412,16 @@ function CandidateList({
 function MemberIdentity({
   member,
 }: {
-  member: Pick<ApplicationMemberDto, 'name' | 'email'>
+  member: {
+    id: string
+    name: string
+    email: string
+    avatarUrl?: string | null
+  }
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <Avatar size="sm">
-        <AvatarFallback>
-          <UserRound className="size-3.5" />
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar user={member} className="shrink-0" />
       <div className="min-w-0">
         <p className="truncate text-[0.8125rem] font-medium text-foreground">
           {member.name}
