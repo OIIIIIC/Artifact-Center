@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, ilike, ne, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { Readable } from 'node:stream'
 import { z } from 'zod'
@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { db } from '../db/client.js'
 import {
   applications,
+  applicationMembers,
   artifacts,
   regions,
   releases,
@@ -66,6 +67,15 @@ const createUploadSchema = z.object({
   channel: channelEnum.optional().default('stable'),
   releaseNotes: z.string().max(8000).optional().default(''),
   markLatest: z.boolean().optional().default(true),
+})
+
+/**
+ * Applications a release credential (or an interactive MCP session) can publish to.
+ * Keep the result deliberately small: it is a target picker, not the Applications UI.
+ */
+export const releaseApplicationQuerySchema = z.object({
+  q: z.string().trim().max(200).optional().default(''),
+  platform: platformEnum.optional(),
 })
 
 type ArtifactType = 'apk' | 'aab' | 'exe' | 'zip'
@@ -144,6 +154,27 @@ function mapArtifact(row: typeof artifacts.$inferSelect) {
   }
 }
 
+function mapReleaseApplicationTarget(row: {
+  application: typeof applications.$inferSelect
+  region: typeof regions.$inferSelect
+  accessRole: 'admin' | 'maintainer'
+}) {
+  return {
+    id: row.application.id,
+    name: row.application.name,
+    applicationCode: row.application.applicationCode,
+    packageName: row.application.packageName,
+    platform: row.application.platform,
+    status: row.application.status,
+    accessRole: row.accessRole,
+    region: {
+      id: row.region.id,
+      code: row.region.code,
+      name: row.region.name,
+    },
+  }
+}
+
 async function getSessionForUser(
   id: string,
   user: { sub: string; role: string },
@@ -169,6 +200,80 @@ async function getSessionForUser(
 }
 
 export const uploadRoutes = new Hono<{ Variables: UploadAuthVariables }>()
+
+/**
+ * Discover publish targets without granting a release credential access to the
+ * broader Applications API. Only maintainers (and admins) are returned.
+ */
+uploadRoutes.get('/release/applications', requireUploadAuth, async (c) => {
+  const parsed = releaseApplicationQuerySchema.safeParse({
+    q: c.req.query('q'),
+    platform: c.req.query('platform'),
+  })
+  if (!parsed.success) {
+    return jsonError(c, 400, 'invalid_query', 'Invalid application query')
+  }
+
+  const { q, platform } = parsed.data
+  const searchCondition = q
+    ? (() => {
+        const pattern = `%${q}%`
+        return or(
+          ilike(applications.name, pattern),
+          // Application code and package name are the stable identifiers normally
+          // found in a repository release configuration.
+          ilike(applications.applicationCode, pattern),
+          ilike(applications.packageName, pattern),
+        )
+      })()
+    : undefined
+  const selectableFilter = platform
+    ? searchCondition
+      ? and(searchCondition, eq(applications.platform, platform))
+      : eq(applications.platform, platform)
+    : searchCondition
+  const filter = selectableFilter
+    ? and(ne(applications.status, 'archived'), selectableFilter)
+    : ne(applications.status, 'archived')
+
+  const user = c.get('user')
+  const rows =
+    user.role === 'admin'
+      ? await db
+          .select({ application: applications, region: regions })
+          .from(applications)
+          .innerJoin(regions, eq(regions.id, applications.regionId))
+          .where(filter)
+          .orderBy(desc(applications.updatedAt), asc(applications.name))
+          .limit(100)
+      : await db
+          .select({ application: applications, region: regions })
+          .from(applications)
+          .innerJoin(regions, eq(regions.id, applications.regionId))
+          .innerJoin(
+            // A release credential acts as its configured actor. Viewer access
+            // can discover/download, but never expose a publish target.
+            applicationMembers,
+            and(
+              eq(applicationMembers.applicationId, applications.id),
+              eq(applicationMembers.userId, user.sub),
+              eq(applicationMembers.role, 'maintainer'),
+            ),
+          )
+          .where(filter)
+          .orderBy(desc(applications.updatedAt), asc(applications.name))
+          .limit(100)
+
+  return c.json({
+    items: rows.map((row) =>
+      mapReleaseApplicationTarget({
+        ...row,
+        accessRole: user.role === 'admin' ? 'admin' : 'maintainer',
+      }),
+    ),
+    total: rows.length,
+  })
+})
 
 /** Create or recover a resumable transfer. The same resumeKey is safe to retry. */
 uploadRoutes.post(
@@ -716,8 +821,8 @@ uploadRoutes.post('/uploads/:id/complete', requireUploadAuth, async (c) => {
 /** Resolve the exact Application + Region bound to an upload credential. */
 uploadRoutes.get('/release/applications/:appId/target', requireUploadAuth, async (c) => {
   const applicationId = c.req.param('appId')
-  if (!(await hasApplicationRole(c.get('user'), applicationId, 'viewer'))) {
-    return jsonError(c, 403, 'forbidden', 'Insufficient application role')
+  if (!(await hasApplicationRole(c.get('user'), applicationId, 'maintainer'))) {
+    return jsonError(c, 403, 'forbidden', 'Insufficient application role to publish')
   }
 
   const [row] = await db

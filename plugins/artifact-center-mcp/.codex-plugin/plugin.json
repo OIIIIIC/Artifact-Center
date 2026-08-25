@@ -1,0 +1,23 @@
+{
+  "name": "artifact-center-mcp",
+  "version": "0.1.0",
+  "description": "Publish and manage Artifact Center artifacts from Codex.",
+  "author": { "name": "Artifact Center" },
+  "license": "UNLICENSED",
+  "keywords": ["artifact", "release", "upload", "mcp"],
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Artifact Center",
+    "shortDescription": "Authorize, publish, and update release artifacts.",
+    "longDescription": "Uses an Artifact Center release credential to safely discover publish targets, upload builds, and update release notes or explicitly promote beta builds. Destructive deletion is intentionally unavailable.",
+    "developerName": "Artifact Center",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Check my Artifact Center release authorization.",
+      "Upload my completed build as a beta artifact.",
+      "Update release notes or promote a beta artifact to stable."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

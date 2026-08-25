@@ -17,6 +17,7 @@ import { authRoutes } from './routes/auth.js'
 import { healthRoutes } from './routes/health.js'
 import { publicRoutes } from './routes/public.js'
 import { releaseCredentialRoutes } from './routes/release-credentials.js'
+import { releaseArtifactRoutes } from './routes/release-artifacts.js'
 import { searchRoutes } from './routes/search.js'
 import { settingsRoutes } from './routes/settings.js'
 import { shareRoutes } from './routes/shares.js'
@@ -80,6 +81,7 @@ app.route('/settings', settingsRoutes)
 app.route('/', uploadRoutes)
 app.route('/applications', applicationRoutes)
 app.route('/settings/release-credentials', releaseCredentialRoutes)
+app.route('/release', releaseArtifactRoutes)
 app.route('/', shareRoutes)
 app.route('/', artifactRoutes)
 

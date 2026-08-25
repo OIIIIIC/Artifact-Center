@@ -1,0 +1,15 @@
+{
+  "name": "@artifact-center/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test",
+    "check": "node --check src/index.js && node --check src/client.js && npm test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "zod": "^3.25.28"
+  }
+}

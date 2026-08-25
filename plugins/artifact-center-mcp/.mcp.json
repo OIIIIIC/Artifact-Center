@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "artifact-center": {
+      "command": "node",
+      "args": ["src/index.js"],
+      "cwd": ".",
+      "env_vars": ["ARTIFACT_CENTER_URL", "ARTIFACT_CENTER_TOKEN"]
+    }
+  }
+}
