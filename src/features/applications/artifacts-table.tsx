@@ -97,6 +97,7 @@ export function ArtifactsTable({
       queryClient.invalidateQueries({
         queryKey: queryKeys.audit.byApp(applicationId),
       }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.audit.global }),
     ])
   }
 
@@ -264,7 +265,7 @@ export function ArtifactsTable({
                       {t('detail.build', { number: art.buildNumber })}
                     </p>
                     <p
-                      className="mt-1 max-w-[16rem] truncate font-mono text-[0.6875rem] text-muted-foreground/70"
+                      className="mt-1 w-full truncate font-mono text-[0.6875rem] text-muted-foreground/70"
                       title={
                         art.originalFilename && art.originalFilename !== art.filename
                           ? `${art.filename}\n${t('upload.reviewOriginalFilename')}: ${art.originalFilename}`
