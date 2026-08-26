@@ -325,15 +325,9 @@
     "avatarChange": "Change photo",
     "avatarRemove": "Remove",
     "avatarLibrary": "Choose from library",
-    "avatarLibraryTitle": "Choose a default avatar",
-    "avatarLibraryStyleLabel": "Avatar styles",
+    "avatarLibraryTitle": "Choose an avatar",
     "avatarLibraryGridLabel": "Available avatars",
     "avatarLibraryOption": "Choose avatar {{number}}",
-    "avatarStyle": {
-      "notionists": "Color illustration",
-      "pixelArt": "Pixel art",
-      "lorelei": "Line art"
-    },
     "avatarHint": "JPG / PNG / WebP, up to 2 MB, or choose from the built-in avatar library.",
     "avatarErrorType": "Choose a valid image file.",
     "avatarErrorSize": "Image must be 2 MB or smaller.",

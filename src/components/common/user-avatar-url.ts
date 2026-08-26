@@ -1,48 +1,37 @@
-import { createAvatar } from '@dicebear/core'
-import * as lorelei from '@dicebear/lorelei'
-import * as notionists from '@dicebear/notionists'
-import * as pixelArt from '@dicebear/pixel-art'
-
 type AvatarUser = {
   id: string
   avatarUrl?: string | null
 }
 
-const DEFAULT_BACKGROUND = ['f1f5f9']
+const AVATAR_LIBRARY_ROOT = '/avatar-library'
 
-export const AVATAR_LIBRARY_STYLES = [
-  { id: 'notionists', labelKey: 'settings.avatarStyle.notionists' },
-  { id: 'pixel-art', labelKey: 'settings.avatarStyle.pixelArt' },
-  { id: 'lorelei', labelKey: 'settings.avatarStyle.lorelei' },
-] as const
+/** Curated 3D avatar assets packaged with the application for offline use. */
+export const DEFAULT_AVATAR_URLS = Array.from(
+  { length: 33 },
+  (_, index) => `${AVATAR_LIBRARY_ROOT}/avatar-${String(index + 1).padStart(2, '0')}.jpg`,
+)
 
-export type AvatarLibraryStyle = (typeof AVATAR_LIBRARY_STYLES)[number]['id']
-
-/**
- * Creates a stable, local SVG avatar. No network request is made: the same seed
- * always results in the same image, so users without a custom image remain
- * recognizable everywhere in the product.
- */
-export function getGeneratedAvatarUrl(
-  seed: string,
-  style: AvatarLibraryStyle = 'notionists',
-): string {
-  const options = {
-    seed,
-    backgroundColor: ['dbeafe', 'dcfce7', 'fce7f3', 'fef3c7', 'ede9fe', 'cffafe'],
-    radius: 50,
+function hashId(id: string): number {
+  let hash = 0
+  for (let index = 0; index < id.length; index += 1) {
+    hash = (hash * 31 + id.charCodeAt(index)) | 0
   }
-
-  if (style === 'pixel-art') return createAvatar(pixelArt, options).toDataUri()
-  if (style === 'lorelei') {
-    return createAvatar(lorelei, {
-      ...options,
-      backgroundColor: DEFAULT_BACKGROUND,
-    }).toDataUri()
-  }
-  return createAvatar(notionists, options).toDataUri()
+  return hash >>> 0
 }
 
+/** The same user id always receives the same built-in avatar. */
+export function getDefaultAvatarUrl(userId: string): string {
+  return DEFAULT_AVATAR_URLS[hashId(userId) % DEFAULT_AVATAR_URLS.length]
+}
+
+function isLegacyGeneratedAvatar(url: string): boolean {
+  return url.startsWith('data:image/svg+xml')
+}
+
+/** Prefer a selected/uploaded image, otherwise use the curated local avatar library. */
 export function getUserAvatarUrl(user: AvatarUser): string {
-  return user.avatarUrl?.trim() || getGeneratedAvatarUrl(user.id)
+  const avatarUrl = user.avatarUrl?.trim()
+  return avatarUrl && !isLegacyGeneratedAvatar(avatarUrl)
+    ? avatarUrl
+    : getDefaultAvatarUrl(user.id)
 }

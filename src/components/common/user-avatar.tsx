@@ -26,7 +26,7 @@ type UserAvatarProps = Omit<React.ComponentProps<typeof Avatar>, 'children'> & {
   fallbackClassName?: string
 }
 
-/** A user avatar that prefers a selected/uploaded image and falls back to DiceBear. */
+/** A user avatar that prefers a selected/uploaded image and falls back to the local library. */
 export function UserAvatar({ user, fallbackClassName, ...props }: UserAvatarProps) {
   return (
     <Avatar {...props}>

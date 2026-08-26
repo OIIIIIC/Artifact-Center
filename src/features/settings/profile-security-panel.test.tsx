@@ -86,7 +86,7 @@ describe('账户设置面板', () => {
 
     await waitFor(() => {
       expect(updateAvatar).toHaveBeenCalledWith(
-        expect.stringMatching(/^data:image\/svg\+xml/),
+        expect.stringMatching(/^\/avatar-library\/avatar-\d{2}\.jpg$/),
       )
     })
   })

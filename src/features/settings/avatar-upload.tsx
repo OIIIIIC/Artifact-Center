@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Camera, Sparkles, Trash2 } from 'lucide-react'
 
@@ -14,10 +14,8 @@ import {
   ModalTitle,
 } from '@/components/ui/modal'
 import {
-  AVATAR_LIBRARY_STYLES,
-  getGeneratedAvatarUrl,
+  DEFAULT_AVATAR_URLS,
   getUserAvatarUrl,
-  type AvatarLibraryStyle,
 } from '@/components/common/user-avatar-url'
 import { cn } from '@/lib/utils'
 import { AvatarCropDialog, type AvatarCropSource } from './avatar-crop-dialog'
@@ -51,7 +49,6 @@ export function AvatarUpload({
   const [error, setError] = useState<string | null>(null)
   const [cropSource, setCropSource] = useState<AvatarCropSource | null>(null)
   const [libraryOpen, setLibraryOpen] = useState(false)
-  const [libraryStyle, setLibraryStyle] = useState<AvatarLibraryStyle>('notionists')
   const [saving, setSaving] = useState(false)
 
   useEffect(
@@ -70,17 +67,6 @@ export function AvatarUpload({
 
   const isDisabled = disabled || saving
   const previewUrl = getUserAvatarUrl({ id: userId, avatarUrl })
-  const libraryAvatars = useMemo(
-    () =>
-      Array.from({ length: 30 }, (_, index) => ({
-        id: index,
-        url: getGeneratedAvatarUrl(
-          `${userId}:${libraryStyle}:avatar:${index + 1}`,
-          libraryStyle,
-        ),
-      })),
-    [libraryStyle, userId],
-  )
 
   const saveAvatar = async (nextAvatarUrl: string | null) => {
     setSaving(true)
@@ -224,42 +210,17 @@ export function AvatarUpload({
           </ModalHeader>
           <ModalBody>
             <div
-              className="mb-5 flex gap-2 overflow-x-auto pb-1"
-              role="tablist"
-              aria-label={t('settings.avatarLibraryStyleLabel')}
-            >
-              {AVATAR_LIBRARY_STYLES.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={libraryStyle === style.id}
-                  disabled={isDisabled}
-                  className={cn(
-                    'shrink-0 rounded-full px-3 py-1.5 text-[0.75rem] font-medium',
-                    'transition-colors duration-[var(--duration-hover)]',
-                    libraryStyle === style.id
-                      ? 'bg-foreground text-background'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )}
-                  onClick={() => setLibraryStyle(style.id)}
-                >
-                  {t(style.labelKey)}
-                </button>
-              ))}
-            </div>
-            <div
               className="grid grid-cols-4 gap-3 sm:grid-cols-6"
               role="list"
               aria-label={t('settings.avatarLibraryGridLabel')}
             >
-              {libraryAvatars.map((avatar) => (
-                <div key={avatar.id} role="listitem">
+              {DEFAULT_AVATAR_URLS.map((avatarUrl, index) => (
+                <div key={avatarUrl} role="listitem">
                   <button
                     type="button"
                     disabled={isDisabled}
                     aria-label={t('settings.avatarLibraryOption', {
-                      number: avatar.id + 1,
+                      number: index + 1,
                     })}
                     className={cn(
                       'group aspect-square w-full overflow-hidden rounded-full outline-none ring-1 ring-border/70',
@@ -269,12 +230,17 @@ export function AvatarUpload({
                     )}
                     onClick={() => {
                       void (async () => {
-                        await saveAvatar(avatar.url)
+                        await saveAvatar(avatarUrl)
                         setLibraryOpen(false)
                       })()
                     }}
                   >
-                    <img src={avatar.url} alt="" className="block size-full" />
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      loading="lazy"
+                      className="block size-full object-cover"
+                    />
                   </button>
                 </div>
               ))}
