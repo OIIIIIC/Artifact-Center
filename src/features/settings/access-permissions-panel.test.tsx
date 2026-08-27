@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { AccessPermissionsPanel } from './access-permissions-panel'
 
 const listUsers = vi.fn()
@@ -77,7 +78,9 @@ describe('批量权限配置', () => {
     })
     render(
       <QueryClientProvider client={queryClient}>
-        <AccessPermissionsPanel isAdmin />
+        <TooltipProvider>
+          <AccessPermissionsPanel isAdmin />
+        </TooltipProvider>
       </QueryClientProvider>,
     )
 

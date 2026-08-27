@@ -1,4 +1,11 @@
-import { Check, Loader2, LockKeyhole, Search, ShieldCheck } from 'lucide-react'
+import {
+  Check,
+  CircleHelp,
+  Loader2,
+  LockKeyhole,
+  Search,
+  ShieldCheck,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -11,6 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import type { ApplicationAccessGrantDto, TeamMemberDto } from '@/services/api'
 import type { Application } from '@/types/application'
 
@@ -38,7 +55,10 @@ export function AccessPermissionsWorkspace({
 }: AccessPermissionsWorkspaceProps) {
   const { t } = useTranslation()
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<Set<string>>(
-    () => new Set(),
+    () =>
+      new Set(
+        grants.filter((grant) => !grant.isOwner).map((grant) => grant.applicationId),
+      ),
   )
   const [regionId, setRegionId] = useState('all')
   const [search, setSearch] = useState('')
@@ -96,12 +116,11 @@ export function AccessPermissionsWorkspace({
   const apply = async (operation: 'set' | 'remove') => {
     const applicationIds = [...selectedApplicationIds]
     if (!applicationIds.length) return
-    const completed = await onApply({ operation, applicationIds, role })
-    if (completed) setSelectedApplicationIds(new Set())
+    await onApply({ operation, applicationIds, role })
   }
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-border/60 px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -109,25 +128,45 @@ export function AccessPermissionsWorkspace({
               <h3 className="text-[0.9375rem] font-semibold">{user.name}</h3>
               <PlatformRoleBadge user={user} />
             </div>
-            <p className="mt-1 text-[0.75rem] text-muted-foreground">
-              {t('access.assignmentHint')}
-            </p>
           </div>
-          <div className="flex rounded-lg bg-muted/45 p-0.5" role="group">
-            {(['viewer', 'maintainer'] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setRole(value)}
-                className={`rounded-md px-2.5 py-1.5 text-[0.6875rem] font-medium transition-colors ${
-                  role === value
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                {t(`access.role.${value}`)}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 text-[0.75rem] font-medium text-muted-foreground">
+              {t('access.applicationRole')}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                    aria-label={t('access.applicationRoleHelp')}
+                  >
+                    <CircleHelp className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="bottom"
+                  sideOffset={8}
+                  className="max-w-[19rem] leading-relaxed"
+                >
+                  {t('access.applicationRoleHelp')}
+                </TooltipContent>
+              </Tooltip>
+            </span>
+            <div className="flex rounded-lg bg-muted/45 p-0.5" role="group">
+              {(['viewer', 'maintainer'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setRole(value)}
+                  className={`rounded-md px-2.5 py-1.5 text-[0.6875rem] font-medium transition-colors ${
+                    role === value
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  {t(`access.role.${value}`)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -157,74 +196,104 @@ export function AccessPermissionsWorkspace({
         </Select>
       </div>
 
-      <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
-        <label className="flex cursor-pointer items-center gap-2 text-[0.75rem] text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={allVisibleSelected}
-            onChange={toggleVisible}
-            className="size-3.5 rounded border-border accent-primary"
-          />
-          {t('access.selectVisible')}
-        </label>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_30%,transparent)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25 [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-transparent [&::-webkit-scrollbar-thumb]:bg-clip-content hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/45">
+        <Table className="table-fixed" containerClassName="overflow-visible">
+          <colgroup>
+            <col className="w-12" />
+            <col className="w-[26%]" />
+            <col className="w-[18%]" />
+            <col />
+            <col className="w-44" />
+          </colgroup>
+          <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="px-4 text-center sm:px-5">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  disabled={editableApplications.length === 0}
+                  onChange={toggleVisible}
+                  aria-label={t('access.selectVisible')}
+                  className="size-3.5 rounded border-border accent-primary disabled:cursor-not-allowed"
+                />
+              </TableHead>
+              <TableHead>{t('access.tableApplication')}</TableHead>
+              <TableHead>{t('access.tableRegion')}</TableHead>
+              <TableHead>{t('access.tableIdentifier')}</TableHead>
+              <TableHead className="pr-5 text-center">
+                {t('access.tableStatus')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleApplications.map((application) => {
+              const grant = grantByApplication.get(application.id)
+              const locked = grant?.isOwner === true
+              const selected = selectedApplicationIds.has(application.id)
+              return (
+                <TableRow
+                  key={application.id}
+                  className={cn(
+                    'h-16',
+                    selected && grant && 'bg-emerald-500/[0.085]',
+                    selected && !grant && 'bg-primary/8',
+                    !selected && grant && 'bg-emerald-500/[0.035]',
+                  )}
+                >
+                  <TableCell className="px-4 text-center sm:px-5">
+                    <input
+                      type="checkbox"
+                      checked={selected || locked}
+                      disabled={locked}
+                      onChange={() => toggleApplication(application.id)}
+                      aria-label={application.name}
+                      className="size-3.5 rounded border-border accent-primary disabled:cursor-not-allowed"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <p className="truncate text-[0.8125rem] font-medium">
+                      {application.name}
+                    </p>
+                  </TableCell>
+                  <TableCell className="truncate text-[0.75rem] text-foreground/65">
+                    {application.region.name}
+                  </TableCell>
+                  <TableCell className="truncate font-mono text-[0.75rem] text-foreground/65">
+                    {application.packageName}
+                  </TableCell>
+                  <TableCell className="pr-5 text-center">
+                    {locked ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[0.6875rem] font-medium text-primary">
+                        <LockKeyhole className="size-3" /> {t('access.owner')}
+                      </span>
+                    ) : grant ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[0.6875rem] font-medium text-emerald-700 dark:text-emerald-300">
+                        <Check className="size-3" />
+                        {t('access.granted')} · {t(`access.role.${grant.role}`)}
+                      </span>
+                    ) : (
+                      <span className="shrink-0 rounded-full border border-dashed border-border/80 bg-muted/30 px-2 py-1 text-[0.6875rem] text-muted-foreground">
+                        {t('access.unassigned')}
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+
+        {visibleApplications.length === 0 ? (
+          <p className="px-5 py-10 text-center text-[0.8125rem] text-muted-foreground">
+            {t('access.noApplications')}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <span className="text-[0.75rem] text-muted-foreground">
           {t('access.selectedCount', { count: selectedApplicationIds.size })}
         </span>
-      </div>
-
-      <ul className="divide-y divide-border/60 border-y border-border/60">
-        {visibleApplications.map((application) => {
-          const grant = grantByApplication.get(application.id)
-          const locked = grant?.isOwner === true
-          const selected = selectedApplicationIds.has(application.id)
-          return (
-            <li
-              key={application.id}
-              className="flex items-center gap-3 px-4 py-3 sm:px-5"
-            >
-              <input
-                type="checkbox"
-                checked={selected || locked}
-                disabled={locked}
-                onChange={() => toggleApplication(application.id)}
-                className="size-3.5 shrink-0 rounded border-border accent-primary disabled:cursor-not-allowed"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[0.8125rem] font-medium">
-                  {application.name}
-                </p>
-                <p className="mt-0.5 truncate text-[0.6875rem] text-muted-foreground">
-                  {application.region.name} · {application.packageName}
-                </p>
-              </div>
-              {locked ? (
-                <span className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
-                  <LockKeyhole className="size-3" /> {t('access.owner')}
-                </span>
-              ) : grant ? (
-                <span className="rounded-md bg-muted px-2 py-1 text-[0.6875rem] text-muted-foreground">
-                  {t(`access.role.${grant.role}`)}
-                </span>
-              ) : (
-                <span className="text-[0.6875rem] text-muted-foreground/70">
-                  {t('access.unassigned')}
-                </span>
-              )}
-            </li>
-          )
-        })}
-      </ul>
-
-      {visibleApplications.length === 0 ? (
-        <p className="px-5 py-10 text-center text-[0.8125rem] text-muted-foreground">
-          {t('access.noApplications')}
-        </p>
-      ) : null}
-
-      <div className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-        <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-          {t('access.scopeHint')}
-        </p>
         <div className="flex shrink-0 gap-2">
           <Button
             type="button"
@@ -251,7 +320,7 @@ export function AccessPermissionsWorkspace({
           </Button>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 

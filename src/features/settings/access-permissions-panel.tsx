@@ -1,9 +1,10 @@
-import { Loader2, UserRound } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { UserAvatar } from '@/components/common/user-avatar'
 import { queryKeys } from '@/lib/query-keys'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import {
@@ -56,6 +57,11 @@ export function AccessPermissionsPanel({
     queryFn: () => apiListApplicationAccess(selectedUser!.id),
     enabled: isAdmin && Boolean(selectedUser) && selectedUser?.role !== 'admin',
   })
+  const grants = grantsQuery.data ?? []
+  const grantsVersion = grants
+    .map((grant) => `${grant.applicationId}:${grant.role}:${grant.isOwner}`)
+    .sort()
+    .join('|')
 
   const saveAccess = async (input: {
     operation: 'set' | 'remove'
@@ -107,6 +113,7 @@ export function AccessPermissionsPanel({
       description={t('access.description')}
       wide
       hideHeader={hideHeader}
+      className={hideHeader ? 'lg:h-full' : undefined}
     >
       {!isAdmin ? (
         <EmptyAccessState title={t('access.adminOnly')} />
@@ -115,13 +122,13 @@ export function AccessPermissionsPanel({
       ) : usersQuery.isError || applicationsQuery.isError ? (
         <EmptyAccessState title={t('access.loadFailed')} />
       ) : (
-        <div className="grid gap-5 xl:grid-cols-[minmax(15rem,0.34fr)_minmax(0,1fr)]">
+        <div className="grid min-h-[34rem] overflow-hidden rounded-2xl bg-card/65 ring-1 ring-border/70 lg:h-full lg:min-h-0 xl:grid-cols-[minmax(19rem,0.34fr)_minmax(0,1fr)]">
           <UserList
             users={users}
             selectedUserId={selectedUser?.id}
             onSelect={(userId) => setSelectedUserId(userId)}
           />
-          <section className="min-w-0 rounded-2xl bg-card/65 ring-1 ring-border/70">
+          <section className="flex min-h-0 min-w-0 flex-col border-t border-border/70 xl:border-t-0 xl:border-l">
             {!selectedUser ? (
               <EmptyAccessState title={t('access.noUsers')} />
             ) : selectedUser.role === 'admin' ? (
@@ -132,10 +139,10 @@ export function AccessPermissionsPanel({
               <EmptyAccessState title={t('access.loadFailed')} />
             ) : (
               <AccessPermissionsWorkspace
-                key={selectedUser.id}
+                key={`${selectedUser.id}:${grantsVersion}`}
                 user={selectedUser}
                 applications={applications}
-                grants={grantsQuery.data ?? []}
+                grants={grants}
                 saving={saving}
                 onApply={saveAccess}
               />
@@ -158,28 +165,32 @@ function UserList({
 }) {
   const { t } = useTranslation()
   return (
-    <aside className="rounded-2xl bg-muted/20 p-3 ring-1 ring-border/60 dark:bg-muted/10">
-      <div className="px-1 pb-3">
-        <p className="text-[0.75rem] font-medium text-foreground">{t('access.people')}</p>
-        <p className="mt-1 text-[0.6875rem] leading-relaxed text-muted-foreground">
+    <aside className="min-h-0 min-w-0 overflow-y-auto bg-muted/20 p-4 [scrollbar-width:thin] [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_30%,transparent)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25 [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-transparent [&::-webkit-scrollbar-thumb]:bg-clip-content hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/45 dark:bg-muted/10">
+      <div className="px-1 pb-4">
+        <p className="text-[0.8125rem] font-semibold text-foreground">
+          {t('access.people')}
+        </p>
+        <p className="mt-1 text-[0.75rem] leading-relaxed text-muted-foreground">
           {t('access.peopleHint')}
         </p>
       </div>
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {users.map((user) => (
           <button
             key={user.id}
             type="button"
             onClick={() => onSelect(user.id)}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
               selectedUserId === user.id
                 ? 'bg-background text-foreground shadow-sm ring-1 ring-border/70'
-                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'
+                : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
             }`}
           >
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <UserRound className="size-3.5" />
-            </span>
+            <UserAvatar
+              user={user}
+              className="size-8 shrink-0"
+              fallbackClassName="text-[0.625rem]"
+            />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[0.8125rem] font-medium">
                 {user.name}
