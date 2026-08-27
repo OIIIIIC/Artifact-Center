@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { FormStack } from '@/components/layout'
+import { cn } from '@/lib/utils'
 
 type SettingsPanelProps = {
   title: string
@@ -8,6 +9,7 @@ type SettingsPanelProps = {
   children: ReactNode
   wide?: boolean
   hideHeader?: boolean
+  className?: string
 }
 
 /** 设置页各业务面板共用的标题与内容容器。 */
@@ -17,9 +19,10 @@ export function SettingsPanel({
   children,
   wide = false,
   hideHeader = false,
+  className,
 }: SettingsPanelProps) {
   return (
-    <section className="w-full space-y-5">
+    <section className={cn('w-full space-y-5', className)}>
       {!hideHeader ? (
         <div className="space-y-1">
           <h2 className="text-[1.0625rem] font-semibold tracking-tight text-foreground">
