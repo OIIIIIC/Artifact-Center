@@ -24,6 +24,7 @@ export type AuditAction =
   | 'settings.access_update'
   | 'user.create'
   | 'user.update'
+  | 'user.admin_transfer'
   | 'user.delete'
   | 'user.reset_password'
   | 'auth.login'

@@ -197,6 +197,16 @@ export async function apiUpdateUser(
   return mapTeamUser(data.user)
 }
 
+export async function apiTransferAdministrator(input: {
+  targetUserId: string
+  nextRole: 'maintainer' | 'viewer'
+}): Promise<void> {
+  await request<{ user: ApiTeamUser; target: ApiTeamUser }>('/users/me/transfer-admin', {
+    method: 'POST',
+    body: input,
+  })
+}
+
 export async function apiDeleteUser(id: string): Promise<void> {
   await request<{ ok: true }>(`/users/${id}`, { method: 'DELETE' })
 }
