@@ -491,6 +491,7 @@
     "cleanupFailed": "Cleanup failed. Try again.",
     "auditTitle": "Operation log",
     "auditDesc": "Review key platform operations and access records in chronological order.",
+    "auditLoadedCount": "{{count}} records loaded",
     "auditAction": "Action",
     "auditSummary": "Details",
     "auditApplication": "Application",

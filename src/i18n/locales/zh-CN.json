@@ -491,6 +491,7 @@
     "cleanupFailed": "清理失败，请重试。",
     "auditTitle": "操作日志",
     "auditDesc": "按时间查看平台内的关键操作与访问记录。",
+    "auditLoadedCount": "已加载 {{count}} 条记录",
     "auditAction": "操作",
     "auditSummary": "内容",
     "auditApplication": "项目",
