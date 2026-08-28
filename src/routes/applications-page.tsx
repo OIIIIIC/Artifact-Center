@@ -110,12 +110,7 @@ export function ApplicationsPage() {
             className="pointer-events-none absolute inset-y-0 right-0 hidden w-[45%] overflow-hidden lg:block"
             aria-hidden
           >
-            <span className="absolute top-[23%] right-[30%] size-16 rounded-[1.25rem] border border-primary/10 bg-primary/[0.04] shadow-[0_20px_40px_-24px_color-mix(in_oklch,var(--primary),transparent_30%)]" />
-            <span className="absolute top-[38%] right-[58%] size-24 rounded-full bg-cyan-300/15 blur-sm dark:bg-cyan-300/8" />
-            <span className="absolute right-[8%] bottom-[-26%] size-64 rounded-full border border-border/60" />
-            <span className="absolute right-[21%] bottom-[-35%] size-64 rounded-full border border-primary/10" />
-            <span className="absolute top-[49%] right-[16%] size-10 rotate-45 rounded-lg bg-foreground/8 shadow-sm" />
-            <span className="absolute top-[65%] right-[35%] size-7 rotate-45 rounded-md bg-foreground/10" />
+            <span className="absolute inset-y-0 right-0 w-[82%] bg-[radial-gradient(circle_at_1px_1px,color-mix(in_oklch,var(--muted-foreground)_18%,transparent)_1px,transparent_0)] [background-size:15px_15px] [mask-image:linear-gradient(to_left,black,transparent)]" />
           </div>
 
           <div className="relative flex flex-col gap-6">
