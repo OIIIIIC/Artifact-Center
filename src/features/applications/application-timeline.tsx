@@ -11,6 +11,9 @@ interface ApplicationTimelineProps {
   transitionKey?: string
   refreshing?: boolean
   className?: string
+  favoriteIds?: ReadonlySet<string>
+  favoritePendingId?: string
+  onToggleFavorite?: (applicationId: string) => void
 }
 
 /**
@@ -22,6 +25,9 @@ export function ApplicationTimeline({
   transitionKey = 'timeline',
   refreshing = false,
   className,
+  favoriteIds,
+  favoritePendingId,
+  onToggleFavorite,
 }: ApplicationTimelineProps) {
   const { t } = useTranslation()
   const groups = groupApplicationsByActivity(applications)
@@ -68,6 +74,9 @@ export function ApplicationTimeline({
               applications={group.applications}
               transitionKey={`${transitionKey}:${group.bucket}`}
               refreshing={refreshing}
+              favoriteIds={favoriteIds}
+              favoritePendingId={favoritePendingId}
+              onToggleFavorite={onToggleFavorite}
             />
           </section>
         )

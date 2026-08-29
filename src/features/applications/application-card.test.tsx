@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -71,5 +71,29 @@ describe('ApplicationCard', () => {
     expect(screen.getByTitle('成员二')).toBeInTheDocument()
     expect(screen.queryAllByTitle('当前用户')).toHaveLength(1)
     expect(screen.getByText('+1')).toBeInTheDocument()
+  })
+
+  it('收藏按钮独立于详情链接并提供即时操作', () => {
+    const toggleFavorite = vi.fn()
+    render(
+      <MemoryRouter>
+        <ApplicationCard
+          application={application}
+          favorite
+          onToggleFavorite={toggleFavorite}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `applications.workspace.removeFavorite`,
+      }),
+    )
+    expect(toggleFavorite).toHaveBeenCalledWith(application.id)
+    expect(screen.getByRole('link')).toHaveAttribute(
+      'href',
+      `/applications/${application.id}`,
+    )
   })
 })

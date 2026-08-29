@@ -46,6 +46,11 @@ const ShareDownloadPage = lazy(() =>
 const UploadPage = lazy(() =>
   import('@/routes/upload-page').then((module) => ({ default: module.UploadPage })),
 )
+const WorkspacePage = lazy(() =>
+  import('@/routes/workspace-page').then((module) => ({
+    default: module.WorkspacePage,
+  })),
+)
 
 /**
  * Product routes behind JWT auth.
@@ -68,6 +73,14 @@ export function AppRouter() {
           }
         />
         <Route path="/applications" element={<Navigate to="/" replace />} />
+        <Route
+          path="/workspace"
+          element={
+            <RequireAuth>
+              <WorkspacePage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/applications/new"
           element={

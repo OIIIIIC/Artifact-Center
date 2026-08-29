@@ -14,6 +14,9 @@ interface ApplicationGridProps {
   transitionKey?: string
   /** 新筛选结果正在加载时保持当前网格，并给出极轻的忙碌语义。 */
   refreshing?: boolean
+  favoriteIds?: ReadonlySet<string>
+  favoritePendingId?: string
+  onToggleFavorite?: (applicationId: string) => void
 }
 
 const easeOut = [0.2, 0, 0, 1] as const
@@ -27,6 +30,9 @@ export function ApplicationGrid({
   className,
   transitionKey = 'grid',
   refreshing = false,
+  favoriteIds,
+  favoritePendingId,
+  onToggleFavorite,
 }: ApplicationGridProps) {
   const reduceMotion = useReducedMotion()
 
@@ -49,7 +55,12 @@ export function ApplicationGrid({
           >
             {applications.map((app) => (
               <li key={app.id} className="min-w-0">
-                <ApplicationCard application={app} />
+                <ApplicationCard
+                  application={app}
+                  favorite={favoriteIds?.has(app.id)}
+                  favoritePending={favoritePendingId === app.id}
+                  onToggleFavorite={onToggleFavorite}
+                />
               </li>
             ))}
           </ul>

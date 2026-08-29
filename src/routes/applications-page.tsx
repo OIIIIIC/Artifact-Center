@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   ListChecks,
   Inbox,
@@ -6,11 +7,12 @@ import {
   SearchX,
   ServerCrash,
   Share2,
+  Star,
   Upload,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 
 import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer } from '@/components/layout'
@@ -26,21 +28,37 @@ import {
   useApplicationCatalog,
   useApplications,
 } from '@/features/applications/use-applications'
+import { usePersonalWorkspace } from '@/features/applications/use-personal-workspace'
+import { useWorkspaceFilterPreferenceSync } from '@/features/applications/use-workspace-filter-preference-sync'
 import { useRegions } from '@/features/regions/use-regions'
 import { useContentScrollRestoration } from '@/hooks/use-content-scroll-restoration'
 import { canMaintainApplication, canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
+const easeOut = [0.2, 0, 0, 1] as const
+
 export function ApplicationsPage() {
   const { t } = useTranslation()
+  const reduceMotion = useReducedMotion()
   const role = useAuthStore((s) => s.user?.role)
   const canCreateApplication = canWriteContent(role)
   const { regions } = useRegions()
   const { catalog } = useApplicationCatalog()
+  const [pageSearchParams, setPageSearchParams] = useSearchParams()
   const [shareRegionId, setShareRegionId] = useState<string | null>(null)
   const [bulkCodesOpen, setBulkCodesOpen] = useState(false)
-  const [regionScope, setRegionScope] = useState('all')
+  const regionScope = pageSearchParams.get('region') ?? 'all'
+  const responsibleOnly = pageSearchParams.get('scope') === 'mine'
+  const favoriteOnly = pageSearchParams.get('favorites') === '1'
+  const {
+    workspace,
+    favoriteIds,
+    toggleFavorite,
+    favoritePendingId,
+    updatePreferences,
+    loading: workspaceLoading,
+  } = usePersonalWorkspace()
   const {
     loading,
     filtered,
@@ -68,7 +86,43 @@ export function ApplicationsPage() {
   )
 
   const changeRegionScope = (next: string) => {
-    setRegionScope(next)
+    setPageSearchParams(
+      (current) => {
+        const updated = new URLSearchParams(current)
+        if (next === 'all') updated.delete('region')
+        else updated.set('region', next)
+        return updated
+      },
+      { replace: true },
+    )
+  }
+
+  const setResponsibleOnly = (enabled: boolean) => {
+    setPageSearchParams(
+      (current) => {
+        const updated = new URLSearchParams(current)
+        if (enabled) updated.set('scope', 'mine')
+        else updated.delete('scope')
+        return updated
+      },
+      { replace: true },
+    )
+  }
+
+  const setFavoriteOnly = (enabled: boolean) => {
+    setPageSearchParams(
+      (current) => {
+        const updated = new URLSearchParams(current)
+        if (enabled) updated.set('favorites', '1')
+        else updated.delete('favorites')
+        return updated
+      },
+      { replace: true },
+    )
+  }
+
+  const changeFilters = (next: typeof filters) => {
+    setFilters(next)
   }
 
   const regionCounts = useMemo(
@@ -90,13 +144,34 @@ export function ApplicationsPage() {
       ? regionScope
       : 'all'
 
-  const visibleApplications = useMemo(
-    () =>
+  useWorkspaceFilterPreferenceSync({
+    current: workspace.preferences,
+    next: {
+      query: filters.query.trim().slice(0, 120),
+      platform: filters.platform,
+      sort: filters.sort,
+      regionId: resolvedRegionScope === 'all' ? null : resolvedRegionScope,
+      favoriteOnly,
+      responsibleOnly,
+    },
+    loading: workspaceLoading,
+    onPersist: updatePreferences,
+  })
+
+  const visibleApplications = useMemo(() => {
+    const regional =
       resolvedRegionScope === 'all'
         ? filtered
-        : filtered.filter((application) => application.region.id === resolvedRegionScope),
-    [filtered, resolvedRegionScope],
-  )
+        : filtered.filter((application) => application.region.id === resolvedRegionScope)
+    const responsible = responsibleOnly
+      ? regional.filter((application) =>
+          canMaintainApplication(role, application.accessRole),
+        )
+      : regional
+    return favoriteOnly
+      ? responsible.filter((application) => favoriteIds.has(application.id))
+      : responsible
+  }, [favoriteIds, favoriteOnly, filtered, resolvedRegionScope, responsibleOnly, role])
 
   const hasNoVisibleMatches =
     !loading && !error && !isEmptyCatalog && visibleApplications.length === 0
@@ -105,7 +180,12 @@ export function ApplicationsPage() {
   return (
     <AppLayout breadcrumbs={[{ label: t('nav.applications') }]}>
       <PageContainer rhythm="product">
-        <section className="relative overflow-hidden rounded-2xl bg-card/80 px-5 py-6 ring-1 ring-border/60 sm:px-7 sm:py-7">
+        <motion.section
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: easeOut }}
+          className="relative overflow-hidden rounded-2xl bg-card/80 px-5 py-6 ring-1 ring-border/60 sm:px-7 sm:py-7"
+        >
           <div
             className="pointer-events-none absolute inset-y-0 right-0 hidden w-[45%] overflow-hidden lg:block"
             aria-hidden
@@ -190,24 +270,47 @@ export function ApplicationsPage() {
 
             <ApplicationSearch
               value={filters.query}
-              onChange={(query) => setFilters({ ...filters, query })}
+              onChange={(query) => changeFilters({ ...filters, query })}
               className="w-full max-w-[34rem]"
             />
           </div>
-        </section>
+        </motion.section>
 
-        <div className="mt-5 space-y-6 sm:mt-6">
-          <div className="overflow-hidden rounded-2xl bg-card/80 ring-1 ring-border/60">
+        <div className="mt-5 sm:mt-6">
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.07, duration: 0.34, ease: easeOut }}
+            className="overflow-hidden rounded-2xl bg-card/80 ring-1 ring-border/60"
+          >
             <div className="p-3 sm:px-4 sm:py-3.5">
               <ApplicationFiltersBar
                 filters={filters}
-                onChange={setFilters}
+                onChange={changeFilters}
                 meta={
                   !loading && !isEmptyCatalog && !isSearchEmpty
                     ? t('applications.count', { count: visibleApplications.length })
                     : !loading && isSearchEmpty
                       ? t('applications.count', { count: 0 })
                       : undefined
+                }
+                trailing={
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={favoriteOnly ? 'secondary' : 'ghost'}
+                    aria-pressed={favoriteOnly}
+                    onClick={() => setFavoriteOnly(!favoriteOnly)}
+                    className="text-muted-foreground data-[pressed=true]:text-foreground"
+                    data-pressed={favoriteOnly}
+                  >
+                    <Star
+                      className="size-3.5"
+                      fill={favoriteOnly ? 'currentColor' : 'none'}
+                      strokeWidth={1.8}
+                    />
+                    {t('applications.favoritesOnly')}
+                  </Button>
                 }
               />
             </div>
@@ -222,79 +325,101 @@ export function ApplicationsPage() {
                 />
               </div>
             ) : null}
-          </div>
+          </motion.div>
 
-          {loading ? (
-            <div aria-busy="true" aria-live="polite">
-              <p className="sr-only">{t('applications.loading')}</p>
-              <ApplicationGridSkeleton />
-            </div>
-          ) : null}
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.14, duration: 0.38, ease: easeOut }}
+            className="mt-6"
+          >
+            {loading ? (
+              <div aria-busy="true" aria-live="polite">
+                <p className="sr-only">{t('applications.loading')}</p>
+                <ApplicationGridSkeleton />
+              </div>
+            ) : null}
 
-          {!loading && error ? (
-            <EmptyState
-              icon={ServerCrash}
-              title={t('common.serviceUnavailableTitle')}
-              description={t('common.serviceUnavailableDescription')}
-              action={
-                <Button type="button" size="lg" onClick={() => void refetch()}>
-                  <RefreshCw className="size-3.5" strokeWidth={1.75} />
-                  {t('common.retry')}
-                </Button>
-              }
-            />
-          ) : null}
-
-          {!loading && isEmptyCatalog ? (
-            <EmptyState
-              icon={Inbox}
-              title={t('applications.emptyTitle')}
-              description={t('applications.emptyDescription')}
-              action={
-                canCreateApplication ? (
-                  <Button asChild size="lg">
-                    <Link to="/applications/new">
-                      <Plus className="size-3.5" strokeWidth={1.75} />
-                      {t('applications.newApplication')}
-                    </Link>
+            {!loading && error ? (
+              <EmptyState
+                icon={ServerCrash}
+                title={t('common.serviceUnavailableTitle')}
+                description={t('common.serviceUnavailableDescription')}
+                action={
+                  <Button type="button" size="lg" onClick={() => void refetch()}>
+                    <RefreshCw className="size-3.5" strokeWidth={1.75} />
+                    {t('common.retry')}
                   </Button>
-                ) : undefined
-              }
-            />
-          ) : null}
+                }
+              />
+            ) : null}
 
-          {!loading && (isSearchEmpty || hasNoVisibleMatches) ? (
-            <EmptyState
-              icon={SearchX}
-              title={t('applications.noMatchTitle')}
-              description={t('applications.noMatchDescription')}
-              action={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    setFilters({
-                      query: '',
-                      platform: 'all',
-                      sort: filters.sort,
-                    })
-                    changeRegionScope('all')
-                  }}
-                >
-                  {t('common.clearFilters')}
-                </Button>
-              }
-            />
-          ) : null}
+            {!loading && isEmptyCatalog ? (
+              <EmptyState
+                icon={Inbox}
+                title={t('applications.emptyTitle')}
+                description={t('applications.emptyDescription')}
+                action={
+                  canCreateApplication ? (
+                    <Button asChild size="lg">
+                      <Link to="/applications/new">
+                        <Plus className="size-3.5" strokeWidth={1.75} />
+                        {t('applications.newApplication')}
+                      </Link>
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : null}
 
-          {!loading && !isEmptyCatalog && !isSearchEmpty && !hasNoVisibleMatches ? (
-            <ApplicationTimeline
-              applications={visibleApplications}
-              transitionKey={`${transitionKey}:${resolvedRegionScope}`}
-              refreshing={refreshing}
-            />
-          ) : null}
+            {!loading && (isSearchEmpty || hasNoVisibleMatches) ? (
+              <EmptyState
+                icon={favoriteOnly ? Star : SearchX}
+                title={
+                  favoriteOnly
+                    ? t('applications.favoritesEmptyTitle')
+                    : t('applications.noMatchTitle')
+                }
+                description={
+                  favoriteOnly
+                    ? t('applications.favoritesEmptyDescription')
+                    : t('applications.noMatchDescription')
+                }
+                action={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setFilters({
+                        query: '',
+                        platform: 'all',
+                        sort: filters.sort,
+                      })
+                      changeRegionScope('all')
+                      setResponsibleOnly(false)
+                      setFavoriteOnly(false)
+                    }}
+                  >
+                    {favoriteOnly
+                      ? t('applications.showAllApplications')
+                      : t('common.clearFilters')}
+                  </Button>
+                }
+              />
+            ) : null}
+
+            {!loading && !isEmptyCatalog && !isSearchEmpty && !hasNoVisibleMatches ? (
+              <ApplicationTimeline
+                applications={visibleApplications}
+                transitionKey={`${transitionKey}:${resolvedRegionScope}:${responsibleOnly ? 'mine' : 'all'}:${favoriteOnly ? 'favorites' : 'all'}`}
+                refreshing={refreshing}
+                favoriteIds={favoriteIds}
+                favoritePendingId={favoritePendingId}
+                onToggleFavorite={toggleFavorite}
+              />
+            ) : null}
+          </motion.div>
         </div>
       </PageContainer>
       {shareRegion ? (

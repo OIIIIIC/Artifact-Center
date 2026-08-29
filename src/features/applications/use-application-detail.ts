@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef } from 'react'
 
 import { queryKeys } from '@/lib/query-keys'
 import {
@@ -7,6 +7,7 @@ import {
   apiListApplicationMembers,
   apiListArtifacts,
   apiListReleases,
+  apiRecordApplicationVisit,
 } from '@/services/api'
 import { ApiError } from '@/services/http'
 import type { Application } from '@/types/application'
@@ -14,6 +15,8 @@ import type { Artifact } from '@/types/artifact'
 import type { Release } from '@/types/release'
 
 export function useApplicationDetail(id: string | undefined) {
+  const queryClient = useQueryClient()
+  const recordedVisit = useRef<string | null>(null)
   const appQuery = useQuery({
     queryKey: queryKeys.applications.detail(id ?? ''),
     queryFn: () => apiGetApplication(id!),
@@ -44,6 +47,19 @@ export function useApplicationDetail(id: string | undefined) {
     queryFn: () => apiListApplicationMembers(id!),
     enabled: Boolean(id) && appQuery.isSuccess,
   })
+
+  useEffect(() => {
+    if (!id || !appQuery.isSuccess || recordedVisit.current === id) return
+    recordedVisit.current = id
+    void apiRecordApplicationVisit(id)
+      .then(() =>
+        queryClient.invalidateQueries({ queryKey: queryKeys.personalWorkspace }),
+      )
+      .catch(() => {
+        // 最近访问属于增强体验，失败不应阻断应用详情主路径。
+        recordedVisit.current = null
+      })
+  }, [appQuery.isSuccess, id, queryClient])
 
   const loading =
     Boolean(id) &&

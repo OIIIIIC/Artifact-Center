@@ -1,4 +1,4 @@
-import { LayoutGrid, Settings } from 'lucide-react'
+import { LayoutGrid, Settings, Sparkles } from 'lucide-react'
 
 import i18n from '@/i18n'
 import type { SidebarNavGroup } from './types'
@@ -16,6 +16,13 @@ export function getProductNavGroups(
       id: 'product',
       label: t('nav.product'),
       items: [
+        {
+          id: 'workspace',
+          label: t('nav.workspace'),
+          href: '/workspace',
+          icon: Sparkles,
+          active: pathname.startsWith('/workspace'),
+        },
         {
           id: 'applications',
           label: t('nav.applications'),

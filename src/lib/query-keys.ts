@@ -7,6 +7,7 @@ export const queryKeys = {
       ['applications', 'list', params] as const,
     detail: (id: string) => ['applications', 'detail', id] as const,
   },
+  personalWorkspace: ['personal-workspace'] as const,
   artifacts: {
     byApp: (appId: string) => ['artifacts', 'byApp', appId] as const,
     detail: (id: string) => ['artifacts', 'detail', id] as const,
