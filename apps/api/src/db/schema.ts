@@ -159,6 +159,67 @@ export const applicationMembers = pgTable(
 )
 
 /**
+ * 用户与 Application 之间的个人工作台状态。
+ * 收藏和最近访问都是用户私有数据，不进入业务审计或 Application 生命周期。
+ */
+export const userApplicationPreferences = pgTable(
+  'user_application_preferences',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    applicationId: uuid('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    favorite: boolean('favorite').notNull().default(false),
+    favoriteAt: timestamp('favorite_at', { withTimezone: true }),
+    lastViewedAt: timestamp('last_viewed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('user_application_preferences_user_application_uidx').on(
+      t.userId,
+      t.applicationId,
+    ),
+    index('user_application_preferences_favorite_idx').on(
+      t.userId,
+      t.favorite,
+      t.favoriteAt,
+    ),
+    index('user_application_preferences_recent_idx').on(t.userId, t.lastViewedAt),
+  ],
+)
+
+/** 账号级目录偏好，用于跨设备恢复最近的浏览上下文。 */
+export const userWorkspacePreferences = pgTable(
+  'user_workspace_preferences',
+  {
+    userId: uuid('user_id')
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    platform: varchar('platform', { length: 16 }).notNull().default('all'),
+    sort: varchar('sort', { length: 16 }).notNull().default('updated'),
+    regionId: uuid('region_id').references(() => regions.id, { onDelete: 'set null' }),
+    query: varchar('search_query', { length: 120 }).notNull().default(''),
+    favoriteOnly: boolean('favorite_only').notNull().default(false),
+    responsibleOnly: boolean('responsible_only').notNull().default(false),
+    collapsed: boolean('collapsed').notNull().default(false),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      'user_workspace_preferences_platform_valid',
+      sql`${t.platform} in ('all', 'android', 'windows', 'zip')`,
+    ),
+    check(
+      'user_workspace_preferences_sort_valid',
+      sql`${t.sort} in ('updated', 'name', 'created')`,
+    ),
+  ],
+)
+
+/**
  * 平台级发布机器人凭据。
  * 可向任意 Application 的 beta/stable 渠道上传；数据库只保存高熵 Token 摘要。
  */

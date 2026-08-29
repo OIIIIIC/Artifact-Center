@@ -22,6 +22,7 @@ import { searchRoutes } from './routes/search.js'
 import { settingsRoutes } from './routes/settings.js'
 import { shareRoutes } from './routes/shares.js'
 import { userRoutes } from './routes/users.js'
+import { workspaceRoutes } from './routes/workspace.js'
 import { uploadRoutes } from './routes/uploads.js'
 
 ensureStorageRoot()
@@ -80,6 +81,7 @@ app.route('/settings', settingsRoutes)
 // the ordinary /applications tree so its user-only middleware cannot intercept robots.
 app.route('/', uploadRoutes)
 app.route('/applications', applicationRoutes)
+app.route('/workspace', workspaceRoutes)
 app.route('/settings/release-credentials', releaseCredentialRoutes)
 app.route('/release', releaseArtifactRoutes)
 app.route('/', shareRoutes)
