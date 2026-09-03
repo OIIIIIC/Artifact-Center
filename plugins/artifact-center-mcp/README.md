@@ -17,7 +17,23 @@ Run `artifact_center_check_authorization` first. It uses the release-specific AP
 
 ## Install in Codex
 
-Install production dependencies, then register the local stdio server (replace the URL and one-time displayed credential):
+The recommended installation does not require this repository. In Artifact Center,
+open **Settings → Release robots**, create a credential, copy the generated PowerShell
+setup command, and run it on the Windows device where Codex is installed. The command:
+
+1. downloads the standalone MCP client from the same Artifact Center deployment;
+2. verifies its published SHA-256 checksum;
+3. stores it under the current user's local application-data directory; and
+4. registers it as a local stdio MCP server in Codex.
+
+The local client remains necessary because it reads build files from the device before
+uploading them. It is distributed as one bundled file and does not require a checkout,
+`npm install`, or access to the Artifact Center source repository.
+
+## Install from source for development
+
+Install dependencies, then register the source entry point (replace the URL and
+one-time displayed credential):
 
 ```powershell
 cd D:\MyCode\artifact-center\plugins\artifact-center-mcp
@@ -47,5 +63,9 @@ cd plugins/artifact-center-mcp
 npm install
 npm run check
 ```
+
+`npm run build` creates the standalone files in `dist/`. The frontend publishes them
+as `/downloads/artifact-center-mcp.mjs` and
+`/downloads/artifact-center-mcp.sha256`.
 
 The MCP uses Artifact Center's resumable upload protocol, so large files resume from already accepted parts. It supports proxy uploads and S3/MinIO signed part uploads.

@@ -39,7 +39,7 @@ describe('发布机器人设置面板', () => {
     vi.unstubAllGlobals()
   })
 
-  it('展示平台级 Beta 机器人及其状态', async () => {
+  it('以单一状态和清晰授权范围展示可用机器人', async () => {
     listReleaseRobots.mockResolvedValue([
       {
         id: 'robot-1',
@@ -62,16 +62,16 @@ describe('发布机器人设置面板', () => {
     )
 
     expect(await screen.findByText('Codex 发布机器人')).toBeInTheDocument()
-    expect(screen.getByText('Beta')).toBeInTheDocument()
-    expect(screen.getByText('channel.stable')).toBeInTheDocument()
-    expect(screen.getByText('settings.releaseRobotScopeDesc')).toBeInTheDocument()
+    expect(screen.getByText('settings.releaseRobotAllowedChannels')).toBeInTheDocument()
+    expect(screen.queryByText('Beta')).not.toBeInTheDocument()
+    expect(screen.queryByText('channel.stable')).not.toBeInTheDocument()
+    expect(screen.queryByText('settings.releaseRobotScopeDesc')).not.toBeInTheDocument()
     expect(screen.getByText('settings.releaseRobotActiveStatus')).toBeInTheDocument()
     expect(screen.getByText('settings.releaseRobotActiveCount')).toBeInTheDocument()
     expect(listReleaseRobots).toHaveBeenCalledOnce()
   })
 
-  it('默认收起已撤销记录并按有效机器人计数', async () => {
-    const user = userEvent.setup()
+  it('不在凭据管理页展示已撤销记录', async () => {
     listReleaseRobots.mockResolvedValue([
       {
         id: 'active',
@@ -104,9 +104,9 @@ describe('发布机器人设置面板', () => {
 
     expect(await screen.findByText('有效机器人')).toBeInTheDocument()
     expect(screen.queryByText('旧机器人')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'settings.releaseRobotHistory' }))
-    expect(screen.getByText('旧机器人')).toBeInTheDocument()
-    expect(screen.getByText('settings.releaseRobotRevokedStatus')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'settings.releaseRobotHistory' }),
+    ).not.toBeInTheDocument()
   })
 
   it('创建后提供安装配置并要求确认已保存 Token', async () => {
@@ -138,6 +138,10 @@ describe('发布机器人设置面板', () => {
 
     await screen.findByText('settings.noReleaseRobots')
     await user.click(screen.getByRole('button', { name: 'settings.addReleaseRobot' }))
+    await user.type(
+      screen.getByPlaceholderText('settings.releaseRobotNamePlaceholder'),
+      'Bino 办公电脑',
+    )
     await user.click(screen.getByRole('button', { name: 'settings.createReleaseRobot' }))
 
     expect(await screen.findByText('acrt_once_only')).toBeInTheDocument()
@@ -145,19 +149,17 @@ describe('发布机器人设置面板', () => {
     const copySetup = screen.getByRole('button', {
       name: 'settings.copyReleaseRobotSetup',
     })
-    expect(copySetup).toBeDisabled()
-    expect(screen.queryByText(/<ARTIFACT_CENTER_MCP_PATH>/)).not.toBeInTheDocument()
-    await user.type(
-      screen.getByRole('textbox', { name: 'settings.releaseRobotMcpPathLabel' }),
-      'D:\\MyCode\\artifact-center\\plugins\\artifact-center-mcp',
-    )
-    expect(screen.getByText(/codex mcp add artifact-center/)).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        /\$mcpPath = 'D:\\MyCode\\artifact-center\\plugins\\artifact-center-mcp'/,
-      ),
-    ).toBeInTheDocument()
     expect(copySetup).toBeEnabled()
+    expect(
+      screen.queryByRole('textbox', { name: 'settings.releaseRobotMcpPathLabel' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText(/codex mcp add artifact-center/)).toBeInTheDocument()
+    expect(screen.getByText(/Invoke-WebRequest/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/\$mcpClientUrl = .*artifact-center-mcp\.mjs/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/LocalApplicationData/)).toBeInTheDocument()
+    expect(screen.queryByText(/D:\\MyCode\\artifact-center/)).not.toBeInTheDocument()
     const done = screen.getByRole('button', { name: 'common.done' })
     expect(done).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'settings.verifyReleaseRobot' }))
@@ -205,6 +207,10 @@ describe('发布机器人设置面板', () => {
 
     await screen.findByText('settings.noReleaseRobots')
     await user.click(screen.getByRole('button', { name: 'settings.addReleaseRobot' }))
+    await user.type(
+      screen.getByPlaceholderText('settings.releaseRobotNamePlaceholder'),
+      'Bino 办公电脑',
+    )
     await user.click(screen.getByRole('button', { name: 'settings.createReleaseRobot' }))
     await screen.findByText('acrt_once_only')
 

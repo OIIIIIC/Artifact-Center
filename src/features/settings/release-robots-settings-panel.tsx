@@ -3,7 +3,7 @@ import {
   Bot,
   Check,
   CircleCheckBig,
-  ChevronDown,
+  ClipboardList,
   Copy,
   KeyRound,
   Loader2,
@@ -27,6 +27,14 @@ import {
   ModalHeader,
   ModalTitle,
 } from '@/components/ui/modal'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { copyText } from '@/lib/clipboard'
 import { queryKeys } from '@/lib/query-keys'
 import { getRequestErrorMessage } from '@/lib/request-error'
@@ -38,17 +46,6 @@ import {
   type ReleaseRobotDto,
 } from '@/services/api'
 import { SettingsPanel } from './settings-panel'
-
-const MCP_PATH_STORAGE_KEY = 'artifact-center:mcp-path'
-
-function getSavedMcpPath() {
-  if (typeof window === 'undefined') return ''
-  try {
-    return window.localStorage.getItem(MCP_PATH_STORAGE_KEY) ?? ''
-  } catch {
-    return ''
-  }
-}
 
 function escapePowerShellSingleQuotedValue(value: string) {
   return value.replace(/'/g, "''")
@@ -62,22 +59,26 @@ function formatDate(value: string | null, language: string) {
   }).format(new Date(value))
 }
 
-export function ReleaseRobotsSettingsPanel({ hideHeader = false }) {
+export function ReleaseRobotsSettingsPanel({
+  hideHeader = false,
+  onViewAudit,
+}: {
+  hideHeader?: boolean
+  onViewAudit?: () => void
+}) {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
-  const [name, setName] = useState('Codex 发布机器人')
+  const [name, setName] = useState('')
   const [validDays, setValidDays] = useState('90')
   const [creating, setCreating] = useState(false)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
-  const [mcpPath, setMcpPath] = useState(getSavedMcpPath)
   const [copied, setCopied] = useState(false)
   const [setupCopied, setSetupCopied] = useState(false)
   const [tokenSaved, setTokenSaved] = useState(false)
   const [discardTokenOpen, setDiscardTokenOpen] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [credentialVerified, setCredentialVerified] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [revoking, setRevoking] = useState<ReleaseRobotDto | null>(null)
 
@@ -106,6 +107,7 @@ export function ReleaseRobotsSettingsPanel({ hideHeader = false }) {
       setDiscardTokenOpen(false)
       setCredentialVerified(false)
       setCreateOpen(false)
+      setName('')
       await queryClient.invalidateQueries({ queryKey: queryKeys.releaseRobots.all })
       toast.success(t('settings.releaseRobotCreated'))
     } catch (caught) {
@@ -153,34 +155,38 @@ export function ReleaseRobotsSettingsPanel({ hideHeader = false }) {
     Boolean(robot.revokedAt) ||
     Boolean(robot.expiresAt && new Date(robot.expiresAt) <= new Date())
   const activeRobots = robots.filter((robot) => !isInactive(robot))
-  const historicalRobots = robots.filter(isInactive)
   const apiUrl =
     typeof window === 'undefined'
       ? API_BASE_URL
       : new URL(API_BASE_URL.replace(/^\//, ''), `${window.location.origin}/`).toString()
-  const setupCommand =
-    createdToken && mcpPath.trim()
-      ? [
-          `$env:ARTIFACT_CENTER_URL = '${apiUrl.replace(/\/$/, '')}'`,
-          `$env:ARTIFACT_CENTER_TOKEN = '${createdToken}'`,
-          `$mcpPath = '${escapePowerShellSingleQuotedValue(mcpPath.trim())}'`,
-          '',
-          'codex mcp add artifact-center `',
-          '  --env ARTIFACT_CENTER_URL=$env:ARTIFACT_CENTER_URL `',
-          '  --env ARTIFACT_CENTER_TOKEN=$env:ARTIFACT_CENTER_TOKEN `',
-          '  -- node "$mcpPath\\src\\index.js"',
-        ].join('\n')
-      : ''
-
-  const updateMcpPath = (value: string) => {
-    setMcpPath(value)
-    setSetupCopied(false)
-    try {
-      window.localStorage.setItem(MCP_PATH_STORAGE_KEY, value)
-    } catch {
-      // The command can still be generated when browser storage is unavailable.
-    }
-  }
+  const mcpClientUrl =
+    typeof window === 'undefined'
+      ? '/downloads/artifact-center-mcp.mjs'
+      : new URL('/downloads/artifact-center-mcp.mjs', window.location.origin).toString()
+  const mcpChecksumUrl = mcpClientUrl.replace(/\.mjs$/, '.sha256')
+  const setupCommand = createdToken
+    ? [
+        `$artifactCenterUrl = '${escapePowerShellSingleQuotedValue(apiUrl.replace(/\/$/, ''))}'`,
+        `$artifactCenterToken = '${escapePowerShellSingleQuotedValue(createdToken)}'`,
+        `$mcpClientUrl = '${escapePowerShellSingleQuotedValue(mcpClientUrl)}'`,
+        `$mcpChecksumUrl = '${escapePowerShellSingleQuotedValue(mcpChecksumUrl)}'`,
+        `$mcpInstallDir = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Artifact Center\\MCP'`,
+        `$mcpClientPath = Join-Path $mcpInstallDir 'artifact-center-mcp.mjs'`,
+        `$mcpChecksumPath = Join-Path $mcpInstallDir 'artifact-center-mcp.sha256'`,
+        '',
+        'New-Item -ItemType Directory -Force -Path $mcpInstallDir | Out-Null',
+        'Invoke-WebRequest -UseBasicParsing -Uri $mcpClientUrl -OutFile $mcpClientPath',
+        'Invoke-WebRequest -UseBasicParsing -Uri $mcpChecksumUrl -OutFile $mcpChecksumPath',
+        '$expectedHash = (Get-Content -Raw -LiteralPath $mcpChecksumPath).Trim()',
+        '$actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $mcpClientPath).Hash.ToLowerInvariant()',
+        "if ($actualHash -ne $expectedHash) { throw 'Artifact Center MCP integrity check failed.' }",
+        '',
+        'codex mcp add artifact-center `',
+        '  --env ARTIFACT_CENTER_URL=$artifactCenterUrl `',
+        '  --env ARTIFACT_CENTER_TOKEN=$artifactCenterToken `',
+        '  -- node "$mcpClientPath"',
+      ].join('\n')
+    : ''
 
   const copySetupCommand = async () => {
     if (!setupCommand) return
@@ -209,62 +215,6 @@ export function ReleaseRobotsSettingsPanel({ hideHeader = false }) {
     }
   }
 
-  const renderRobot = (robot: ReleaseRobotDto) => {
-    const inactive = isInactive(robot)
-    return (
-      <li key={robot.id} className="flex min-w-0 items-center gap-3 px-4 py-4 sm:px-5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/45 text-muted-foreground">
-          <Bot className="size-4" strokeWidth={1.75} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-[0.875rem] font-medium">{robot.name}</span>
-            {!inactive ? (
-              <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[0.6875rem] text-emerald-700 dark:text-emerald-400">
-                {t('settings.releaseRobotActiveStatus')}
-              </span>
-            ) : null}
-            {robot.channels.map((channel) => (
-              <span
-                key={channel}
-                className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[0.6875rem] text-primary"
-              >
-                {channel === 'beta' ? 'Beta' : t('channel.stable')}
-              </span>
-            ))}
-            {inactive ? (
-              <span className="rounded-md bg-muted px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground">
-                {t(
-                  robot.revokedAt
-                    ? 'settings.releaseRobotRevokedStatus'
-                    : 'settings.releaseRobotExpiredStatus',
-                )}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-1 text-[0.75rem] text-muted-foreground">
-            {t('settings.releaseRobotDates', {
-              expires: formatDate(robot.expiresAt, i18n.language),
-              used: formatDate(robot.lastUsedAt, i18n.language),
-            })}
-          </p>
-        </div>
-        {!inactive ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setRevoking(robot)}
-            aria-label={t('settings.revokeReleaseRobot', { name: robot.name })}
-          >
-            <ShieldOff className="size-3.5 text-destructive" />
-            <span className="text-destructive">{t('settings.revokeCredential')}</span>
-          </Button>
-        ) : null}
-      </li>
-    )
-  }
-
   return (
     <SettingsPanel
       title={t('settings.releaseRobotsTitle')}
@@ -272,39 +222,34 @@ export function ReleaseRobotsSettingsPanel({ hideHeader = false }) {
       wide
       hideHeader={hideHeader}
     >
-      <div className="mb-4 grid gap-2 sm:grid-cols-3">
-        {[
-          ['settings.releaseRobotScopeTitle', 'settings.releaseRobotScopeDesc'],
-          ['settings.releaseRobotChannelTitle', 'settings.releaseRobotChannelDesc'],
-          ['settings.releaseRobotSecretTitle', 'settings.releaseRobotSecretDesc'],
-        ].map(([title, description]) => (
-          <div
-            key={title}
-            className="flex items-start gap-2.5 rounded-xl bg-muted/30 p-3 ring-1 ring-border/60"
-          >
-            <ShieldCheck
-              className="mt-0.5 size-4 shrink-0 text-primary"
-              strokeWidth={1.8}
-            />
-            <div>
-              <p className="text-[0.8125rem] font-medium">{t(title)}</p>
-              <p className="mt-0.5 text-[0.6875rem] leading-relaxed text-muted-foreground">
-                {t(description)}
-              </p>
+      <div className="overflow-hidden rounded-2xl bg-card/80 ring-1 ring-border/70 shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-[0.9375rem] font-semibold tracking-[-0.01em]">
+                {t('settings.releaseRobotListTitle')}
+              </h2>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[0.6875rem] font-medium text-emerald-700 dark:text-emerald-400">
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                {t('settings.releaseRobotActiveCount', { count: activeRobots.length })}
+              </span>
             </div>
+            <p className="mt-1 text-[0.75rem] text-muted-foreground">
+              {t('settings.releaseRobotListDesc')}
+            </p>
           </div>
-        ))}
-      </div>
-
-      <div className="overflow-hidden rounded-xl bg-card/70 ring-1 ring-border/70">
-        <div className="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-3 sm:px-5">
-          <p className="text-[0.75rem] text-muted-foreground">
-            {t('settings.releaseRobotActiveCount', { count: activeRobots.length })}
-          </p>
-          <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-3.5" />
-            {t('settings.addReleaseRobot')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {onViewAudit ? (
+              <Button type="button" size="sm" variant="outline" onClick={onViewAudit}>
+                <ClipboardList className="size-3.5" />
+                {t('settings.releaseRobotViewAudit')}
+              </Button>
+            ) : null}
+            <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-3.5" />
+              {t('settings.addReleaseRobot')}
+            </Button>
+          </div>
         </div>
 
         {robotsQuery.isLoading ? (
@@ -325,46 +270,98 @@ export function ReleaseRobotsSettingsPanel({ hideHeader = false }) {
               {t('settings.noReleaseRobotsHint')}
             </p>
           </div>
+        ) : activeRobots.length ? (
+          <Table className="min-w-[38rem] table-fixed">
+            <colgroup>
+              <col className="w-[30%]" />
+              <col className="w-[23%]" />
+              <col className="w-[17%]" />
+              <col className="w-[18%]" />
+              <col className="w-[12%]" />
+            </colgroup>
+            <TableHeader className="bg-muted/35 text-[0.6875rem] text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-11 px-5 font-medium sm:px-6">
+                  {t('settings.releaseRobotColumnName')}
+                </TableHead>
+                <TableHead className="h-11 px-3 font-medium">
+                  {t('settings.releaseRobotColumnAccess')}
+                </TableHead>
+                <TableHead className="h-11 px-3 font-medium">
+                  {t('settings.releaseRobotColumnLastUsed')}
+                </TableHead>
+                <TableHead className="h-11 px-3 font-medium">
+                  {t('settings.releaseRobotColumnExpires')}
+                </TableHead>
+                <TableHead className="h-11 px-4 text-right font-medium">
+                  {t('settings.releaseRobotColumnActions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activeRobots.map((robot) => (
+                <TableRow key={robot.id} className="h-[4.75rem] hover:bg-muted/20">
+                  <TableCell className="px-5 py-3 sm:px-6">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/8 text-primary ring-1 ring-primary/10">
+                        <Bot className="size-4" strokeWidth={1.75} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[0.8125rem] font-medium text-foreground">
+                          {robot.name}
+                        </p>
+                        <p className="mt-1 flex items-center gap-1.5 text-[0.6875rem] text-emerald-700 dark:text-emerald-400">
+                          <span className="size-1.5 rounded-full bg-emerald-500" />
+                          {t('settings.releaseRobotActiveStatus')}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-3 py-3">
+                    <p className="text-[0.8125rem] font-medium text-foreground">
+                      {t('settings.releaseRobotAllApplications')}
+                    </p>
+                    <p className="mt-1 text-[0.6875rem] text-muted-foreground">
+                      {t('settings.releaseRobotAllowedChannels')}
+                    </p>
+                  </TableCell>
+                  <TableCell className="whitespace-normal px-3 py-3 text-[0.75rem] leading-5 text-muted-foreground">
+                    {robot.lastUsedAt
+                      ? formatDate(robot.lastUsedAt, i18n.language)
+                      : t('settings.releaseRobotNeverUsed')}
+                  </TableCell>
+                  <TableCell className="whitespace-normal px-3 py-3 text-[0.75rem] leading-5 text-muted-foreground">
+                    {formatDate(robot.expiresAt, i18n.language)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRevoking(robot)}
+                      aria-label={t('settings.revokeReleaseRobot', { name: robot.name })}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <ShieldOff className="size-3.5" />
+                      <span className="hidden 2xl:inline">
+                        {t('settings.revokeCredential')}
+                      </span>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         ) : (
-          <>
-            {activeRobots.length ? (
-              <ul className="divide-y divide-border/60">
-                {activeRobots.map(renderRobot)}
-              </ul>
-            ) : (
-              <div className="px-5 py-10 text-center">
-                <KeyRound className="mx-auto size-5 text-muted-foreground/60" />
-                <p className="mt-3 text-[0.875rem] font-medium">
-                  {t('settings.noActiveReleaseRobots')}
-                </p>
-                <p className="mt-1 text-[0.75rem] text-muted-foreground">
-                  {t('settings.noActiveReleaseRobotsHint')}
-                </p>
-              </div>
-            )}
-            {historicalRobots.length ? (
-              <div className="border-t border-border/60">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between px-5 py-3 text-left text-[0.8125rem] font-medium hover:bg-muted/30"
-                  aria-expanded={historyOpen}
-                  onClick={() => setHistoryOpen((open) => !open)}
-                >
-                  {t('settings.releaseRobotHistory', {
-                    count: historicalRobots.length,
-                  })}
-                  <ChevronDown
-                    className={`size-4 text-muted-foreground transition-transform ${historyOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {historyOpen ? (
-                  <ul className="divide-y divide-border/60 border-t border-border/60 bg-muted/10">
-                    {historicalRobots.map(renderRobot)}
-                  </ul>
-                ) : null}
-              </div>
-            ) : null}
-          </>
+          <div className="px-5 py-12 text-center">
+            <KeyRound className="mx-auto size-5 text-muted-foreground/60" />
+            <p className="mt-3 text-[0.875rem] font-medium">
+              {t('settings.noActiveReleaseRobots')}
+            </p>
+            <p className="mt-1 text-[0.75rem] text-muted-foreground">
+              {t('settings.noActiveReleaseRobotsHint')}
+            </p>
+          </div>
         )}
       </div>
 
@@ -381,7 +378,11 @@ export function ReleaseRobotsSettingsPanel({ hideHeader = false }) {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 maxLength={120}
+                placeholder={t('settings.releaseRobotNamePlaceholder')}
               />
+              <span className="text-[0.6875rem] font-normal text-muted-foreground">
+                {t('settings.releaseRobotNameHint')}
+              </span>
             </label>
             <label className="grid gap-1.5 text-[0.8125rem] font-medium">
               {t('settings.releaseRobotValidDays')}
@@ -456,27 +457,8 @@ export function ReleaseRobotsSettingsPanel({ hideHeader = false }) {
                 <Terminal className="size-3.5" />
                 {t('settings.releaseRobotSetupTitle')}
               </div>
-              <div className="mb-3 grid gap-1.5 text-[0.75rem] font-medium">
-                <label htmlFor="release-robot-mcp-path">
-                  {t('settings.releaseRobotMcpPathLabel')}
-                </label>
-                <Input
-                  id="release-robot-mcp-path"
-                  value={mcpPath}
-                  onChange={(event) => updateMcpPath(event.target.value)}
-                  placeholder={t('settings.releaseRobotMcpPathPlaceholder')}
-                  autoComplete="off"
-                  aria-describedby="release-robot-mcp-path-hint"
-                />
-                <span
-                  id="release-robot-mcp-path-hint"
-                  className="text-[0.6875rem] font-normal text-muted-foreground"
-                >
-                  {t('settings.releaseRobotMcpPathHint')}
-                </span>
-              </div>
               <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/50 p-3 font-mono text-[0.6875rem] leading-relaxed ring-1 ring-border/70">
-                {setupCommand || t('settings.releaseRobotSetupAwaitingPath')}
+                {setupCommand}
               </pre>
               <p className="mt-1.5 text-[0.6875rem] text-muted-foreground">
                 {t('settings.releaseRobotSetupHint')}

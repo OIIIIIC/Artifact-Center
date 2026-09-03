@@ -136,7 +136,10 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
               <MembersSettingsPanel hideHeader />
             ) : null}
             {isAdmin && section === 'robots' ? (
-              <ReleaseRobotsSettingsPanel hideHeader />
+              <ReleaseRobotsSettingsPanel
+                hideHeader
+                onViewAudit={() => setSection('audit')}
+              />
             ) : null}
             {isAdmin && section === 'regions' ? (
               <RegionsSettingsPanel isAdmin={isAdmin} hideHeader />

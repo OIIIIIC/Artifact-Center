@@ -4,10 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run build:mcp-client && vite",
     "dev:api": "npm run dev --prefix apps/api",
-    "dev:web": "vite",
-    "build": "tsc -b && vite build",
+    "dev:web": "npm run build:mcp-client && vite",
+    "build": "npm run build:mcp-client && tsc -b && vite build",
+    "build:mcp-client": "npm run build --prefix plugins/artifact-center-mcp",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -15,7 +16,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:api": "npm test --prefix apps/api",
-    "test:all": "npm test && npm run test:api",
+    "test:mcp": "npm run check --prefix plugins/artifact-center-mcp",
+    "test:all": "npm test && npm run test:api && npm run test:mcp",
     "typecheck": "tsc -b --pretty false",
     "typecheck:api": "npm run typecheck --prefix apps/api",
     "verify": "npm run lint && npm run typecheck && npm run typecheck:api && npm run test:all && npm run build",
@@ -24,7 +26,8 @@
     "db:setup": "npm run db:setup --prefix apps/api",
     "db:migrate": "npm run db:migrate --prefix apps/api",
     "db:seed": "npm run db:seed --prefix apps/api",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "npm ci --prefix plugins/artifact-center-mcp"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
