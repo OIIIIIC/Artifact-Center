@@ -16,6 +16,7 @@ export type UploadCredential =
   | {
       kind: 'release-credential'
       id: string
+      name: string
     }
 
 export type UploadAuthVariables = AuthVariables & {
@@ -45,6 +46,7 @@ export const requireUploadAuth = createMiddleware<{
       const [row] = await db
         .select({
           id: releaseCredentials.id,
+          credentialName: releaseCredentials.name,
           actorUserId: releaseCredentials.actorUserId,
           email: users.email,
           name: users.name,
@@ -77,6 +79,7 @@ export const requireUploadAuth = createMiddleware<{
       credential = {
         kind: 'release-credential',
         id: row.id,
+        name: row.credentialName,
       }
       releaseCredentialId = row.id
     }

@@ -140,10 +140,17 @@ releaseArtifactRoutes.patch('/artifacts/:id', requireUploadAuth, async (c) => {
     objectId: current.id,
     applicationId: current.applicationId,
     summary: `更新发布制品 ${current.filename}`,
+    actorName: credential.kind === 'release-credential' ? credential.name : undefined,
     meta: {
       releaseNotes: parsed.data.releaseNotes !== undefined,
       promotedToStable: parsed.data.promoteToStable === true,
       via: credential.kind,
+      ...(credential.kind === 'release-credential'
+        ? {
+            releaseCredentialId: credential.id,
+            releaseCredentialName: credential.name,
+          }
+        : {}),
     },
   })
   return c.json({ artifact: mapArtifact(updated) })

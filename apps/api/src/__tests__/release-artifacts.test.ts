@@ -11,8 +11,14 @@ const database = vi.hoisted(() => ({
   transaction: vi.fn(),
 }))
 
+const auditWrite = vi.hoisted(() => vi.fn())
+
 const auth = vi.hoisted(() => ({
-  credential: { kind: 'release-credential' as const, id: 'credential-1' },
+  credential: {
+    kind: 'release-credential' as const,
+    id: 'credential-1',
+    name: 'Bino workstation',
+  },
   userId: 'uploader-1',
 }))
 
@@ -42,7 +48,7 @@ vi.mock('../middleware/upload-auth.js', () => ({
 vi.mock('../middleware/application-access.js', () => ({
   hasApplicationRole: vi.fn(async () => true),
 }))
-vi.mock('../lib/audit.js', () => ({ writeAudit: vi.fn() }))
+vi.mock('../lib/audit.js', () => ({ writeAudit: auditWrite }))
 
 import { releaseArtifactRoutes } from '../routes/release-artifacts.js'
 
@@ -97,7 +103,11 @@ function createApp() {
 describe('MCP 安全发布修改接口', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    auth.credential = { kind: 'release-credential', id: 'credential-1' }
+    auth.credential = {
+      kind: 'release-credential',
+      id: 'credential-1',
+      name: 'Bino workstation',
+    }
     auth.userId = 'uploader-1'
     database.transaction.mockImplementation(async (callback) =>
       callback({ update: database.update }),
@@ -130,6 +140,17 @@ describe('MCP 安全发布修改接口', () => {
     expect(database.set).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({ releaseNotes: 'fixed notes' }),
+    )
+    expect(auditWrite).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorName: 'Bino workstation',
+        meta: expect.objectContaining({
+          via: 'release-credential',
+          releaseCredentialId: 'credential-1',
+          releaseCredentialName: 'Bino workstation',
+        }),
+      }),
     )
   })
 

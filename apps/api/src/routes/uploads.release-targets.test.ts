@@ -51,7 +51,11 @@ vi.mock('../middleware/upload-auth.js', () => ({
     next: () => Promise<void>,
   ) => {
     c.set('user', releaseCredentialUser)
-    c.set('uploadCredential', { kind: 'release-credential', id: 'credential-1' })
+    c.set('uploadCredential', {
+      kind: 'release-credential',
+      id: 'credential-1',
+      name: 'Bino workstation',
+    })
     await next()
   },
 }))

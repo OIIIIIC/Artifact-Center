@@ -618,11 +618,8 @@ uploadRoutes.post(
 
 /** Assemble persisted chunks, verify total bytes + SHA-256, then publish the artifact atomically. */
 uploadRoutes.post('/uploads/:id/complete', requireUploadAuth, async (c) => {
-  const session = await getSessionForUser(
-    c.req.param('id'),
-    c.get('user'),
-    c.get('uploadCredential'),
-  )
+  const credential = c.get('uploadCredential')
+  const session = await getSessionForUser(c.req.param('id'), c.get('user'), credential)
   if (session === null) return jsonError(c, 404, 'not_found', 'Upload session not found')
   if (!session) return jsonError(c, 403, 'forbidden', 'Insufficient application role')
   if (session.status !== 'active' || session.expiresAt <= new Date()) {
@@ -714,6 +711,8 @@ uploadRoutes.post('/uploads/:id/complete', requireUploadAuth, async (c) => {
         : 'stable'
   const isDeprecated = status === 'deprecated' || channel === 'deprecated'
   const user = c.get('user')
+  const uploaderName =
+    credential.kind === 'release-credential' ? credential.name : user.name
   if (!artifactType) {
     if (session.storageBackend === 's3') await deleteObject(session.storageKey)
     else await deleteStorageFile(session.storageKey)
@@ -731,7 +730,7 @@ uploadRoutes.post('/uploads/:id/complete', requireUploadAuth, async (c) => {
           version: fields.version,
           releaseNotes: fields.releaseNotes,
           createdById: user.sub,
-          createdByName: user.name,
+          createdByName: uploaderName,
           publishedAt: now,
         })
         .onConflictDoUpdate({
@@ -770,7 +769,7 @@ uploadRoutes.post('/uploads/:id/complete', requireUploadAuth, async (c) => {
           storageBackend: session.storageBackend,
           releaseNotes: fields.releaseNotes,
           uploaderId: user.sub,
-          uploaderName: user.name,
+          uploaderName,
           deprecatedAt: isDeprecated ? now : null,
         })
         .returning()
@@ -802,6 +801,7 @@ uploadRoutes.post('/uploads/:id/complete', requireUploadAuth, async (c) => {
     objectId: created.id,
     applicationId: session.applicationId,
     summary: `上传 ${app.name} v${fields.version}（${finalFilename}）`,
+    actorName: credential.kind === 'release-credential' ? credential.name : undefined,
     meta: {
       originalFilename: session.filename,
       filename: finalFilename,
@@ -811,6 +811,13 @@ uploadRoutes.post('/uploads/:id/complete', requireUploadAuth, async (c) => {
       sha256: assembled.sha256,
       markLatest,
       resumable: true,
+      via: credential.kind,
+      ...(credential.kind === 'release-credential'
+        ? {
+            releaseCredentialId: credential.id,
+            releaseCredentialName: credential.name,
+          }
+        : {}),
     },
   })
   return c.json({ artifact: mapArtifact(created) }, 201)
