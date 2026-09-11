@@ -1,18 +1,20 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, Files } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { CollectionPagination } from '@/components/common/collection-pagination'
 import { Input } from '@/components/ui/input'
+import { useCollectionPage } from '@/hooks/use-collection-page'
 import { copyText } from '@/lib/clipboard'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
-import { apiCreateShareCollection } from '@/services/api'
+import { apiApplicationPage, apiCreateShareCollection } from '@/services/api'
 import { shareUrlForToken } from '@/store/share-store'
-import type { Application, Region } from '@/types/application'
+import type { Project, Region } from '@/types/application'
 import type { ShareMode } from '@/types/share'
 
 type ExpiryOption = 0 | 1 | 7 | 30
@@ -21,30 +23,29 @@ interface ShareCollectionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   region: Region
-  applications: Application[]
+  project?: Project
 }
 
-/** 创建同一地区内多个应用的分享清单。 */
+/** 按当前产品或项目分页选择应用，创建同产品范围的分享清单。 */
 export function ShareCollectionDialog({
   open,
   onOpenChange,
   region,
-  applications,
+  project,
 }: ShareCollectionDialogProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const shareableApplications = useMemo(
-    () =>
-      applications
-        .filter(
-          (application) =>
-            application.status !== 'archived' && application.artifactCount > 0,
-        )
-        .slice(0, 20),
-    [applications],
-  )
+  const scopeName = project?.name ?? region.name
+  const scope = { product: region.id, project: project?.id, shareable: '1' as const }
+  const query = useCollectionPage({
+    queryKey: ['applications', 'share-collection', scope],
+    queryFn: (cursor, signal) =>
+      apiApplicationPage({ ...scope, sort: 'updated', limit: 20, cursor }, signal),
+    enabled: open,
+  })
+  const shareableApplications = query.data?.items ?? []
   const [title, setTitle] = useState(() =>
-    t('share.collectionDefaultName', { region: region.name }),
+    t('share.collectionDefaultName', { region: scopeName }),
   )
   const [selected, setSelected] = useState<Record<string, ShareMode>>({})
   const [expiry, setExpiry] = useState<ExpiryOption>(7)
@@ -54,6 +55,10 @@ export function ShareCollectionDialog({
   if (!open) return null
 
   const selectedCount = Object.keys(selected).length
+  const pagePending = query.isPlaceholderData || query.isFetching
+  const pageSelected = shareableApplications.every(
+    (application) => selected[application.id],
+  )
 
   const toggleApplication = (applicationId: string) => {
     setSelected((current) => {
@@ -81,7 +86,7 @@ export function ShareCollectionDialog({
     setBusy(true)
     try {
       const share = await apiCreateShareCollection({
-        title: title.trim() || t('share.collectionDefaultName', { region: region.name }),
+        title: title.trim() || t('share.collectionDefaultName', { region: scopeName }),
         regionId: region.id,
         items: Object.entries(selected).map(([applicationId, mode]) => ({
           applicationId,
@@ -125,7 +130,9 @@ export function ShareCollectionDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/20 p-4 backdrop-blur-[2px] sm:items-center"
+      // A full-screen backdrop filter makes every form update expensive to present,
+      // especially while the generated link and success toast appear together.
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-4 sm:items-center"
       role="dialog"
       aria-modal
       aria-labelledby="share-collection-title"
@@ -143,10 +150,10 @@ export function ShareCollectionDialog({
               id="share-collection-title"
               className="text-[0.9375rem] font-semibold tracking-tight"
             >
-              {t('share.collectionTitle')}
+              {t(project ? 'share.collectionProjectTitle' : 'share.collectionTitle')}
             </h2>
             <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">
-              {t('share.collectionDescription', { region: region.name })}
+              {t('share.collectionDescription', { region: scopeName })}
             </p>
           </div>
         </div>
@@ -180,31 +187,72 @@ export function ShareCollectionDialog({
                 {shareableApplications.length > 0 ? (
                   <button
                     type="button"
-                    className="font-medium text-muted-foreground hover:text-foreground"
+                    disabled={
+                      busy ||
+                      pagePending ||
+                      query.isError ||
+                      selectedCount >= 20 ||
+                      pageSelected
+                    }
+                    className="font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
                     onClick={() => {
-                      setSelected(
-                        selectedCount === shareableApplications.length
-                          ? {}
-                          : Object.fromEntries(
-                              shareableApplications.map((application) => [
-                                application.id,
-                                'artifact',
-                              ]),
-                            ),
-                      )
+                      setSelected((current) => {
+                        const next = { ...current }
+                        for (const application of shareableApplications) {
+                          if (Object.keys(next).length >= 20) break
+                          next[application.id] ??= 'artifact'
+                        }
+                        return next
+                      })
                       setCopiedUrl(null)
                     }}
                   >
-                    {selectedCount === shareableApplications.length
-                      ? t('share.collectionClear')
-                      : t('share.collectionSelectAll')}
+                    {t(
+                      query.hasPrevious || query.hasNext
+                        ? 'share.collectionSelectPage'
+                        : 'share.collectionSelectAll',
+                    )}
+                  </button>
+                ) : null}
+                {selectedCount > 0 ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                    onClick={() => {
+                      setSelected({})
+                      setCopiedUrl(null)
+                    }}
+                  >
+                    {t('share.collectionClear')}
                   </button>
                 ) : null}
               </div>
             </div>
 
-            {shareableApplications.length > 0 ? (
-              <div className="max-h-72 divide-y divide-border/50 overflow-y-auto rounded-xl ring-1 ring-border/70">
+            {query.isLoading ? (
+              <p
+                role="status"
+                className="px-4 py-6 text-center text-sm text-muted-foreground"
+              >
+                {t('applications.loading')}
+              </p>
+            ) : query.isError ? (
+              <div
+                role="alert"
+                className="space-y-2 px-4 py-6 text-center text-sm text-muted-foreground"
+              >
+                <p>{t('common.serviceUnavailableDescription')}</p>
+                <Button variant="outline" onClick={() => void query.refetch()}>
+                  {t('common.retry')}
+                </Button>
+              </div>
+            ) : shareableApplications.length > 0 ? (
+              <fieldset
+                disabled={busy || pagePending}
+                aria-busy={pagePending}
+                className="max-h-72 min-w-0 divide-y divide-border/50 overflow-y-auto rounded-xl ring-1 ring-border/70"
+              >
                 {shareableApplications.map((application) => {
                   const mode = selected[application.id]
                   return (
@@ -216,6 +264,7 @@ export function ShareCollectionDialog({
                         type="button"
                         role="checkbox"
                         aria-checked={Boolean(mode)}
+                        disabled={!mode && selectedCount >= 20}
                         onClick={() => toggleApplication(application.id)}
                         className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                       >
@@ -260,12 +309,21 @@ export function ShareCollectionDialog({
                     </div>
                   )
                 })}
-              </div>
+              </fieldset>
             ) : (
               <p className="rounded-xl bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
                 {t('share.collectionNoArtifacts')}
               </p>
             )}
+            <CollectionPagination
+              page={query.page}
+              total={query.data?.total ?? 0}
+              hasPrevious={query.hasPrevious}
+              hasNext={!query.isError && query.hasNext}
+              busy={busy || query.isFetching}
+              onPrevious={query.previous}
+              onNext={query.next}
+            />
           </div>
 
           <div className="space-y-1.5">

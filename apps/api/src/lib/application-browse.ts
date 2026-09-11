@@ -75,6 +75,7 @@ export async function listApplicationPage(c: Context<{ Variables: AuthVariables 
     query.project ?? '',
     query.scope ?? '',
     query.favorites ?? '',
+    query.shareable ?? '',
     sort,
   ])
   let page, cursorWhere
@@ -84,7 +85,16 @@ export async function listApplicationPage(c: Context<{ Variables: AuthVariables 
   } catch {
     return jsonError(c, 400, 'invalid_page', 'Invalid page or cursor')
   }
-  const conditions = [visibleApplications(user, query.scope === 'mine')]
+  const shareable = query.shareable === '1'
+  const conditions = [visibleApplications(user, query.scope === 'mine' || shareable)]
+  // Filter share candidates before pagination so unrelated or unshareable apps
+  // cannot fill the first page or inflate its total.
+  if (shareable) {
+    conditions.push(
+      sql`${applications.status} <> 'archived'`,
+      sql`${applications.artifactCount} > 0`,
+    )
+  }
   const q = (query.q ?? '').trim().slice(0, 120)
   if (q)
     conditions.push(

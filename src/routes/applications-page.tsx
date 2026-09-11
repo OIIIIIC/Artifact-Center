@@ -7,11 +7,10 @@ import {
   RefreshCw,
   SearchX,
   ServerCrash,
-  Share2,
   Star,
   Upload,
 } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 
@@ -29,7 +28,7 @@ import { ApplicationTimeline } from '@/features/applications/application-timelin
 import { CompactDirectory } from '@/features/products/product-directory'
 import { ApplicationDirectory } from '@/features/products/application-directory'
 import { useProjects } from '@/features/products/use-projects'
-import { ShareCollectionDialog } from '@/features/share/share-collection-dialog'
+import { ShareCollectionAction } from '@/features/share/share-collection-action'
 import {
   useApplicationCatalog,
   useApplications,
@@ -38,7 +37,7 @@ import { usePersonalWorkspace } from '@/features/applications/use-personal-works
 import { useWorkspaceFilterPreferenceSync } from '@/features/applications/use-workspace-filter-preference-sync'
 import { useRegions } from '@/features/regions/use-regions'
 import { useContentScrollRestoration } from '@/hooks/use-content-scroll-restoration'
-import { canMaintainApplication, canWriteContent } from '@/lib/roles'
+import { canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
@@ -67,9 +66,8 @@ export function ApplicationsPage() {
   const summary = useDirectorySummary()
   const listStart = useRef<HTMLDivElement>(null)
   const [pageSearchParams, setPageSearchParams] = useSearchParams()
-  const [shareRegionId, setShareRegionId] = useState<string | null>(null)
   const [bulkCodesOpen, setBulkCodesOpen] = useState(false)
-  const catalogQuery = useApplicationCatalog(bulkCodesOpen || shareRegionId !== null)
+  const catalogQuery = useApplicationCatalog(bulkCodesOpen)
   const catalog = catalogQuery.catalog
   const regionScope =
     pageSearchParams.get('product') ?? pageSearchParams.get('region') ?? 'all'
@@ -101,14 +99,6 @@ export function ApplicationsPage() {
   } = useApplications()
 
   useContentScrollRestoration({ ready: !loading })
-
-  const maintainableCatalog = useMemo(
-    () =>
-      catalog.filter((application) =>
-        canMaintainApplication(role, application.accessRole),
-      ),
-    [catalog, role],
-  )
   const toggleCardFavorite = useCallback(
     (id: string) => toggleFavorite(id, filtered.find((app) => app.id === id)?.name),
     [toggleFavorite, filtered],
@@ -200,7 +190,6 @@ export function ApplicationsPage() {
 
   const hasNoVisibleMatches =
     !loading && !error && !isEmptyCatalog && visibleApplications.length === 0
-  const shareRegion = regions.find((region) => region.id === shareRegionId)
 
   return (
     <AppLayout
@@ -249,19 +238,18 @@ export function ApplicationsPage() {
                   <AnimatedScopeAction
                     visible={
                       resolvedRegionScope !== 'all' &&
-                      !!resolvedRegionScope &&
+                      !!selectedProduct &&
+                      (resolvedProjectScope === 'all' || !!selectedProject) &&
                       (summary.data?.maintainableCounts[resolvedRegionScope] ?? 0) > 0
                     }
                   >
-                    <Button
-                      type="button"
-                      size="lg"
-                      variant="outline"
-                      onClick={() => setShareRegionId(resolvedRegionScope)}
-                    >
-                      <Share2 className="size-3.5" strokeWidth={1.75} />
-                      {t('share.collectionAction')}
-                    </Button>
+                    {selectedProduct ? (
+                      <ShareCollectionAction
+                        key={`${selectedProduct.id}:${resolvedProjectScope}`}
+                        product={selectedProduct}
+                        project={selectedProject}
+                      />
+                    ) : null}
                   </AnimatedScopeAction>
                   <div className="flex items-center gap-2 p-1">
                     {canCreateApplication ? (
@@ -483,7 +471,7 @@ export function ApplicationsPage() {
           </motion.div>
         </div>
       </PageContainer>
-      {(shareRegion || bulkCodesOpen) && (catalogQuery.loading || catalogQuery.error) ? (
+      {bulkCodesOpen && (catalogQuery.loading || catalogQuery.error) ? (
         <div
           role="status"
           className="fixed right-6 bottom-6 z-50 rounded-xl border border-border bg-card p-4 shadow-lg"
@@ -498,28 +486,12 @@ export function ApplicationsPage() {
           <Button
             variant="ghost"
             onClick={() => {
-              setShareRegionId(null)
               setBulkCodesOpen(false)
             }}
           >
             {t('common.cancel')}
           </Button>
         </div>
-      ) : null}
-      {shareRegion && !catalogQuery.loading && !catalogQuery.error ? (
-        <ShareCollectionDialog
-          key={shareRegion.id}
-          open
-          onOpenChange={(open) => {
-            if (!open) setShareRegionId(null)
-          }}
-          region={shareRegion}
-          applications={maintainableCatalog.filter(
-            (application) =>
-              application.region.id === shareRegion.id &&
-              application.status !== 'archived',
-          )}
-        />
       ) : null}
       {bulkCodesOpen && !catalogQuery.loading && !catalogQuery.error ? (
         <BulkApplicationActionsDialog

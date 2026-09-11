@@ -114,6 +114,7 @@ export type ApplicationPageParams = ListApplicationsParams & {
   project?: string
   scope?: string
   favorites?: string
+  shareable?: '1'
   limit?: number
   cursor?: string
 }
