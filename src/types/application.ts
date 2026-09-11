@@ -35,12 +35,26 @@ export type ApplicationIconColor =
   | 'cyan'
   | 'lime'
 
-export interface Region {
+export interface Product {
   id: string
   code: string
   name: string
   sortOrder: number
   enabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/** Legacy wire name retained for existing APIs and integrations. */
+export type Region = Product
+
+export interface Project {
+  id: string
+  productId: string
+  name: string
+  sortOrder: number
+  enabled: boolean
+  isDefault: boolean
   createdAt: string
   updatedAt: string
 }
@@ -56,6 +70,9 @@ export interface Application {
   packageName: string
   platform: ApplicationPlatform
   region: Region
+  /** Present on current APIs; optional only for legacy cached responses. */
+  projectName?: string
+  projectId?: string
   latestVersion: string
   /** Latest artifact upload time; distinct from application metadata updates. */
   latestArtifactUploadedAt?: string | null
