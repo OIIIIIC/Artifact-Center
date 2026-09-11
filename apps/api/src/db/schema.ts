@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   check,
+  foreignKey,
   integer,
   jsonb,
   pgEnum,
@@ -81,7 +82,7 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-/** 地域是管理员维护的应用目录分类，不作为一级产品导航对象。 */
+/** 产品目录；保留 regions 表名和 ID，兼容已有客户端与分享链接。 */
 export const regions = pgTable(
   'regions',
   {
@@ -100,6 +101,30 @@ export const regions = pgTable(
   ],
 )
 
+export const projects = pgTable(
+  'projects',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => regions.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 120 }).notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    enabled: boolean('enabled').notNull().default(true),
+    isDefault: boolean('is_default').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('projects_product_name_uidx').on(t.productId, t.name),
+    uniqueIndex('projects_product_id_uidx').on(t.productId, t.id),
+    uniqueIndex('projects_default_uidx')
+      .on(t.productId)
+      .where(sql`${t.isDefault} = true`),
+    index('projects_product_sort_idx').on(t.productId, t.sortOrder, t.name),
+  ],
+)
+
 export const applications = pgTable(
   'applications',
   {
@@ -114,6 +139,10 @@ export const applications = pgTable(
     description: text('description').notNull().default(''),
     packageName: varchar('package_name', { length: 255 }).notNull(),
     platform: appPlatformEnum('platform').notNull(),
+    // BEFORE INSERT trigger supplies the product's default project for legacy writers.
+    projectId: uuid('project_id')
+      .notNull()
+      .default(sql`NULL`),
     regionId: uuid('region_id')
       .notNull()
       .references(() => regions.id, { onDelete: 'restrict' }),
@@ -128,6 +157,15 @@ export const applications = pgTable(
   },
   (t) => [
     index('applications_region_code_idx').on(t.regionId, t.applicationCode),
+    index('applications_project_idx').on(t.projectId),
+    index('applications_updated_page_idx').on(t.updatedAt, t.id),
+    index('applications_created_page_idx').on(t.createdAt, t.id),
+    index('applications_name_page_idx').on(t.name, t.id),
+    foreignKey({
+      name: 'applications_product_project_fk',
+      columns: [t.regionId, t.projectId],
+      foreignColumns: [projects.productId, projects.id],
+    }).onDelete('restrict'),
     check(
       'applications_application_code_format',
       sql`${t.applicationCode} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
@@ -201,6 +239,7 @@ export const userWorkspacePreferences = pgTable(
     platform: varchar('platform', { length: 16 }).notNull().default('all'),
     sort: varchar('sort', { length: 16 }).notNull().default('updated'),
     regionId: uuid('region_id').references(() => regions.id, { onDelete: 'set null' }),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
     query: varchar('search_query', { length: 120 }).notNull().default(''),
     favoriteOnly: boolean('favorite_only').notNull().default(false),
     responsibleOnly: boolean('responsible_only').notNull().default(false),
@@ -264,7 +303,7 @@ export const releases = pgTable(
   },
   (t) => [
     uniqueIndex('releases_application_version_uidx').on(t.applicationId, t.version),
-    index('releases_application_published_at_idx').on(t.applicationId, t.publishedAt),
+    index('releases_application_history_idx').on(t.applicationId, t.publishedAt, t.id),
   ],
 )
 
@@ -312,7 +351,7 @@ export const artifacts = pgTable(
     uniqueIndex('artifacts_one_latest_per_application_uidx')
       .on(t.applicationId)
       .where(sql`${t.status} = 'latest'`),
-    index('artifacts_application_uploaded_at_idx').on(t.applicationId, t.uploadedAt),
+    index('artifacts_application_history_idx').on(t.applicationId, t.uploadedAt, t.id),
     index('artifacts_application_sha256_idx').on(t.applicationId, t.sha256),
     index('artifacts_release_id_idx').on(t.releaseId),
     check('artifacts_size_bytes_nonnegative', sql`${t.sizeBytes} >= 0`),

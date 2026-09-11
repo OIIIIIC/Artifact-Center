@@ -5,6 +5,10 @@ import { auditLogs } from '../db/schema.js'
 import type { AuthVariables } from '../middleware/auth.js'
 
 export type AuditAction =
+  | 'settings.project_reorder'
+  | 'settings.project_create'
+  | 'settings.project_update'
+  | 'settings.project_delete'
   | 'app.create'
   | 'app.update'
   | 'app.delete'
@@ -34,6 +38,7 @@ export type AuditAction =
   | 'release_credential.revoke'
 
 export type AuditObjectType =
+  | 'project'
   | 'application'
   | 'artifact'
   | 'release'

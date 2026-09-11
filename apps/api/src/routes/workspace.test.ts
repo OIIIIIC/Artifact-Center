@@ -32,6 +32,7 @@ describe('个人工作台', () => {
       platform: 'all',
       sort: 'updated',
       regionId: null,
+      projectId: null,
       query: '',
       favoriteOnly: false,
       responsibleOnly: false,

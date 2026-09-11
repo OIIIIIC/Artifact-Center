@@ -155,6 +155,27 @@
       "when": 1787993955332,
       "tag": "0021_rich_random",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788943693480,
+      "tag": "0022_product_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788944335164,
+      "tag": "0023_project_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789006648202,
+      "tag": "0024_collection_pagination",
+      "breakpoints": true
     }
   ]
 }

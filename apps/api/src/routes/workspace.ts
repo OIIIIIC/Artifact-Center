@@ -6,6 +6,7 @@ import { db } from '../db/client.js'
 import {
   applicationMembers,
   applications,
+  projects,
   regions,
   userApplicationPreferences,
   userWorkspacePreferences,
@@ -21,6 +22,7 @@ export const workspacePreferencesSchema = z
     platform: z.enum(['all', 'android', 'windows', 'zip']).optional(),
     sort: z.enum(['updated', 'name', 'created']).optional(),
     regionId: z.string().uuid().nullable().optional(),
+    projectId: z.string().uuid().nullable().optional(),
     query: z.string().trim().max(120).optional(),
     favoriteOnly: z.boolean().optional(),
     responsibleOnly: z.boolean().optional(),
@@ -62,6 +64,7 @@ export function serializeWorkspace(
       platform: preferences?.platform ?? 'all',
       sort: preferences?.sort ?? 'updated',
       regionId: preferences?.regionId ?? null,
+      projectId: preferences?.projectId ?? null,
       query: preferences?.query ?? '',
       favoriteOnly: preferences?.favoriteOnly ?? false,
       responsibleOnly: preferences?.responsibleOnly ?? false,
@@ -228,11 +231,32 @@ workspaceRoutes.put('/preferences', async (c) => {
       parsed.data.regionId !== undefined
         ? parsed.data.regionId
         : (current?.regionId ?? null),
+    projectId:
+      parsed.data.projectId !== undefined
+        ? parsed.data.projectId
+        : parsed.data.regionId !== undefined && parsed.data.regionId !== current?.regionId
+          ? null
+          : (current?.projectId ?? null),
     query: parsed.data.query ?? current?.query ?? '',
     favoriteOnly: parsed.data.favoriteOnly ?? current?.favoriteOnly ?? false,
     responsibleOnly: parsed.data.responsibleOnly ?? current?.responsibleOnly ?? false,
     collapsed: parsed.data.collapsed ?? current?.collapsed ?? false,
     updatedAt: now,
+  }
+
+  if (values.projectId) {
+    const [project] = await db
+      .select({ productId: projects.productId })
+      .from(projects)
+      .where(eq(projects.id, values.projectId))
+      .limit(1)
+    if (!project || project.productId !== values.regionId)
+      return jsonError(
+        c,
+        400,
+        'project_unavailable',
+        'Project is unavailable in this product',
+      )
   }
 
   await db.insert(userWorkspacePreferences).values(values).onConflictDoUpdate({
@@ -245,6 +269,7 @@ workspaceRoutes.put('/preferences', async (c) => {
       platform: values.platform,
       sort: values.sort,
       regionId: values.regionId,
+      projectId: values.projectId,
       query: values.query,
       favoriteOnly: values.favoriteOnly,
       responsibleOnly: values.responsibleOnly,

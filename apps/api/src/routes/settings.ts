@@ -13,6 +13,7 @@ import {
 } from '../lib/retention.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import { requireRoles } from '../middleware/require-role.js'
+import { projectRoutes } from './projects.js'
 
 const patchSchema = z.object({
   maxVersions: z.number().int().min(1).max(999).optional(),
@@ -67,6 +68,7 @@ function mapRegion(row: typeof regions.$inferSelect) {
 export const settingsRoutes = new Hono<{ Variables: AuthVariables }>()
 
 settingsRoutes.use('*', requireAuth)
+settingsRoutes.route('/', projectRoutes)
 
 /** GET /settings/access-grants/:userId — 管理员一次读取某账户的全部应用权限。 */
 settingsRoutes.get('/access-grants/:userId', requireRoles('admin'), async (c) => {
