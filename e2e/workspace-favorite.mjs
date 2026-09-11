@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { mkdir, writeFile, rm } from 'node:fs/promises'
-import { chromium } from '@playwright/test'
+import { chromium, expect } from '@playwright/test'
 import { createServer } from 'node:http'
 import { build } from 'vite'
 
@@ -92,41 +92,30 @@ try {
     await page.waitForTimeout(700)
     const box = await star.boundingBox()
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
-    await page.waitForTimeout(100)
+    await expect(page.locator('#favorite')).toHaveText('false')
     assert.equal(
       await page.locator('#location').textContent(),
       '/workspace',
       `${reducedMotion}: star must not open details`,
     )
-    assert.equal(
-      await page.locator('#favorite').textContent(),
-      'false',
-      `${reducedMotion}: star must remove favorite`,
-    )
-    assert.equal(await card.count(), 0)
+    await expect(card).toHaveCount(0)
     await page.reload()
     await page.getByRole('article').getByRole('link').click()
-    assert.equal(
-      await page.locator('#location').textContent(),
-      '/applications/favorite-test',
-    )
+    // Router transitions may render after Playwright has completed the click.
+    await expect(page.locator('#location')).toHaveText('/applications/favorite-test')
     await page.reload()
     await star.waitFor()
     await page.waitForTimeout(700)
     const cardBox = await card.boundingBox()
     await page.mouse.click(cardBox.x + 38, cardBox.y + 38)
-    assert.equal(
-      await page.locator('#location').textContent(),
+    await expect(page.locator('#location'), 'avatar area must open details').toHaveText(
       '/applications/favorite-test',
-      'avatar area must open details',
     )
     await page.reload()
     await star.focus()
     await page.keyboard.press('Enter')
-    assert.equal(
-      await page.locator('#favorite').textContent(),
+    await expect(page.locator('#favorite'), 'keyboard must remove favorite').toHaveText(
       'false',
-      'keyboard must remove favorite',
     )
     assert.equal(await page.locator('#location').textContent(), '/workspace')
     console.log(
