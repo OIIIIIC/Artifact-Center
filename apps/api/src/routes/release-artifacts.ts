@@ -1,6 +1,7 @@
 import { and, eq, ne } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { mapArtifact } from '../lib/artifact-response.js'
 
 import { db } from '../db/client.js'
 import { artifacts, releases } from '../db/schema.js'
@@ -32,29 +33,6 @@ const patchReleaseArtifactSchema = z
       })
     }
   })
-
-function mapArtifact(row: typeof artifacts.$inferSelect) {
-  return {
-    id: row.id,
-    applicationId: row.applicationId,
-    releaseId: row.releaseId,
-    version: row.version,
-    buildNumber: row.buildNumber,
-    platform: row.platform,
-    type: row.type,
-    channel: row.channel,
-    status: row.status,
-    originalFilename: row.originalFilename,
-    filename: row.filename,
-    sizeBytes: row.sizeBytes,
-    sha256: row.sha256,
-    releaseNotes: row.releaseNotes,
-    uploader: row.uploaderName,
-    uploadedAt: row.uploadedAt.toISOString(),
-    parsedMeta: row.parsedMeta,
-    buildMeta: row.buildMeta,
-  }
-}
 
 /**
  * MCP-safe artifact mutation surface.  It deliberately excludes deletion,

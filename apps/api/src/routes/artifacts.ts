@@ -2,25 +2,25 @@ import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { Readable } from 'node:stream'
 import { z } from 'zod'
+import { mapArtifact } from '../lib/artifact-response.js'
 
 import { db } from '../db/client.js'
 import { applications, artifacts, regions, releases } from '../db/schema.js'
+import { distributionFilename } from '../lib/artifact-filename.js'
 import {
   refreshApplicationArtifactStats,
   statusFromChannel,
 } from '../lib/artifact-helpers.js'
 import { writeAudit } from '../lib/audit.js'
-import { distributionFilename } from '../lib/artifact-filename.js'
 import { attachmentDisposition } from '../lib/download-response.js'
-import { enforceRetentionAfterUpload } from '../lib/retention.js'
-import { reserveUploadCapacity } from '../lib/upload-capacity.js'
 import { jsonError } from '../lib/errors.js'
-import { MultipartUploadError, streamMultipartForm } from '../lib/multipart-upload.js'
 import {
   signDownloadTicket,
   verifyDownloadTicket,
   type DownloadTicketPayload,
 } from '../lib/jwt.js'
+import { MultipartUploadError, streamMultipartForm } from '../lib/multipart-upload.js'
+import { enforceRetentionAfterUpload } from '../lib/retention.js'
 import {
   deleteArtifactStorageFile,
   deleteStorageFile,
@@ -29,15 +29,16 @@ import {
   saveUploadStream,
   storageKeyFor,
 } from '../lib/storage.js'
-import {
-  requireAuth,
-  type AuthVariables,
-  validateCurrentAuthUser,
-} from '../middleware/auth.js'
+import { reserveUploadCapacity } from '../lib/upload-capacity.js'
 import {
   hasApplicationRole,
   requireApplicationRole,
 } from '../middleware/application-access.js'
+import {
+  requireAuth,
+  validateCurrentAuthUser,
+  type AuthVariables,
+} from '../middleware/auth.js'
 
 /** Max artifact size — keep in sync with frontend UPLOAD_MAX_BYTES */
 const MAX_UPLOAD_BYTES = 512 * 1024 * 1024 // 512 MB
@@ -56,29 +57,6 @@ const patchSchema = z.object({
   /** Shorthand: promote this row to latest (demotes previous) */
   markLatest: z.boolean().optional(),
 })
-
-function mapArtifact(r: typeof artifacts.$inferSelect) {
-  return {
-    id: r.id,
-    applicationId: r.applicationId,
-    releaseId: r.releaseId,
-    version: r.version,
-    buildNumber: r.buildNumber,
-    platform: r.platform,
-    type: r.type,
-    channel: r.channel,
-    status: r.status,
-    originalFilename: r.originalFilename,
-    filename: r.filename,
-    sizeBytes: r.sizeBytes,
-    sha256: r.sha256,
-    releaseNotes: r.releaseNotes,
-    uploader: r.uploaderName,
-    uploadedAt: r.uploadedAt.toISOString(),
-    parsedMeta: r.parsedMeta,
-    buildMeta: r.buildMeta,
-  }
-}
 
 async function findArtifactForDownload(id: string) {
   const [row] = await db
