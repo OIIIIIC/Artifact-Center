@@ -3,15 +3,12 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { Loading } from '@/components/feedback/loading'
 import { RequireAuth } from '@/routes/require-auth'
+import { loadApplicationsPage } from '@/routes/load-applications-page'
 
 const ProductsPage = lazy(() =>
   import('@/routes/products-page').then((module) => ({ default: module.ProductsPage })),
 )
-const ApplicationsPage = lazy(() =>
-  import('@/routes/applications-page').then((module) => ({
-    default: module.ApplicationsPage,
-  })),
-)
+const ApplicationsPage = lazy(loadApplicationsPage)
 const ApplicationDetailPage = lazy(() =>
   import('@/routes/application-detail-page').then((module) => ({
     default: module.ApplicationDetailPage,

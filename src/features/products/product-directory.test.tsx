@@ -39,6 +39,25 @@ const projects: Project[] = [
 ]
 
 describe('主侧栏应用目录', () => {
+  it('首次仅创建产品行，展开后保留分支内容以完成收起动画', () => {
+    render(
+      <ProductDirectory
+        products={products}
+        projects={projects}
+        productId="all"
+        projectId="all"
+        onSelect={vi.fn()}
+      />,
+    )
+    expect(screen.queryAllByText('全部项目')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: '展开 开封' }))
+    expect(screen.getAllByText('全部项目')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: '收起 开封' }))
+    expect(screen.getAllByText('全部项目')).toHaveLength(1)
+    expect(
+      screen.queryByRole('button', { name: /^默认项目\s?0$/ }),
+    ).not.toBeInTheDocument()
+  })
   it('展开只改变目录；点击产品或项目才改变筛选', () => {
     const onSelect = vi.fn()
     render(

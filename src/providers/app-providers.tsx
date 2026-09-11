@@ -10,6 +10,7 @@ import { QueryProvider } from '@/providers/query-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { UploadManagerProvider } from '@/features/upload/upload-manager'
 import { useAuthStore } from '@/store/auth-store'
+import { ApplicationEntryPreparation } from '@/features/applications/application-entry'
 
 interface AppProvidersProps {
   children: ReactNode
@@ -33,6 +34,7 @@ function AuthenticatedShell({ children }: { children: ReactNode }) {
 
   return (
     <UploadManagerProvider>
+      <ApplicationEntryPreparation />
       {children}
       <ConnectivityNotice />
       <UploadTaskIndicator />

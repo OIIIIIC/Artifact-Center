@@ -1,27 +1,44 @@
-import { motion, useReducedMotion } from 'framer-motion'
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { animate, motion, useMotionValue, useReducedMotion } from 'framer-motion'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 /** Animate document-flow height without scaling cards or the text inside them. */
 export function AnimatedHeight({ children }: { children: ReactNode }) {
   const content = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState<number>()
+  const height = useMotionValue<number | 'auto'>('auto')
   const reduceMotion = useReducedMotion()
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const element = content.current
-    if (!element) return
-    const measure = () => setHeight(element.getBoundingClientRect().height)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
+    if (!element || reduceMotion) return
+    let previous: number | undefined
+    let stop: (() => void) | undefined
+    // ResizeObserver delivers the browser's completed layout. Do not force another
+    // layout or a synchronous React render for every timeline section on entry.
+    const observer = new ResizeObserver(([entry]) => {
+      const next = entry.borderBoxSize[0]?.blockSize
+      if (next === undefined || next === previous) return
+      stop?.()
+      if (previous === undefined) height.set(next)
+      else {
+        const animation = animate(height, next, {
+          duration: 0.32,
+          ease: [0.2, 0, 0, 1],
+        })
+        stop = () => animation.stop()
+      }
+      previous = next
+    })
+    observer.observe(element, { box: 'border-box' })
+    return () => {
+      observer.disconnect()
+      stop?.()
+    }
+  }, [height, reduceMotion])
 
   return (
     <motion.div
       initial={false}
-      animate={{ height: reduceMotion ? 'auto' : (height ?? 'auto') }}
-      transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.2, 0, 0, 1] }}
+      style={{ height: reduceMotion ? 'auto' : height }}
       className="-m-1 overflow-hidden"
     >
       <div ref={content} className="p-1">

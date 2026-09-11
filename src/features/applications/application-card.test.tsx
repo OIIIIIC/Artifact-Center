@@ -59,6 +59,27 @@ const application: Application = {
 }
 
 describe('ApplicationCard', () => {
+  it('更新收藏和应用内容时仍刷新卡片', () => {
+    const toggle = vi.fn()
+    const view = (favorite: boolean, value = application) => (
+      <MemoryRouter>
+        <ApplicationCard
+          application={value}
+          favorite={favorite}
+          onToggleFavorite={toggle}
+        />
+      </MemoryRouter>
+    )
+    const { rerender } = render(view(false))
+    expect(
+      screen.getByRole('button', { name: 'applications.workspace.addFavorite' }),
+    ).toBeInTheDocument()
+    rerender(view(true, { ...application, name: '更新后的应用' }))
+    expect(screen.getByRole('heading', { name: '更新后的应用' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'applications.workspace.removeFavorite' }),
+    ).toBeInTheDocument()
+  })
   it('始终先显示登录用户头像，再显示项目成员且不重复', () => {
     render(
       <MemoryRouter>

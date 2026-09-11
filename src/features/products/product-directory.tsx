@@ -78,7 +78,11 @@ export function ProductDirectory({
     setExpanded(productId)
   })
   useLayoutEffect(() => {
-    if (scroll.current && navigation) scroll.current.scrollTop = navigation.scrollTop
+    // A newly mounted directory is already at zero. Assigning scrollTop even at
+    // zero forces layout of the whole freshly mounted page.
+    if (scroll.current && navigation && navigation.scrollTop > 0) {
+      scroll.current.scrollTop = navigation.scrollTop
+    }
     // Restore only on mount/load/collapse, never fight an ongoing user scroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, navigation?.collapsed])
@@ -239,15 +243,7 @@ export function ProductDirectory({
                       />
                     </button>
                   </div>
-                  <div
-                    id={panelId}
-                    aria-hidden={!open}
-                    inert={!open}
-                    className={cn(
-                      'grid transition-[grid-template-rows,opacity] duration-[220ms] ease-out motion-reduce:transition-none',
-                      open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-                    )}
-                  >
+                  <DirectoryBranch id={panelId} open={open}>
                     <div className="overflow-hidden">
                       <ul className="my-1 ml-4 space-y-0.5 border-l border-sidebar-border/90 pl-2">
                         <li>
@@ -312,7 +308,7 @@ export function ProductDirectory({
                           ))}
                       </ul>
                     </div>
-                  </div>
+                  </DirectoryBranch>
                 </li>
               )
             })}
@@ -326,6 +322,33 @@ export function ProductDirectory({
         </div>
       ) : null}
     </section>
+  )
+}
+
+function DirectoryBranch({
+  id,
+  open,
+  children,
+}: {
+  id: string
+  open: boolean
+  children: ReactNode
+}) {
+  const [visited, setVisited] = useState(open)
+  if (open && !visited) setVisited(true)
+  return (
+    <div
+      id={id}
+      aria-hidden={!open}
+      inert={!open}
+      className={cn(
+        'grid transition-[grid-template-rows,opacity] duration-[220ms] ease-out motion-reduce:transition-none',
+        open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+      )}
+    >
+      {/* Keep visited content during closing; unopened branches need no DOM. */}
+      {open || visited ? children : <div className="overflow-hidden" />}
+    </div>
   )
 }
 

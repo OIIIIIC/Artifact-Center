@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
+import { loadApplicationsPage } from '@/routes/load-applications-page'
 
 /** 登录页保持最小化，并且不预填任何凭据。 */
 export function LoginPage() {
@@ -30,6 +31,7 @@ export function LoginPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    void loadApplicationsPage().catch(() => {})
     const result = await login({ identifier, password })
     setLoading(false)
     if (!result.ok) {

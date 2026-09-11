@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion'
+import { memo } from 'react'
 import { Box, Package, Star } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
@@ -31,7 +32,7 @@ function statusKey(status: ApplicationStatus): string | null {
  * 列表卡片只负责识别与进入详情；下载 / 分享放在详情页，
  * 方便用户先看清更新时间与变更内容再操作。
  */
-export function ApplicationCard({
+export const ApplicationCard = memo(function ApplicationCard({
   application,
   className,
   favorite = false,
@@ -225,7 +226,7 @@ export function ApplicationCard({
       ) : null}
     </div>
   )
-}
+})
 
 // re-export for any leftover imports
 export { APPLICATION_STATUS_LABEL, PLATFORM_LABEL }

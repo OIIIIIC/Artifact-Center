@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react'
 
 import { useAuthStore } from '@/store/auth-store'
+import { loadApplicationsPage } from '@/routes/load-applications-page'
 
 function subscribeHydration(onStoreChange: () => void) {
   return useAuthStore.persist.onFinishHydration(onStoreChange)
@@ -25,6 +26,9 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
+    // Loading public page code can overlap session validation. Protected data is
+    // prepared only after AuthBootstrap releases the authenticated shell.
+    if (window.location.pathname === '/') void loadApplicationsPage().catch(() => {})
     void bootstrap()
   }, [hydrated, bootstrap])
 
