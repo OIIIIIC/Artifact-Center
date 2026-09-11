@@ -96,6 +96,13 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler
 }
 
+function handleUnauthorized(token: string | null) {
+  // A response from a previous login must not clear the current session.
+  if (!token || token !== getAccessToken()) return
+  setAccessToken(null)
+  onUnauthorized?.()
+}
+
 async function parseError(res: Response): Promise<ApiError> {
   let code = 'http_error'
   let message = res.statusText || `HTTP ${res.status}`
@@ -172,11 +179,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     ...rest
   } = options
   const headers = new Headers(initHeaders)
-
-  if (!isPublic) {
-    const token = getAccessToken()
-    if (token) headers.set('Authorization', `Bearer ${token}`)
-  }
+  const token = isPublic ? null : getAccessToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
 
   let finalBody: BodyInit | undefined | null = rawBody
   if (body !== undefined && rawBody === undefined) {
@@ -192,8 +196,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   })
 
   if (res.status === 401 && !isPublic) {
-    setAccessToken(null)
-    onUnauthorized?.()
+    handleUnauthorized(token)
   }
 
   if (!res.ok) {
@@ -275,8 +278,7 @@ export async function requestMultipart<T>(
     xhr.onload = () => {
       updateConnectivityStatus(null)
       if (xhr.status === 401) {
-        setAccessToken(null)
-        onUnauthorized?.()
+        handleUnauthorized(token)
       }
 
       let data: {
@@ -510,10 +512,8 @@ export async function requestBlob(
   options: { public?: boolean; signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<{ blob: Blob; filename?: string }> {
   const headers = new Headers()
-  if (!options.public) {
-    const token = getAccessToken()
-    if (token) headers.set('Authorization', `Bearer ${token}`)
-  }
+  const token = options.public ? null : getAccessToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
 
   const res = await fetchApi(`${API_BASE_URL}${path}`, {
     headers,
@@ -521,8 +521,7 @@ export async function requestBlob(
   })
 
   if (res.status === 401 && !options.public) {
-    setAccessToken(null)
-    onUnauthorized?.()
+    handleUnauthorized(token)
   }
 
   if (!res.ok) {
