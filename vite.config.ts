@@ -79,7 +79,7 @@ export default defineConfig({
       // Frontend uses /api → Artifact Center API
       // Note: Windows may reserve 3001; local .env uses 4001 when needed.
       '/api': {
-        target: 'http://localhost:4001',
+        target: process.env.API_PROXY_TARGET ?? 'http://localhost:4001',
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api/, ''),
       },

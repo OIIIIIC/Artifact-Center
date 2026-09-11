@@ -1,0 +1,19 @@
+{
+  "database": "PostgreSQL 16",
+  "artifactCount": 90000,
+  "samples": 5,
+  "results": [
+    {
+      "name": "search-version",
+      "bytes": 18797,
+      "returned": 8,
+      "medianMs": 692.04
+    },
+    {
+      "name": "search-absent",
+      "bytes": 66,
+      "returned": 0,
+      "medianMs": 770.27
+    }
+  ]
+}

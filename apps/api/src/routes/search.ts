@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 
 import { db } from '../db/client.js'
 import { applicationMembers, applications, artifacts, regions } from '../db/schema.js'
+import { artifactSearchText } from '../lib/artifact-search-text.js'
 import { jsonError } from '../lib/errors.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 
@@ -53,13 +54,15 @@ searchRoutes.get('/', async (c) => {
     ilike(applications.repository, pattern),
     ilike(applications.latestVersion, pattern),
   )
-  const artifactFilter = or(
+  const ownArtifactFilter = or(
     ilike(artifacts.version, pattern),
     ilike(artifacts.filename, pattern),
     ilike(artifacts.originalFilename, pattern),
     ilike(artifacts.buildNumber, pattern),
     ilike(artifacts.uploaderName, pattern),
     ilike(artifacts.releaseNotes, pattern),
+  )
+  const artifactApplicationFilter = or(
     ilike(applications.name, pattern),
     ilike(applications.applicationCode, pattern),
     ilike(applications.packageName, pattern),
@@ -88,6 +91,26 @@ searchRoutes.get('/', async (c) => {
             .orderBy(desc(applications.updatedAt))
             .limit(appLimit)
         ).map((row) => row.application)
+
+  // Each branch produces its top K *after* permission filtering. Their union contains
+  // the top K of the combined result, without an OR across a large joined history table.
+  const artifactAccess =
+    user.role === 'admin'
+      ? sql`true`
+      : sql`exists (
+    select 1 from application_members m where m.application_id = ${artifacts.applicationId} and m.user_id = ${user.sub}
+  )`
+  const artifactCandidates = sql`select id from (
+    (select ${artifacts.id}, ${artifacts.uploadedAt} from ${artifacts}
+      where ${and(artifactAccess, sql`${artifactSearchText(artifacts)} ilike ${pattern}`, ownArtifactFilter)}
+      order by ${artifacts.uploadedAt} desc, ${artifacts.id} desc limit ${artLimit})
+    union
+    (select ${artifacts.id}, ${artifacts.uploadedAt} from ${artifacts}
+      inner join ${applications} on ${applications.id} = ${artifacts.applicationId}
+      where ${and(artifactAccess, artifactApplicationFilter)}
+      order by ${artifacts.uploadedAt} desc, ${artifacts.id} desc limit ${artLimit})
+    ) candidates order by uploaded_at desc, id desc limit ${artLimit}`
+  const artifactFilter = sql`${artifacts.id} in (${artifactCandidates})`
 
   const artifactQuery = db
     .select({
@@ -126,7 +149,7 @@ searchRoutes.get('/', async (c) => {
     user.role === 'admin'
       ? await artifactQuery
           .where(artifactFilter)
-          .orderBy(desc(artifacts.uploadedAt))
+          .orderBy(desc(artifacts.uploadedAt), desc(artifacts.id))
           .limit(artLimit)
       : await artifactQuery
           .innerJoin(
@@ -137,7 +160,7 @@ searchRoutes.get('/', async (c) => {
             ),
           )
           .where(artifactFilter)
-          .orderBy(desc(artifacts.uploadedAt))
+          .orderBy(desc(artifacts.uploadedAt), desc(artifacts.id))
           .limit(artLimit)
 
   const regionRows = await db.select().from(regions)

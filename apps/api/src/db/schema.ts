@@ -15,6 +15,7 @@ import {
   index,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
+import { artifactSearchText } from '../lib/artifact-search-text.js'
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'maintainer', 'viewer'])
 
@@ -354,6 +355,10 @@ export const artifacts = pgTable(
     index('artifacts_application_history_idx').on(t.applicationId, t.uploadedAt, t.id),
     index('artifacts_application_sha256_idx').on(t.applicationId, t.sha256),
     index('artifacts_release_id_idx').on(t.releaseId),
+    index('artifacts_search_trgm_idx').using(
+      'gin',
+      sql`${artifactSearchText(t)} gin_trgm_ops`,
+    ),
     check('artifacts_size_bytes_nonnegative', sql`${t.sizeBytes} >= 0`),
   ],
 )
