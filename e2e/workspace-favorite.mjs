@@ -41,28 +41,48 @@ await mkdir(fixtureDirectory, { recursive: true })
 await writeFile(`${fixtureDirectory}/fixture.js`, fixture)
 const result = await build({
   define: { 'process.env.NODE_ENV': JSON.stringify('production') },
-  build: { write: false, minify: false, sourcemap: false,
-    lib: { entry: `${fixtureDirectory}/fixture.js`, formats: ['es'], fileName: 'fixture' } },
+  build: {
+    write: false,
+    minify: false,
+    sourcemap: false,
+    lib: {
+      entry: `${fixtureDirectory}/fixture.js`,
+      formats: ['es'],
+      fileName: 'fixture',
+    },
+  },
 })
 const assets = result[0].output
-const javascript = assets.find(asset => asset.type === 'chunk').code
-const css = assets.filter(asset => asset.fileName.endsWith('.css')).map(asset => asset.source).join('\n')
+const javascript = assets.find((asset) => asset.type === 'chunk').code
+const css = assets
+  .filter((asset) => asset.fileName.endsWith('.css'))
+  .map((asset) => asset.source)
+  .join('\n')
 const server = createServer((request, response) => {
   const isScript = request.url === '/fixture.js'
   response.setHeader('Content-Type', isScript ? 'text/javascript' : 'text/html')
-  response.end(isScript ? javascript : `<html><head><style>${css}</style></head><body><div id="root" style="max-width:1100px;padding:40px"></div><script type="module" src="/fixture.js"></script></body></html>`)
+  response.end(
+    isScript
+      ? javascript
+      : `<html><head><style>${css}</style></head><body><div id="root" style="max-width:1100px;padding:40px"></div><script type="module" src="/fixture.js"></script></body></html>`,
+  )
 })
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 let browser
 try {
   browser = await chromium.launch({ headless: true, args: ['--no-proxy-server'] })
   const address = server.address()
   for (const reducedMotion of ['reduce', 'no-preference']) {
-    const page = await browser.newPage({ reducedMotion, viewport: { width: 1440, height: 900 } })
+    const page = await browser.newPage({
+      reducedMotion,
+      viewport: { width: 1440, height: 900 },
+    })
     page.setDefaultTimeout(15000)
-    page.on('requestfailed', request => console.error(request.url(), request.failure()))
-    page.on('pageerror', error => console.error(error.message))
-    await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'domcontentloaded' })
+    page.on('requestfailed', (request) => console.error(request.url(), request.failure()))
+    page.on('pageerror', (error) => console.error(error.message))
+    await page.goto(`http://127.0.0.1:${address.port}/`, {
+      waitUntil: 'domcontentloaded',
+    })
     const card = page.getByRole('article')
     const star = card.getByRole('button')
     await star.waitFor()
@@ -73,24 +93,45 @@ try {
     const box = await star.boundingBox()
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
     await page.waitForTimeout(100)
-    assert.equal(await page.locator('#location').textContent(), '/workspace', `${reducedMotion}: star must not open details`)
-    assert.equal(await page.locator('#favorite').textContent(), 'false', `${reducedMotion}: star must remove favorite`)
+    assert.equal(
+      await page.locator('#location').textContent(),
+      '/workspace',
+      `${reducedMotion}: star must not open details`,
+    )
+    assert.equal(
+      await page.locator('#favorite').textContent(),
+      'false',
+      `${reducedMotion}: star must remove favorite`,
+    )
     assert.equal(await card.count(), 0)
     await page.reload()
     await page.getByRole('article').getByRole('link').click()
-    assert.equal(await page.locator('#location').textContent(), '/applications/favorite-test')
+    assert.equal(
+      await page.locator('#location').textContent(),
+      '/applications/favorite-test',
+    )
     await page.reload()
     await star.waitFor()
     await page.waitForTimeout(700)
     const cardBox = await card.boundingBox()
     await page.mouse.click(cardBox.x + 38, cardBox.y + 38)
-    assert.equal(await page.locator('#location').textContent(), '/applications/favorite-test', 'avatar area must open details')
+    assert.equal(
+      await page.locator('#location').textContent(),
+      '/applications/favorite-test',
+      'avatar area must open details',
+    )
     await page.reload()
     await star.focus()
     await page.keyboard.press('Enter')
-    assert.equal(await page.locator('#favorite').textContent(), 'false', 'keyboard must remove favorite')
+    assert.equal(
+      await page.locator('#favorite').textContent(),
+      'false',
+      'keyboard must remove favorite',
+    )
     assert.equal(await page.locator('#location').textContent(), '/workspace')
-    console.log(`PASS (${reducedMotion}): pointer/keyboard remove favorite; card/avatar open details`)
+    console.log(
+      `PASS (${reducedMotion}): pointer/keyboard remove favorite; card/avatar open details`,
+    )
     await page.close()
   }
 } catch (error) {
