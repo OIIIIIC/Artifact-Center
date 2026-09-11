@@ -81,7 +81,10 @@
     "designSystem": "Design System",
     "layout": "Layout"
   },
-  "brand": { "name": "Artifact Center", "subtitle": "Software Delivery" },
+  "brand": {
+    "name": "Artifact Center",
+    "subtitle": "Software Delivery"
+  },
   "download": {
     "starting": "Preparing download…",
     "started": "Download started",
@@ -132,7 +135,11 @@
     "errorNetwork": "Artifact Center could not be reached. Please try again shortly."
   },
   "password": {
-    "strength": { "weak": "Weak", "fair": "Fair", "strong": "Strong" },
+    "strength": {
+      "weak": "Weak",
+      "fair": "Fair",
+      "strong": "Strong"
+    },
     "policyHint": "Prefer 12+ characters with mixed case and symbols.",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
@@ -155,7 +162,12 @@
       "empty": "Enter a password"
     }
   },
-  "platform": { "android": "Android", "windows": "Windows", "zip": "ZIP", "all": "All" },
+  "platform": {
+    "android": "Android",
+    "windows": "Windows",
+    "zip": "ZIP",
+    "all": "All"
+  },
   "status": {
     "new": "NEW",
     "beta": "Beta",
@@ -177,7 +189,9 @@
     "internal": "Team-only distribution",
     "deprecated": "Do not use for new installs"
   },
-  "filters": { "platform": "Filter by platform" },
+  "filters": {
+    "platform": "Filter by platform"
+  },
   "sort": {
     "updated": "Recently updated",
     "name": "Name",
@@ -444,7 +458,11 @@
     "transferringAdmin": "Transferring…",
     "adminTransferred": "Administrator access transferred",
     "adminTransferredDesc": "{{name}} is now an administrator.",
-    "role": { "admin": "Admin", "maintainer": "Maintainer", "viewer": "Member" },
+    "role": {
+      "admin": "Admin",
+      "maintainer": "Maintainer",
+      "viewer": "Member"
+    },
     "roleDesc": {
       "admin": "Manage settings and members; upload, edit, download, archive, and delete",
       "maintainer": "Can create applications; actions in existing applications follow the application role",
@@ -613,7 +631,10 @@
     "adminHint": "Platform administrator · automatic access to every application",
     "adminAutoTitle": "This account automatically has access to every application",
     "adminAutoDescription": "Platform administrators do not join individual applications and cannot be downgraded or removed here.",
-    "role": { "maintainer": "App maintainer", "viewer": "App viewer" },
+    "role": {
+      "maintainer": "App maintainer",
+      "viewer": "App viewer"
+    },
     "applicationRole": "Grant app role",
     "applicationRoleHelp": "This only changes roles within the selected applications, not the user's platform role. App viewers can view and download; app maintainers can also maintain and publish artifacts for those applications.",
     "platformRole": {
@@ -655,7 +676,10 @@
     "count": "{{count}} application members",
     "roleHint": "Application roles can be changed anytime",
     "role": "Application role",
-    "roleName": { "maintainer": "Maintainer", "viewer": "Viewer" },
+    "roleName": {
+      "maintainer": "Maintainer",
+      "viewer": "Viewer"
+    },
     "addAsMaintainer": "Make maintainer",
     "addAsViewer": "Make viewer",
     "owner": "Owner",
@@ -783,11 +807,9 @@
       "eyebrow": "Personal workspace",
       "title": "Continue with what matters",
       "recent": "Recently viewed",
-      "recentDescription": "Return to your latest work in visit order.",
       "noRecent": "Applications you open will appear here automatically.",
       "favorites": "Favorites",
       "favoritesCount": "{{count}}",
-      "favoritesDescription": "Keep frequently used applications close for faster access and downloads.",
       "viewAllFavorites": "View all favorites ({{count}})",
       "noFavorites": "No favorites yet. Select the star in Applications to pin one here.",
       "visited": "Visited {{time}}",
@@ -799,8 +821,7 @@
       "showAll": "Show all applications",
       "restoreFilters": "Restore last filters",
       "savedFilters": "Last view: {{filters}}",
-      "savedFilterQuery": "Search “{{query}}”",
-      "personalHint": "Favorite or visit an application to keep it close."
+      "savedFilterQuery": "Search “{{query}}”"
     },
     "timeline": {
       "today": "Published today",
@@ -814,9 +835,7 @@
     "updated": "Updated {{time}}"
   },
   "workspace": {
-    "eyebrow": "Personal workspace",
     "greeting": "{{name}}, continue where you left off",
-    "description": "Your favorites, recent visits, and last catalog filters are ready for the next release task.",
     "browseApplications": "Browse applications",
     "myApplications": "View my applications",
     "emptyTitle": "Start by favoriting an application",

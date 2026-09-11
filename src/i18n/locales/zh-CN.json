@@ -81,7 +81,10 @@
     "designSystem": "设计系统",
     "layout": "布局"
   },
-  "brand": { "name": "Artifact Center", "subtitle": "软件交付中心" },
+  "brand": {
+    "name": "Artifact Center",
+    "subtitle": "软件交付中心"
+  },
   "download": {
     "starting": "正在准备下载…",
     "started": "已开始下载",
@@ -132,7 +135,11 @@
     "errorNetwork": "无法连接到 Artifact Center 服务，请稍后重试。"
   },
   "password": {
-    "strength": { "weak": "弱", "fair": "中", "strong": "强" },
+    "strength": {
+      "weak": "弱",
+      "fair": "中",
+      "strong": "强"
+    },
     "policyHint": "建议 12 位以上，并包含大小写与符号。",
     "showPassword": "显示密码",
     "hidePassword": "隐藏密码",
@@ -182,7 +189,9 @@
     "internal": "仅团队内部使用",
     "deprecated": "勿再用于新安装"
   },
-  "filters": { "platform": "按平台筛选" },
+  "filters": {
+    "platform": "按平台筛选"
+  },
   "sort": {
     "updated": "最近更新",
     "name": "名称",
@@ -449,7 +458,11 @@
     "transferringAdmin": "移交中…",
     "adminTransferred": "管理员权限已移交",
     "adminTransferredDesc": "{{name}} 已成为管理员。",
-    "role": { "admin": "管理员", "maintainer": "维护者", "viewer": "成员" },
+    "role": {
+      "admin": "管理员",
+      "maintainer": "维护者",
+      "viewer": "成员"
+    },
     "roleDesc": {
       "admin": "可管理设置与成员，上传、编辑、下载、归档与删除",
       "maintainer": "可创建应用；已有应用的操作由应用角色决定",
@@ -618,7 +631,10 @@
     "adminHint": "平台管理员 · 已自动拥有所有应用访问权",
     "adminAutoTitle": "此账号已自动拥有全部应用权限",
     "adminAutoDescription": "平台管理员不需要加入单个应用，也不能在这里降级或移除权限。",
-    "role": { "maintainer": "应用维护者", "viewer": "应用查看者" },
+    "role": {
+      "maintainer": "应用维护者",
+      "viewer": "应用查看者"
+    },
     "applicationRole": "授予应用角色",
     "applicationRoleHelp": "仅设置所选应用内的角色，不改变该用户的平台身份。应用查看者可查看和下载；应用维护者还可维护和发布该应用的制品。",
     "platformRole": {
@@ -660,7 +676,10 @@
     "count": "{{count}} 位应用成员",
     "roleHint": "应用角色可以随时调整",
     "role": "应用角色",
-    "roleName": { "maintainer": "维护者", "viewer": "查看者" },
+    "roleName": {
+      "maintainer": "维护者",
+      "viewer": "查看者"
+    },
     "addAsMaintainer": "设为维护者",
     "addAsViewer": "设为查看者",
     "owner": "负责人",
@@ -788,11 +807,9 @@
       "eyebrow": "个人工作台",
       "title": "继续你关心的应用",
       "recent": "最近访问",
-      "recentDescription": "按访问时间快速回到刚才的工作。",
       "noRecent": "打开过的应用会自动出现在这里。",
       "favorites": "我的收藏",
       "favoritesCount": "{{count}} 个",
-      "favoritesDescription": "常用应用固定在这里，打开和下载都更快。",
       "viewAllFavorites": "查看全部收藏（{{count}}）",
       "noFavorites": "还没有收藏。去应用目录点亮星标，即可固定常用应用。",
       "visited": "{{time}}访问",
@@ -804,8 +821,7 @@
       "showAll": "显示全部应用",
       "restoreFilters": "恢复上次筛选",
       "savedFilters": "上次浏览：{{filters}}",
-      "savedFilterQuery": "搜索“{{query}}”",
-      "personalHint": "收藏或访问应用后，它们会出现在这里。"
+      "savedFilterQuery": "搜索“{{query}}”"
     },
     "timeline": {
       "today": "今天发布",
@@ -819,9 +835,7 @@
     "updated": "更新于 {{time}}"
   },
   "workspace": {
-    "eyebrow": "个人工作台",
     "greeting": "{{name}}，继续上次的工作",
-    "description": "常用应用、最近访问和上次筛选都在这里，直接进入需要处理的版本。",
     "browseApplications": "浏览全部应用",
     "myApplications": "查看我负责的",
     "emptyTitle": "从收藏一个应用开始",

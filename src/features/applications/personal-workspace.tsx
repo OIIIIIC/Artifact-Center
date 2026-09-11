@@ -5,7 +5,7 @@ import {
   useReducedMotion,
   useSpring,
 } from 'framer-motion'
-import { ArrowRight, Clock3, Layers3, SlidersHorizontal, Star } from 'lucide-react'
+import { ArrowRight, Clock3, SlidersHorizontal, Star } from 'lucide-react'
 import { useMemo, type PointerEvent as ReactPointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
@@ -114,7 +114,9 @@ function FavoriteApplicationCard({
         aria-label={application.name}
       />
 
-      <div className="relative flex items-start justify-between gap-4 [transform:translateZ(24px)]">
+      {/* The transformed header needs its own layer above the full-card link.
+          Only the star receives clicks; the avatar area still opens details. */}
+      <div className="pointer-events-none relative z-20 flex items-start justify-between gap-4 [transform:translateZ(24px)]">
         <motion.div
           className="rounded-xl transition-transform duration-300 ease-out group-hover:-rotate-3 group-hover:scale-110 group-focus-within:-rotate-3 group-focus-within:scale-110"
           aria-hidden
@@ -128,7 +130,7 @@ function FavoriteApplicationCard({
           aria-label={t('applications.workspace.removeFavorite', {
             name: application.name,
           })}
-          className="relative z-20 inline-flex size-8 items-center justify-center rounded-full text-amber-500 transition-[background-color,transform,box-shadow] duration-300 hover:scale-110 hover:bg-amber-500/12 hover:shadow-[0_0_20px_color-mix(in_oklch,var(--color-amber-500)_35%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 disabled:cursor-wait disabled:opacity-50 [transform:translateZ(30px)]"
+          className="pointer-events-auto relative z-20 inline-flex size-8 items-center justify-center rounded-full text-amber-500 transition-[background-color,transform,box-shadow] duration-300 hover:scale-110 hover:bg-amber-500/12 hover:shadow-[0_0_20px_color-mix(in_oklch,var(--color-amber-500)_35%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 disabled:cursor-wait disabled:opacity-50 [transform:translateZ(30px)]"
         >
           <motion.span
             animate={
@@ -232,7 +234,7 @@ export function PersonalWorkspace({
   const favorites = workspace.favoriteApplicationIds
     .map((id) => applicationById.get(id))
     .filter((application): application is Application => Boolean(application))
-  const visibleFavorites = favorites.slice(0, 8)
+  const visibleFavorites = favorites.slice(0, 12)
   const recent = workspace.recentApplications
     .map((visit) => ({ ...visit, application: applicationById.get(visit.applicationId) }))
     .filter(
@@ -284,7 +286,7 @@ export function PersonalWorkspace({
     >
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10 xl:grid-cols-[minmax(0,1fr)_25rem] xl:gap-12 2xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:gap-14">
         <div className="min-w-0">
-          <div className="mb-5 flex items-end justify-between gap-4">
+          <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <Star
@@ -301,9 +303,6 @@ export function PersonalWorkspace({
                   })}
                 </span>
               </div>
-              <p className="mt-1.5 text-[0.75rem] text-muted-foreground">
-                {t('applications.workspace.favoritesDescription')}
-              </p>
             </div>
           </div>
 
@@ -347,16 +346,13 @@ export function PersonalWorkspace({
           ) : null}
         </div>
 
-        <aside className="min-w-0 lg:border-l lg:border-border/60 lg:pl-8">
+        <aside className="min-w-0 self-start lg:border-l lg:border-border/60 lg:pl-8">
           <div className="mb-2 flex items-center gap-2">
             <Clock3 className="size-4 text-primary" strokeWidth={1.8} />
             <h2 className="text-[1rem] font-semibold tracking-tight text-foreground">
               {t('applications.workspace.recent')}
             </h2>
           </div>
-          <p className="mb-3 text-[0.75rem] text-muted-foreground">
-            {t('applications.workspace.recentDescription')}
-          </p>
 
           {recent.length > 0 ? (
             <motion.ol
@@ -378,47 +374,38 @@ export function PersonalWorkspace({
               {t('applications.workspace.noRecent')}
             </p>
           )}
+          {hasSavedFilters ? (
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.18, duration: 0.3, ease: easeOut }}
+              className="mt-6 border-t border-border/60 pt-4"
+            >
+              <button
+                type="button"
+                onClick={() => onRestoreFilters(workspace.preferences)}
+                aria-label={t('applications.workspace.restoreFilters')}
+                className="group/filter flex w-full items-start gap-2.5 rounded-xl px-2 py-2 text-left text-[0.75rem] text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
+              >
+                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
+                  <SlidersHorizontal className="size-3.5" strokeWidth={1.8} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1 font-medium text-foreground">
+                    {t('applications.workspace.restoreFilters')}
+                    <ArrowRight className="size-3.5" strokeWidth={1.8} />
+                  </span>
+                  <span className="mt-1 block leading-5 break-words">
+                    {t('applications.workspace.savedFilters', {
+                      filters: savedFilterSummary,
+                    })}
+                  </span>
+                </span>
+              </button>
+            </motion.div>
+          ) : null}
         </aside>
       </div>
-
-      <motion.div
-        initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.18, duration: 0.3, ease: easeOut }}
-        className="mt-9 border-t border-border/60 pt-5"
-      >
-        {hasSavedFilters ? (
-          <button
-            type="button"
-            onClick={() => onRestoreFilters(workspace.preferences)}
-            aria-label={t('applications.workspace.restoreFilters')}
-            className="group/filter flex max-w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-[0.75rem] text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
-          >
-            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-              <SlidersHorizontal className="size-3.5" strokeWidth={1.8} />
-            </span>
-            <span className="truncate">
-              {t('applications.workspace.savedFilters', {
-                filters: savedFilterSummary,
-              })}
-            </span>
-            <span className="ml-1 hidden shrink-0 items-center gap-1 font-medium text-foreground sm:inline-flex">
-              {t('applications.workspace.restoreFilters')}
-              <ArrowRight
-                className="size-3.5 transition-transform group-hover/filter:translate-x-0.5"
-                strokeWidth={1.8}
-              />
-            </span>
-          </button>
-        ) : (
-          <div className="flex min-w-0 items-center gap-2.5 text-[0.75rem] text-muted-foreground">
-            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-              <Layers3 className="size-3.5" strokeWidth={1.8} />
-            </span>
-            <span>{t('applications.workspace.personalHint')}</span>
-          </div>
-        )}
-      </motion.div>
     </motion.section>
   )
 }

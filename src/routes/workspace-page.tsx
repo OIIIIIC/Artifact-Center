@@ -74,24 +74,21 @@ export function WorkspacePage() {
 
   return (
     <AppLayout breadcrumbs={[{ label: t('nav.workspace') }]}>
-      <PageContainer rhythm="product" constrained={false}>
+      <PageContainer
+        rhythm="product"
+        constrained={false}
+        className="pt-6 pb-8 sm:pt-7 md:pt-8"
+      >
         <motion.header
           initial={reduceMotion ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.38, ease: easeOut }}
-          className="mb-9 flex flex-col gap-5 border-b border-border/60 pb-7 sm:mb-10 sm:flex-row sm:items-end sm:justify-between"
+          className="mb-6 flex flex-col gap-4 border-b border-border/60 pb-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="min-w-0">
-            <div className="mb-3 flex items-center gap-2 text-[0.6875rem] font-semibold tracking-[0.12em] text-primary uppercase">
-              <span className="h-px w-6 bg-primary/70" aria-hidden />
-              {t('workspace.eyebrow')}
-            </div>
-            <h1 className="text-[1.875rem] leading-tight font-semibold tracking-[-0.035em] text-foreground sm:text-[2.25rem]">
+            <h1 className="text-2xl leading-tight font-semibold tracking-tight text-foreground">
               {t('workspace.greeting', { name: user?.name ?? '' })}
             </h1>
-            <p className="mt-2.5 max-w-2xl text-[0.875rem] leading-6 text-muted-foreground">
-              {t('workspace.description')}
-            </p>
           </div>
 
           <div className="flex shrink-0 flex-wrap items-center gap-2">

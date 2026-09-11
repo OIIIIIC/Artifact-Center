@@ -130,8 +130,8 @@ describe('PersonalWorkspace', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('收藏不设上限，工作台展示前八个并提供全部收藏入口', () => {
-    const applications = Array.from({ length: 9 }, (_, index) => ({
+  it('收藏不设上限，工作台展示前十二个并提供全部收藏入口', () => {
+    const applications = Array.from({ length: 13 }, (_, index) => ({
       ...application,
       id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
       name: `应用${index + 1}`,
@@ -152,8 +152,9 @@ describe('PersonalWorkspace', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getAllByRole('article')).toHaveLength(8)
-    expect(screen.queryByText('应用9')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('article')).toHaveLength(12)
+    expect(screen.getByText('应用10')).toBeInTheDocument()
+    expect(screen.queryByText('应用13')).not.toBeInTheDocument()
     expect(
       screen.getByRole('link', {
         name: 'applications.workspace.viewAllFavorites',
