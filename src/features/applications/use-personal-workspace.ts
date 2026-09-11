@@ -69,7 +69,10 @@ export function usePersonalWorkspace() {
       }
     },
     onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.personalWorkspace }),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.personalWorkspace }),
+        queryClient.invalidateQueries({ queryKey: ['applications', 'page'] }),
+      ]),
   })
 
   const preferencesMutation = useMutation({

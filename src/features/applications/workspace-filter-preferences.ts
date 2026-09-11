@@ -11,6 +11,8 @@ export function buildRestoredApplicationSearch(
   params.set('platform', preferences.platform)
   params.set('sort', preferences.sort)
   if (preferences.regionId) params.set('region', preferences.regionId)
+  if (preferences.regionId && preferences.projectId)
+    params.set('project', preferences.projectId)
   if (preferences.favoriteOnly) params.set('favorites', '1')
   if (preferences.responsibleOnly) params.set('scope', 'mine')
 

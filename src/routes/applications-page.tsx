@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import {
+  Folder,
   ListChecks,
   Inbox,
   Plus,
@@ -10,7 +11,7 @@ import {
   Star,
   Upload,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 
@@ -21,8 +22,12 @@ import { ApplicationFiltersBar } from '@/features/applications/application-filte
 import { BulkApplicationActionsDialog } from '@/features/applications/bulk-application-actions-dialog'
 import { ApplicationGridSkeleton } from '@/features/applications/application-grid-skeleton'
 import { ApplicationSearch } from '@/features/applications/application-search'
+import { ApplicationScopeHeading } from '@/features/applications/application-scope-heading'
+import { ApplicationScopePath } from '@/features/applications/application-scope-path'
 import { ApplicationTimeline } from '@/features/applications/application-timeline'
-import { RegionSwitcher } from '@/features/applications/region-switcher'
+import { CompactDirectory } from '@/features/products/product-directory'
+import { ApplicationDirectory } from '@/features/products/application-directory'
+import { useProjects } from '@/features/products/use-projects'
 import { ShareCollectionDialog } from '@/features/share/share-collection-dialog'
 import {
   useApplicationCatalog,
@@ -36,6 +41,9 @@ import { canMaintainApplication, canWriteContent } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
+import { useDirectorySummary } from '@/features/applications/use-directory-summary'
+import { CollectionPagination } from '@/components/common/collection-pagination'
+
 const easeOut = [0.2, 0, 0, 1] as const
 
 export function ApplicationsPage() {
@@ -43,12 +51,28 @@ export function ApplicationsPage() {
   const reduceMotion = useReducedMotion()
   const role = useAuthStore((s) => s.user?.role)
   const canCreateApplication = canWriteContent(role)
-  const { regions } = useRegions()
-  const { catalog } = useApplicationCatalog()
+  const {
+    regions,
+    loading: productsLoading,
+    error: productsError,
+    refetch: refetchProducts,
+  } = useRegions()
+  const {
+    projects,
+    loading: projectsLoading,
+    error: projectsError,
+    refetch: refetchProjects,
+  } = useProjects()
+  const summary = useDirectorySummary()
+  const listStart = useRef<HTMLDivElement>(null)
   const [pageSearchParams, setPageSearchParams] = useSearchParams()
   const [shareRegionId, setShareRegionId] = useState<string | null>(null)
   const [bulkCodesOpen, setBulkCodesOpen] = useState(false)
-  const regionScope = pageSearchParams.get('region') ?? 'all'
+  const catalogQuery = useApplicationCatalog(bulkCodesOpen || shareRegionId !== null)
+  const catalog = catalogQuery.catalog
+  const regionScope =
+    pageSearchParams.get('product') ?? pageSearchParams.get('region') ?? 'all'
+  const projectScope = pageSearchParams.get('project') ?? 'all'
   const responsibleOnly = pageSearchParams.get('scope') === 'mine'
   const favoriteOnly = pageSearchParams.get('favorites') === '1'
   const {
@@ -69,7 +93,10 @@ export function ApplicationsPage() {
     error,
     refetch,
     refreshing,
+    resultsPending,
     transitionKey,
+    total,
+    pagination,
   } = useApplications()
 
   useContentScrollRestoration({ ready: !loading })
@@ -81,28 +108,19 @@ export function ApplicationsPage() {
       ),
     [catalog, role],
   )
-  const canUpload = maintainableCatalog.some(
-    (application) => application.status !== 'archived',
+  const canUpload = Object.values(summary.data?.maintainableCounts ?? {}).some(
+    (count) => count > 0,
   )
 
-  const changeRegionScope = (next: string) => {
+  const changeRegionScope = (next: string, project = 'all') => {
     setPageSearchParams(
       (current) => {
         const updated = new URLSearchParams(current)
-        if (next === 'all') updated.delete('region')
-        else updated.set('region', next)
-        return updated
-      },
-      { replace: true },
-    )
-  }
-
-  const setResponsibleOnly = (enabled: boolean) => {
-    setPageSearchParams(
-      (current) => {
-        const updated = new URLSearchParams(current)
-        if (enabled) updated.set('scope', 'mine')
-        else updated.delete('scope')
+        updated.delete('region')
+        if (next === 'all') updated.delete('product')
+        else updated.set('product', next)
+        if (next === 'all' || project === 'all') updated.delete('project')
+        else updated.set('project', project)
         return updated
       },
       { replace: true },
@@ -125,24 +143,32 @@ export function ApplicationsPage() {
     setFilters(next)
   }
 
-  const regionCounts = useMemo(
-    () =>
-      catalog.reduce<Record<string, number>>((counts, application) => {
-        counts[application.region.id] = (counts[application.region.id] ?? 0) + 1
-        return counts
-      }, {}),
-    [catalog],
+  const browseRegions = regions
+  const resolvedRegionScope = regionScope
+  const resolvedProjectScope = regionScope === 'all' ? 'all' : projectScope
+  const selectedProduct = regions.find((p) => p.id === resolvedRegionScope)
+  const selectedProject = projects.find(
+    (p) => p.id === resolvedProjectScope && p.productId === resolvedRegionScope,
   )
-
-  const browseRegions = useMemo(
-    () => regions.filter((region) => (regionCounts[region.id] ?? 0) > 0),
-    [regionCounts, regions],
-  )
-
-  const resolvedRegionScope =
-    regionScope === 'all' || browseRegions.some((region) => region.id === regionScope)
-      ? regionScope
-      : 'all'
+  const directory = {
+    products: browseRegions,
+    projects,
+    counts: summary.data,
+    productId: resolvedRegionScope,
+    projectId: resolvedProjectScope,
+    onSelect: changeRegionScope,
+    loading: productsLoading || projectsLoading || summary.isLoading,
+    error: !!productsError || !!projectsError || summary.isError,
+    onRetry: () => {
+      void refetchProducts()
+      void refetchProjects()
+      void summary.refetch()
+    },
+  }
+  const createSearch = new URLSearchParams()
+  if (resolvedRegionScope !== 'all') createSearch.set('product', resolvedRegionScope)
+  if (selectedProject) createSearch.set('project', selectedProject.id)
+  const createHref = `/applications/new${createSearch.size ? `?${createSearch}` : ''}`
 
   useWorkspaceFilterPreferenceSync({
     current: workspace.preferences,
@@ -150,35 +176,31 @@ export function ApplicationsPage() {
       query: filters.query.trim().slice(0, 120),
       platform: filters.platform,
       sort: filters.sort,
-      regionId: resolvedRegionScope === 'all' ? null : resolvedRegionScope,
+      regionId: selectedProduct?.id ?? null,
+      projectId: selectedProject?.id ?? null,
       favoriteOnly,
       responsibleOnly,
     },
-    loading: workspaceLoading,
+    loading: workspaceLoading || productsLoading || projectsLoading,
     onPersist: updatePreferences,
   })
 
-  const visibleApplications = useMemo(() => {
-    const regional =
-      resolvedRegionScope === 'all'
-        ? filtered
-        : filtered.filter((application) => application.region.id === resolvedRegionScope)
-    const responsible = responsibleOnly
-      ? regional.filter((application) =>
-          canMaintainApplication(role, application.accessRole),
-        )
-      : regional
-    return favoriteOnly
-      ? responsible.filter((application) => favoriteIds.has(application.id))
-      : responsible
-  }, [favoriteIds, favoriteOnly, filtered, resolvedRegionScope, responsibleOnly, role])
+  const visibleApplications = filtered
+  const hasActiveFilters =
+    !!filters.query.trim() ||
+    filters.platform !== 'all' ||
+    favoriteOnly ||
+    responsibleOnly
 
   const hasNoVisibleMatches =
     !loading && !error && !isEmptyCatalog && visibleApplications.length === 0
   const shareRegion = regions.find((region) => region.id === shareRegionId)
 
   return (
-    <AppLayout breadcrumbs={[{ label: t('nav.applications') }]}>
+    <AppLayout
+      breadcrumbs={[{ label: t('nav.applications') }]}
+      sidebarDirectory={<ApplicationDirectory directory={directory} />}
+    >
       <PageContainer rhythm="product">
         <motion.section
           initial={reduceMotion ? false : { opacity: 0, y: 10 }}
@@ -195,21 +217,18 @@ export function ApplicationsPage() {
 
           <div className="relative flex flex-col gap-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h1 className="text-[1.875rem] leading-tight font-semibold tracking-tight text-foreground sm:text-[2.125rem]">
-                    {t('applications.title')}
-                  </h1>
-                  {!loading ? (
-                    <span className="text-[0.8125rem] text-muted-foreground">
-                      {t('applications.count', { count: catalog.length })}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
+              <ApplicationScopeHeading
+                productId={resolvedRegionScope}
+                projectId={resolvedProjectScope}
+                product={selectedProduct}
+                project={selectedProject}
+                counts={summary.data}
+                loading={directory.loading}
+                error={directory.error}
+              />
 
               {canCreateApplication || canUpload || role === 'admin' ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   {role === 'admin' ? (
                     <Button
                       type="button"
@@ -222,12 +241,8 @@ export function ApplicationsPage() {
                     </Button>
                   ) : null}
                   {resolvedRegionScope !== 'all' &&
-                  resolvedRegionScope &&
-                  maintainableCatalog.some(
-                    (application) =>
-                      application.region.id === resolvedRegionScope &&
-                      application.status !== 'archived',
-                  ) ? (
+                  !!resolvedRegionScope &&
+                  (summary.data?.maintainableCounts[resolvedRegionScope] ?? 0) > 0 ? (
                     <Button
                       type="button"
                       size="lg"
@@ -238,45 +253,58 @@ export function ApplicationsPage() {
                       {t('share.collectionAction')}
                     </Button>
                   ) : null}
-                  {canCreateApplication ? (
-                    <Button asChild size="lg">
-                      <Link to="/applications/new">
-                        <Plus className="size-3.5" strokeWidth={1.75} />
-                        {t('applications.newApplication')}
-                      </Link>
-                    </Button>
-                  ) : null}
-                  {canUpload ? (
-                    <Button
-                      asChild
-                      size="lg"
-                      variant="outline"
-                      className={cn(
-                        'border-0 bg-background/75 font-medium text-muted-foreground',
-                        'ring-1 ring-border/60 backdrop-blur-sm',
-                        'hover:bg-muted/55 hover:text-foreground hover:ring-border',
-                        'dark:bg-muted/25 dark:hover:bg-muted/35',
-                      )}
-                    >
-                      <Link to="/upload">
-                        <Upload className="size-3.5" strokeWidth={1.75} />
-                        {t('applications.uploadArtifact')}
-                      </Link>
-                    </Button>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {canCreateApplication ? (
+                      <Button asChild size="lg">
+                        <Link to={createHref}>
+                          <Plus className="size-3.5" strokeWidth={1.75} />
+                          {t('applications.newApplication')}
+                        </Link>
+                      </Button>
+                    ) : null}
+                    {canUpload ? (
+                      <Button
+                        asChild
+                        size="lg"
+                        variant="outline"
+                        className={cn(
+                          'border-0 bg-background/75 font-medium text-muted-foreground',
+                          'ring-1 ring-border/60 backdrop-blur-sm',
+                          'hover:bg-muted/55 hover:text-foreground hover:ring-border',
+                          'dark:bg-muted/25 dark:hover:bg-muted/35',
+                        )}
+                      >
+                        <Link to="/upload">
+                          <Upload className="size-3.5" strokeWidth={1.75} />
+                          {t('applications.uploadArtifact')}
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
             </div>
 
-            <ApplicationSearch
-              value={filters.query}
-              onChange={(query) => changeFilters({ ...filters, query })}
-              className="w-full max-w-[34rem]"
-            />
+            <div className="flex min-w-0 items-center justify-between gap-3 sm:gap-6">
+              <div className="min-w-0 shrink-0 sm:flex-1 sm:shrink">
+                <ApplicationScopePath
+                  productId={resolvedRegionScope}
+                  projectId={resolvedProjectScope}
+                  product={selectedProduct}
+                  project={selectedProject}
+                  onSelect={changeRegionScope}
+                />
+              </div>
+              <ApplicationSearch
+                value={filters.query}
+                onChange={(query) => changeFilters({ ...filters, query })}
+                className="min-w-0 max-w-[34rem] flex-1"
+              />
+            </div>
           </div>
         </motion.section>
 
-        <div className="mt-5 sm:mt-6">
+        <div ref={listStart} className="mt-5 scroll-mt-5 sm:mt-6">
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -288,11 +316,11 @@ export function ApplicationsPage() {
                 filters={filters}
                 onChange={changeFilters}
                 meta={
-                  !loading && !isEmptyCatalog && !isSearchEmpty
-                    ? t('applications.count', { count: visibleApplications.length })
-                    : !loading && isSearchEmpty
-                      ? t('applications.count', { count: 0 })
-                      : undefined
+                  hasActiveFilters && !error
+                    ? loading || resultsPending
+                      ? t('common.loading')
+                      : t('applications.filteredCount', { count: total })
+                    : undefined
                 }
                 trailing={
                   <Button
@@ -315,16 +343,9 @@ export function ApplicationsPage() {
               />
             </div>
 
-            {!loading && !error && browseRegions.length > 0 ? (
-              <div className="border-t border-border/60 px-3 py-3 sm:px-4">
-                <RegionSwitcher
-                  regions={browseRegions}
-                  selected={resolvedRegionScope}
-                  counts={regionCounts}
-                  onChange={changeRegionScope}
-                />
-              </div>
-            ) : null}
+            <div className="border-t border-border/60 p-3 lg:hidden">
+              <CompactDirectory {...directory} />
+            </div>
           </motion.div>
 
           <motion.div
@@ -362,7 +383,7 @@ export function ApplicationsPage() {
                 action={
                   canCreateApplication ? (
                     <Button asChild size="lg">
-                      <Link to="/applications/new">
+                      <Link to={createHref}>
                         <Plus className="size-3.5" strokeWidth={1.75} />
                         {t('applications.newApplication')}
                       </Link>
@@ -374,37 +395,52 @@ export function ApplicationsPage() {
 
             {!loading && (isSearchEmpty || hasNoVisibleMatches) ? (
               <EmptyState
-                icon={favoriteOnly ? Star : SearchX}
+                icon={favoriteOnly ? Star : selectedProject ? Folder : SearchX}
                 title={
                   favoriteOnly
                     ? t('applications.favoritesEmptyTitle')
-                    : t('applications.noMatchTitle')
+                    : selectedProject &&
+                        summary.data?.projectCounts[selectedProject.id] === undefined
+                      ? t('directory.emptyProject')
+                      : t('applications.noMatchTitle')
                 }
                 description={
                   favoriteOnly
                     ? t('applications.favoritesEmptyDescription')
-                    : t('applications.noMatchDescription')
+                    : selectedProject &&
+                        summary.data?.projectCounts[selectedProject.id] === undefined
+                      ? t('directory.emptyProjectHint')
+                      : t('applications.noMatchDescription')
                 }
                 action={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      setFilters({
-                        query: '',
-                        platform: 'all',
-                        sort: filters.sort,
-                      })
-                      changeRegionScope('all')
-                      setResponsibleOnly(false)
-                      setFavoriteOnly(false)
-                    }}
-                  >
-                    {favoriteOnly
-                      ? t('applications.showAllApplications')
-                      : t('common.clearFilters')}
-                  </Button>
+                  selectedProject &&
+                  summary.data?.projectCounts[selectedProject.id] === undefined &&
+                  canCreateApplication &&
+                  !favoriteOnly ? (
+                    <Button asChild variant="outline">
+                      <Link to={createHref}>
+                        <Plus className="size-3.5" />
+                        {t('applications.newApplication')}
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setFilters({ query: '', platform: 'all', sort: filters.sort })
+                        setPageSearchParams(
+                          { platform: 'all', sort: filters.sort },
+                          { replace: true },
+                        )
+                      }}
+                    >
+                      {favoriteOnly
+                        ? t('applications.showAllApplications')
+                        : t('common.clearFilters')}
+                    </Button>
+                  )
                 }
               />
             ) : null}
@@ -412,17 +448,55 @@ export function ApplicationsPage() {
             {!loading && !isEmptyCatalog && !isSearchEmpty && !hasNoVisibleMatches ? (
               <ApplicationTimeline
                 applications={visibleApplications}
-                transitionKey={`${transitionKey}:${resolvedRegionScope}:${responsibleOnly ? 'mine' : 'all'}:${favoriteOnly ? 'favorites' : 'all'}`}
+                transitionKey={`${transitionKey}:${resolvedRegionScope}:${resolvedProjectScope}:${responsibleOnly ? 'mine' : 'all'}:${favoriteOnly ? 'favorites' : 'all'}`}
                 refreshing={refreshing}
                 favoriteIds={favoriteIds}
                 favoritePendingId={favoritePendingId}
                 onToggleFavorite={toggleFavorite}
               />
             ) : null}
+            <CollectionPagination
+              page={pagination.page}
+              total={total}
+              hasNext={pagination.hasNext}
+              hasPrevious={pagination.hasPrevious}
+              busy={pagination.busy}
+              onNext={() => {
+                pagination.next()
+                listStart.current?.scrollIntoView({ block: 'start' })
+              }}
+              onPrevious={() => {
+                pagination.previous()
+                listStart.current?.scrollIntoView({ block: 'start' })
+              }}
+            />
           </motion.div>
         </div>
       </PageContainer>
-      {shareRegion ? (
+      {(shareRegion || bulkCodesOpen) && (catalogQuery.loading || catalogQuery.error) ? (
+        <div
+          role="status"
+          className="fixed right-6 bottom-6 z-50 rounded-xl border border-border bg-card p-4 shadow-lg"
+        >
+          {catalogQuery.error ? (
+            <Button onClick={() => void catalogQuery.refetch()}>
+              {t('common.retry')}
+            </Button>
+          ) : (
+            t('applications.loading')
+          )}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setShareRegionId(null)
+              setBulkCodesOpen(false)
+            }}
+          >
+            {t('common.cancel')}
+          </Button>
+        </div>
+      ) : null}
+      {shareRegion && !catalogQuery.loading && !catalogQuery.error ? (
         <ShareCollectionDialog
           key={shareRegion.id}
           open
@@ -437,7 +511,7 @@ export function ApplicationsPage() {
           )}
         />
       ) : null}
-      {bulkCodesOpen ? (
+      {bulkCodesOpen && !catalogQuery.loading && !catalogQuery.error ? (
         <BulkApplicationActionsDialog
           open
           onOpenChange={setBulkCodesOpen}

@@ -9,6 +9,7 @@ interface ApplicationSearchProps {
   value: string
   onChange: (value: string) => void
   className?: string
+  placeholder?: string
 }
 
 /**
@@ -18,6 +19,7 @@ export function ApplicationSearch({
   value,
   onChange,
   className,
+  placeholder,
 }: ApplicationSearchProps) {
   const { t } = useTranslation()
   const [draft, setDraft] = useState(value)
@@ -66,8 +68,8 @@ export function ApplicationSearch({
             submit(nextValue)
           }
         }}
-        placeholder={t('applications.searchPlaceholder')}
-        aria-label={t('applications.searchAria')}
+        placeholder={placeholder ?? t('applications.searchPlaceholder')}
+        aria-label={placeholder ?? t('applications.searchAria')}
         className={cn(
           /* h-10 aligns with page action buttons (size lg) */
           'h-10 w-full rounded-xl bg-muted/35 pl-11',

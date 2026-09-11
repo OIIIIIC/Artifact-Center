@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion'
-import { MapPin, Package, Star } from 'lucide-react'
+import { Box, Package, Star } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -120,9 +120,17 @@ export function ApplicationCard({
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex h-5 items-center gap-1 rounded-md bg-muted/55 px-1.5 text-[11px] font-medium text-foreground/75 dark:bg-muted/45">
-            <MapPin className="size-3 opacity-65" strokeWidth={1.75} aria-hidden />
-            {application.region.name}
+          <span className="inline-flex h-5 max-w-full min-w-0 items-center gap-1 rounded-md bg-muted/55 px-1.5 text-[11px] font-medium text-foreground/75 dark:bg-muted/45">
+            <Box className="size-3 shrink-0 opacity-65" strokeWidth={1.75} aria-hidden />
+            <span
+              className="truncate"
+              title={[application.region.name, application.projectName]
+                .filter(Boolean)
+                .join(' / ')}
+            >
+              {application.region.name}
+              {application.projectName ? ` / ${application.projectName}` : ''}
+            </span>
           </span>
           <span className="inline-flex h-5 items-center gap-1 rounded-md bg-muted/50 px-1.5 text-[11px] text-muted-foreground dark:bg-muted/40">
             <PlatformIcon className="size-3 opacity-70" strokeWidth={1.75} aria-hidden />

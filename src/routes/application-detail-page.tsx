@@ -1,3 +1,4 @@
+import { resolveDetailTab } from '@/features/applications/detail-navigation'
 import { Inbox, RefreshCw, ServerCrash } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -12,36 +13,37 @@ import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warnin
 import { ApplicationDetailSkeleton } from '@/features/applications/application-detail-skeleton'
 import { ApplicationSettingsPanel } from '@/features/applications/application-settings-panel'
 import { ApplicationSummary } from '@/features/applications/application-summary'
-import { ArtifactsTable } from '@/features/applications/artifacts-table'
+import { ApplicationHistoryPage } from '@/features/applications/application-history-page'
 import { OverviewRecentVersions } from '@/features/applications/overview-recent-versions'
-import { ReleaseNotesPanel } from '@/features/applications/release-notes-panel'
 import { useApplicationDetail } from '@/features/applications/use-application-detail'
 import { ShareLinksPanel } from '@/features/share/share-links-panel'
 import { canMaintainApplication } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
+import { ApplicationDirectory } from '@/features/products/application-directory'
 
 export function ApplicationDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const user = useAuthStore((s) => s.user)
-  const {
-    loading,
-    application,
-    artifacts,
-    releases,
-    latest,
-    recentVersions,
-    notFound,
-    loadError,
-    refetch,
-  } = useApplicationDetail(id)
+  const { loading, application, latest, recentVersions, notFound, loadError, refetch } =
+    useApplicationDetail(id)
   const canWrite = canMaintainApplication(user?.role, application?.accessRole)
+  const requestedTab = searchParams.get('tab') ?? 'overview'
+  const activeTab = resolveDetailTab(requestedTab, canWrite)
+  const sidebarDirectory = (
+    <ApplicationDirectory
+      application={application}
+      applicationId={id}
+      tab={loading ? requestedTab : activeTab}
+    />
+  )
 
   if (loading) {
     return (
       <AppLayout
+        sidebarDirectory={sidebarDirectory}
         breadcrumbs={[{ label: t('detail.breadcrumbApps'), href: '/' }, { label: '…' }]}
       >
         <PageContainer rhythm="product">
@@ -57,6 +59,7 @@ export function ApplicationDetailPage() {
   if (loadError || (!application && !notFound)) {
     return (
       <AppLayout
+        sidebarDirectory={sidebarDirectory}
         breadcrumbs={[
           { label: t('detail.breadcrumbApps'), href: '/' },
           { label: t('common.serviceUnavailableTitle') },
@@ -82,6 +85,7 @@ export function ApplicationDetailPage() {
   if (notFound || !application) {
     return (
       <AppLayout
+        sidebarDirectory={sidebarDirectory}
         breadcrumbs={[
           { label: t('detail.breadcrumbApps'), href: '/' },
           { label: t('detail.notFound') },
@@ -108,7 +112,7 @@ export function ApplicationDetailPage() {
     {
       value: 'artifacts',
       label: t('detail.tabArtifacts'),
-      count: artifacts.length,
+      count: application.artifactCount,
     },
     { value: 'release-notes', label: t('detail.tabReleaseNotes') },
     { value: 'activity', label: t('detail.tabActivity') },
@@ -122,6 +126,7 @@ export function ApplicationDetailPage() {
 
   return (
     <AppLayout
+      sidebarDirectory={sidebarDirectory}
       breadcrumbs={[
         { label: t('detail.breadcrumbApps'), href: '/' },
         { label: application.name },
@@ -141,12 +146,22 @@ export function ApplicationDetailPage() {
           <ApplicationSummary
             application={application}
             latest={latest}
-            artifactCount={artifacts.length}
+            artifactCount={application.artifactCount}
           />
 
           <Tabs
-            defaultValue={
-              canWrite && searchParams.get('tab') === 'settings' ? 'settings' : 'overview'
+            value={activeTab}
+            onValueChange={(tab) =>
+              setSearchParams(
+                (current) => {
+                  const next = new URLSearchParams(current)
+                  if (tab === 'overview') next.delete('tab')
+                  else next.set('tab', tab)
+                  next.delete('addMember')
+                  return next
+                },
+                { replace: true },
+              )
             }
             className="gap-6"
           >
@@ -204,20 +219,19 @@ export function ApplicationDetailPage() {
                   {t('detail.artifactsHint')}
                 </p>
               </div>
-              <ArtifactsTable
-                artifacts={artifacts}
-                applicationId={application.id}
-                applicationName={application.name}
-                applicationStatus={application.status}
+              <ApplicationHistoryPage
+                key={application.id}
+                kind="artifacts"
+                application={application}
                 canManage={canWrite}
               />
             </TabsContent>
 
             <TabsContent value="release-notes" className="mt-0 outline-none">
-              <ReleaseNotesPanel
-                releases={releases}
-                applicationId={application.id}
-                applicationStatus={application.status}
+              <ApplicationHistoryPage
+                key={application.id}
+                kind="releases"
+                application={application}
                 canManage={canWrite}
               />
             </TabsContent>

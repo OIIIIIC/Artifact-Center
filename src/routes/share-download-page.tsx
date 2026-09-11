@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Download, FileArchive, Loader2, MapPin, Package } from 'lucide-react'
+import { Download, FileArchive, Loader2, Box, Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 
@@ -87,7 +87,7 @@ export function ShareDownloadPage() {
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 {result.region ? (
                   <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="size-3.5" />
+                    <Box className="size-3.5" />
                     {result.region.name}
                   </span>
                 ) : null}

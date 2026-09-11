@@ -1,8 +1,10 @@
 import type { ListApplicationsParams } from '@/services/api'
 
 export const queryKeys = {
+  projects: ['projects'] as const,
   applications: {
     all: ['applications'] as const,
+    summary: ['applications', 'summary'] as const,
     list: (params: ListApplicationsParams = {}) =>
       ['applications', 'list', params] as const,
     detail: (id: string) => ['applications', 'detail', id] as const,
@@ -26,6 +28,7 @@ export const queryKeys = {
   users: {
     all: ['users'] as const,
     list: ['users', 'list'] as const,
+    resetPassword: ['users', 'reset-password'] as const,
   },
   regions: {
     all: ['regions'] as const,

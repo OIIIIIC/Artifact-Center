@@ -4,7 +4,13 @@ import type { PersonalWorkspacePreferences } from '@/services/api'
 
 export type WorkspaceFilterPreferenceSnapshot = Pick<
   PersonalWorkspacePreferences,
-  'query' | 'platform' | 'sort' | 'regionId' | 'favoriteOnly' | 'responsibleOnly'
+  | 'query'
+  | 'platform'
+  | 'sort'
+  | 'regionId'
+  | 'projectId'
+  | 'favoriteOnly'
+  | 'responsibleOnly'
 >
 
 type WorkspaceFilterPreferenceSyncOptions = {
@@ -24,6 +30,7 @@ function isSamePreferenceSnapshot(
     current.platform === next.platform &&
     current.sort === next.sort &&
     current.regionId === next.regionId &&
+    (current.projectId ?? null) === (next.projectId ?? null) &&
     current.favoriteOnly === next.favoriteOnly &&
     current.responsibleOnly === next.responsibleOnly
   )
@@ -44,6 +51,7 @@ export function useWorkspaceFilterPreferenceSync({
     platform: nextPlatform,
     sort: nextSort,
     regionId: nextRegionId,
+    projectId: nextProjectId,
     favoriteOnly: nextFavoriteOnly,
     responsibleOnly: nextResponsibleOnly,
   } = next
@@ -52,6 +60,7 @@ export function useWorkspaceFilterPreferenceSync({
     platform: currentPlatform,
     sort: currentSort,
     regionId: currentRegionId,
+    projectId: currentProjectId,
     favoriteOnly: currentFavoriteOnly,
     responsibleOnly: currentResponsibleOnly,
   } = current
@@ -79,6 +88,7 @@ export function useWorkspaceFilterPreferenceSync({
       platform: nextPlatform,
       sort: nextSort,
       regionId: nextRegionId,
+      ...(nextProjectId !== undefined ? { projectId: nextProjectId } : {}),
       favoriteOnly: nextFavoriteOnly,
       responsibleOnly: nextResponsibleOnly,
     }
@@ -87,6 +97,7 @@ export function useWorkspaceFilterPreferenceSync({
       platform: currentPlatform,
       sort: currentSort,
       regionId: currentRegionId,
+      projectId: currentProjectId,
       favoriteOnly: currentFavoriteOnly,
       responsibleOnly: currentResponsibleOnly,
     }
@@ -120,6 +131,7 @@ export function useWorkspaceFilterPreferenceSync({
     currentPlatform,
     currentQuery,
     currentRegionId,
+    currentProjectId,
     currentResponsibleOnly,
     currentSort,
     flush,
@@ -128,6 +140,7 @@ export function useWorkspaceFilterPreferenceSync({
     nextPlatform,
     nextQuery,
     nextRegionId,
+    nextProjectId,
     nextResponsibleOnly,
     nextSort,
     queryDelay,

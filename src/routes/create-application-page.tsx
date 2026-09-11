@@ -15,6 +15,8 @@ import {
 import { CreateAppReferenceRail } from '@/features/applications/create-app-reference-rail'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useApplicationCatalog } from '@/features/applications/use-applications'
+import { ProjectSelect } from '@/features/products/project-select'
+import { useProjects } from '@/features/products/use-projects'
 import { useRegions } from '@/features/regions/use-regions'
 import { queryKeys } from '@/lib/query-keys'
 import { APPLICATION_FIELD_LIMITS } from '@/lib/application-fields'
@@ -67,6 +69,7 @@ export function CreateApplicationPage() {
   const role = useAuthStore((s) => s.user?.role)
   const { catalog } = useApplicationCatalog()
   const { enabledRegions, loading: regionsLoading } = useRegions()
+  const { projects, loading: projectsLoading } = useProjects()
 
   const [name, setName] = useState('')
   const [applicationCode, setApplicationCode] = useState('')
@@ -74,7 +77,16 @@ export function CreateApplicationPage() {
   const [description, setDescription] = useState('')
   const [packageName, setPackageName] = useState('')
   const [platform, setPlatform] = useState<ApplicationPlatform>('android')
-  const [regionId, setRegionId] = useState(() => searchParams.get('region') ?? '')
+  const [regionId, setRegionId] = useState(
+    () => searchParams.get('product') ?? searchParams.get('region') ?? '',
+  )
+  const [projectId, setProjectId] = useState(() => searchParams.get('project') ?? '')
+  const selectedProject = projects.find(
+    (p) =>
+      p.productId === regionId &&
+      p.enabled &&
+      (projectId ? p.id === projectId : p.isDefault),
+  )
   const [repository, setRepository] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -95,6 +107,8 @@ export function CreateApplicationPage() {
   const canSubmit =
     !submitting &&
     !regionsLoading &&
+    !projectsLoading &&
+    Boolean(selectedProject) &&
     Boolean(selectedRegion) &&
     isApplicationCode(applicationCode)
   const onSubmit = async (e: React.FormEvent) => {
@@ -108,7 +122,8 @@ export function CreateApplicationPage() {
       !isApplicationCode(applicationCode) ||
       !description.trim() ||
       !packageName.trim() ||
-      !regionId
+      !regionId ||
+      !selectedProject
     ) {
       setError(t('createApp.errorRequired'))
       return
@@ -123,6 +138,7 @@ export function CreateApplicationPage() {
         packageName: packageName.trim(),
         platform,
         regionId,
+        projectId: selectedProject?.id,
         repository: repository.trim() || undefined,
       })
       await queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
@@ -366,7 +382,10 @@ export function CreateApplicationPage() {
                           role="radio"
                           aria-checked={regionId === region.id}
                           disabled={submitting || regionsLoading}
-                          onClick={() => setRegionId(region.id)}
+                          onClick={() => {
+                            setRegionId(region.id)
+                            setProjectId('')
+                          }}
                           className={regionChipClass(regionId === region.id)}
                         >
                           {region.name}
@@ -380,7 +399,7 @@ export function CreateApplicationPage() {
                     ) : enabledRegions.length === 0 ? (
                       <span className="block text-[0.75rem] text-destructive">
                         {t('createApp.noRegions')}{' '}
-                        <Link to="/settings" className="underline underline-offset-2">
+                        <Link to="/products" className="underline underline-offset-2">
                           {t('createApp.manageRegions')}
                         </Link>
                       </span>
@@ -390,6 +409,12 @@ export function CreateApplicationPage() {
                       </span>
                     )}
                   </div>
+                  <ProjectSelect
+                    productId={regionId}
+                    value={selectedProject?.id ?? ''}
+                    onChange={setProjectId}
+                    disabled={submitting}
+                  />
                 </div>
               </div>
             </section>

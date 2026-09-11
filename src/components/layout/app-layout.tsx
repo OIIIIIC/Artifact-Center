@@ -20,6 +20,7 @@ interface AppLayoutProps {
   className?: string
   navGroups?: SidebarNavGroup[]
   sidebarLogo?: ReactNode
+  sidebarDirectory?: ReactNode
   sidebarFooter?: ReactNode
   breadcrumbs?: BreadcrumbItem[]
   showSearch?: boolean
@@ -34,6 +35,7 @@ export function AppLayout({
   navGroups,
   sidebarLogo,
   sidebarFooter,
+  sidebarDirectory,
   breadcrumbs,
   showSearch = true,
   onSearchClick,
@@ -86,7 +88,12 @@ export function AppLayout({
   )
 
   const sidebar = !hideSidebar ? (
-    <Sidebar logo={logo} groups={resolvedGroups} footer={sidebarFooter} />
+    <Sidebar
+      logo={logo}
+      groups={resolvedGroups}
+      footer={sidebarFooter}
+      directory={sidebarDirectory}
+    />
   ) : null
 
   return (
@@ -131,6 +138,21 @@ export function AppLayout({
                   },
                 })),
               }))}
+              directory={
+                sidebarDirectory ? (
+                  <div
+                    className="flex min-h-0 flex-1 flex-col"
+                    onClick={(event) => {
+                      if (
+                        (event.target as HTMLElement).closest('[data-directory-select]')
+                      )
+                        setMobileOpen(false)
+                    }}
+                  >
+                    {sidebarDirectory}
+                  </div>
+                ) : undefined
+              }
               footer={sidebarFooter}
             />
           </div>

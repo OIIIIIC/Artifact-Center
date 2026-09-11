@@ -126,7 +126,7 @@
   --section-gap: 2.5rem;
   --card-gap: 1.25rem;
   /* 248–256px band; lock 256px for Linear/GitHub-like calm rail */
-  --sidebar-width: 16rem;
+  --sidebar-width: 13.25rem;
   --sidebar-padding-x: 1rem;
   --topbar-height: 3.5rem;
 }
@@ -346,5 +346,13 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+@keyframes project-saved {
+  from {
+    background-color: color-mix(in oklch, var(--primary) 14%, transparent);
+  }
+  to {
+    background-color: transparent;
   }
 }

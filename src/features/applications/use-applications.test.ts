@@ -14,7 +14,11 @@ import type { Application } from '@/types/application'
 const listApplications = vi.fn()
 
 vi.mock('@/services/api', () => ({
-  apiListApplications: (...args: unknown[]) => listApplications(...args),
+  apiApplicationPage: async (...args: unknown[]) => ({
+    items: await listApplications(...args),
+    total: 1,
+    nextCursor: null,
+  }),
 }))
 
 const application: Application = {

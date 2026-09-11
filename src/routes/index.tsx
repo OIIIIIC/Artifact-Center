@@ -4,6 +4,9 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { Loading } from '@/components/feedback/loading'
 import { RequireAuth } from '@/routes/require-auth'
 
+const ProductsPage = lazy(() =>
+  import('@/routes/products-page').then((module) => ({ default: module.ProductsPage })),
+)
 const ApplicationsPage = lazy(() =>
   import('@/routes/applications-page').then((module) => ({
     default: module.ApplicationsPage,
@@ -113,11 +116,12 @@ export function AppRouter() {
             </RequireAuth>
           }
         />
+        <Route path="/regions" element={<Navigate to="/products" replace />} />
         <Route
-          path="/regions"
+          path="/products"
           element={
             <RequireAuth>
-              <SettingsPage standalone="regions" />
+              <ProductsPage />
             </RequireAuth>
           }
         />

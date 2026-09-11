@@ -9,6 +9,7 @@ import type { SidebarNavGroup, SidebarNavItem } from './types'
 interface SidebarProps {
   logo?: ReactNode
   groups: SidebarNavGroup[]
+  directory?: ReactNode
   footer?: ReactNode
   className?: string
   collapsed?: boolean
@@ -21,6 +22,7 @@ export function Sidebar({
   logo,
   groups,
   footer,
+  directory,
   className,
   collapsed = false,
 }: SidebarProps) {
@@ -42,13 +44,18 @@ export function Sidebar({
       </div>
 
       <nav
-        className="min-h-0 flex-1 space-y-8 overflow-x-hidden overflow-y-auto px-3 pt-2 pb-6"
+        className={cn(
+          'space-y-6 overflow-x-hidden overflow-y-auto px-3 pt-2 pb-5',
+          directory ? 'max-h-[45%] shrink-0' : 'min-h-0 flex-1',
+        )}
         aria-label="Main"
       >
         {groups.map((group) => (
           <SidebarGroup key={group.id} group={group} />
         ))}
       </nav>
+
+      {directory}
 
       {footer ? <div className="shrink-0 px-3 py-3">{footer}</div> : null}
     </aside>

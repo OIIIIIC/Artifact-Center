@@ -1,7 +1,7 @@
 import {
   ClipboardList,
   HardDrive,
-  MapPinned,
+  Box,
   Palette,
   Bot,
   ShieldCheck,
@@ -60,7 +60,7 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
     retention: { label: t('settings.navRetention'), icon: HardDrive },
     robots: { label: t('settings.navReleaseRobots'), icon: Bot },
     members: { label: t('settings.navMembers'), icon: Users },
-    regions: { label: t('settings.navRegions'), icon: MapPinned },
+    regions: { label: t('settings.navRegions'), icon: Box },
     access: { label: t('settings.navAccess'), icon: ShieldCheck },
     audit: { label: t('settings.navAudit'), icon: ClipboardList },
   } satisfies Record<SettingsSection, { label: string; icon: typeof UserRound }>
