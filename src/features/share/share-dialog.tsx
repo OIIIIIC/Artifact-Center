@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, Link2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
 import { copyText } from '@/lib/clipboard'
 import { getRequestErrorMessage } from '@/lib/request-error'
+import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
 import { apiCreateShare } from '@/services/api'
 import { shareUrlForToken } from '@/store/share-store'
@@ -39,6 +41,7 @@ export function ShareDialog({
   className,
 }: ShareDialogProps) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const artifactRisk = artifact ? getArtifactRiskStatus(artifact) : null
 
   const [mode, setMode] = useState<ShareMode>(
@@ -73,6 +76,8 @@ export function ShareDialog({
         expiresInDays: expiry === 0 ? 0 : expiry,
       })
       const url = shareUrlForToken(share.token)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.audit.all })
+      void queryClient.invalidateQueries({ queryKey: ['shares', applicationId] })
       if (await copyText(url)) {
         setCopiedUrl(url)
         toast.success(t('share.copied'), { description: applicationName })

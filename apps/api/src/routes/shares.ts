@@ -396,6 +396,7 @@ shareRoutes.delete('/shares/:id', requireAuth, async (c) => {
         ? shareTokenPrefix(updated.token)
         : updated.tokenHash.slice(0, 8),
       kind: updated.kind,
+      applicationIds,
     },
   })
   return c.json({ share: mapShare(updated) })

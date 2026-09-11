@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -68,16 +69,19 @@ const latest: Artifact = {
 }
 
 function renderHeader(canManage: boolean) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <TooltipProvider>
-        <ApplicationDetailHeader
-          application={application}
-          latest={latest}
-          canManage={canManage}
-        />
-      </TooltipProvider>
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <TooltipProvider>
+          <ApplicationDetailHeader
+            application={application}
+            latest={latest}
+            canManage={canManage}
+          />
+        </TooltipProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 

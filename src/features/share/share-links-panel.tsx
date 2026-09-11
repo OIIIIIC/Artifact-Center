@@ -55,10 +55,9 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
   const onRevoke = async (id: string) => {
     try {
       await apiRevokeShare(id)
-      await queryClient.invalidateQueries({ queryKey: ['shares', applicationId] })
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.audit.byApp(applicationId),
-      })
+      // A collection can appear in several applications' cached share/activity lists.
+      void queryClient.invalidateQueries({ queryKey: ['shares'] })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.audit.all })
       toast.success(t('share.revokedToast'))
     } catch (err) {
       toast.error(

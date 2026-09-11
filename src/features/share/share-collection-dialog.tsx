@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { useCollectionPage } from '@/hooks/use-collection-page'
 import { copyText } from '@/lib/clipboard'
 import { getRequestErrorMessage } from '@/lib/request-error'
+import { queryKeys } from '@/lib/query-keys'
 import { cn } from '@/lib/utils'
 import { apiApplicationPage, apiCreateShareCollection } from '@/services/api'
 import { shareUrlForToken } from '@/store/share-store'
@@ -95,6 +96,8 @@ export function ShareCollectionDialog({
         expiresInDays: expiry,
       })
       const url = shareUrlForToken(share.token)
+      // Activity refresh must not delay copying while an open feed refetches.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.audit.all })
       setCopiedUrl(url)
       await Promise.all(
         Object.keys(selected).map((applicationId) =>
