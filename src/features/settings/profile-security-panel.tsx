@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/modal'
 import { useAuthStore } from '@/store/auth-store'
 import { AvatarUpload } from './avatar-upload'
-import { MEMBER_ROLES, type MemberRole } from './mock-members'
+import { MEMBER_ROLES, type MemberRole } from './member-roles'
 import { PasswordField, PasswordPolicyHints } from './password-field'
 
 export function ProfileSecurityPanel() {

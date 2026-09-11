@@ -1,55 +1,40 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  ArrowRightLeft,
   ChevronLeft,
   ChevronRight,
   KeyRound,
   Loader2,
-  Plus,
   Search,
   Trash2,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { CreateMemberDialog } from './create-member-dialog'
+import { getMemberErrorMessage } from './member-error'
+import { ResetMemberPasswordForm } from './reset-member-password-form'
+import { TransferAdministratorDialog } from './transfer-administrator-dialog'
 
-import { FormError } from '@/components/feedback'
-import { UserAvatar } from '@/components/common/user-avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Modal,
-  ModalBody,
   ModalContent,
   ModalDescription,
   ModalFooter,
   ModalHeader,
   ModalTitle,
 } from '@/components/ui/modal'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { checkPassword } from '@/lib/password'
 import { queryKeys } from '@/lib/query-keys'
-import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
-import { ApiError, isConnectivityError } from '@/services/http'
 import {
-  apiAdminResetPassword,
-  apiCreateUser,
   apiDeleteUser,
   apiListUsers,
-  apiTransferAdministrator,
   apiUpdateUser,
   type TeamMemberDto,
 } from '@/services/api'
 import { useAuthStore } from '@/store/auth-store'
-import { MEMBER_ROLES, type MemberRole } from './mock-members'
-import { PasswordField } from './password-field'
+import { MEMBER_ROLES, type MemberRole } from './member-roles'
 import { SettingsPanel } from './settings-panel'
 
 const PAGE_SIZE = 10
@@ -64,7 +49,7 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
+
   const isAdmin = user?.role === 'admin'
   const membersQuery = useQuery({
     queryKey: queryKeys.users.list,
@@ -75,55 +60,15 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<MemberRole | 'all'>('all')
   const [page, setPage] = useState(1)
-  const [showCreate, setShowCreate] = useState(false)
-  const [name, setName] = useState('')
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [passwordConfirm, setPasswordConfirm] = useState('')
-  const [role, setRole] = useState<MemberRole>('viewer')
-  const [createError, setCreateError] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
+
   const [removeId, setRemoveId] = useState<string | null>(null)
   const [resetId, setResetId] = useState<string | null>(null)
-  const [resetPassword, setResetPassword] = useState('')
-  const [resetConfirm, setResetConfirm] = useState('')
-  const [resetError, setResetError] = useState<string | null>(null)
-  const [resetting, setResetting] = useState(false)
+
   const [roleChangeConfirmation, setRoleChangeConfirmation] =
     useState<RoleChangeConfirmation>(null)
-  const [transferOpen, setTransferOpen] = useState(false)
-  const [transferTargetId, setTransferTargetId] = useState('')
-  const [transferRole, setTransferRole] = useState<'maintainer' | 'viewer'>('viewer')
-  const [transferError, setTransferError] = useState<string | null>(null)
-  const [transferring, setTransferring] = useState(false)
 
   const roleLabel = (value: MemberRole) => t(`settings.role.${value}`)
-  const errorMessage = (error: unknown) => {
-    if (isConnectivityError(error))
-      return getRequestErrorMessage(error, {
-        offline: t('common.requestFailedOffline'),
-        unavailable: t('common.requestFailedUnavailable'),
-        fallback: t('settings.memberErrorGeneric'),
-      })
-    if (error instanceof ApiError) {
-      const key = {
-        email_taken: 'settings.memberErrorDuplicate',
-        username_taken: 'settings.memberErrorDuplicate',
-        last_admin: 'settings.memberErrorLastAdmin',
-        cannot_delete_self: 'settings.memberErrorSelfDelete',
-        self_role_change_requires_transfer: 'settings.memberErrorSelfRoleChange',
-        transfer_target_not_found: 'settings.memberErrorTransferTarget',
-        transfer_target_inactive: 'settings.memberErrorTransferTargetInactive',
-        weak_password: 'settings.passwordErrorWeak',
-        not_found: 'settings.memberErrorNotFound',
-        forbidden: 'settings.resetForbidden',
-        invalid_body: 'settings.memberErrorEmpty',
-      }[error.code]
-      return key ? t(key) : error.message || t('settings.memberErrorGeneric')
-    }
-    return t('settings.memberErrorGeneric')
-  }
+  const errorMessage = (error: unknown) => getMemberErrorMessage(error, t)
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
   const filtered = useMemo(() => {
@@ -146,43 +91,6 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
     (Math.min(page, totalPages) - 1) * PAGE_SIZE,
     Math.min(page, totalPages) * PAGE_SIZE,
   )
-  const createMember = async () => {
-    setCreateError(null)
-    if (!name.trim() || !username.trim() || !email.trim() || !password)
-      return setCreateError(t('settings.memberErrorEmptyFields'))
-    if (password !== passwordConfirm)
-      return setCreateError(t('settings.passwordErrorMismatch'))
-    if (!checkPassword(password, { confirm: passwordConfirm }).ok)
-      return setCreateError(t('settings.passwordErrorWeak'))
-    setCreating(true)
-    try {
-      const member = await apiCreateUser({
-        name: name.trim(),
-        username: username.trim(),
-        email: email.trim(),
-        password,
-        role,
-      })
-      await invalidate()
-      toast.success(t('settings.memberAdded'), {
-        description: t('settings.memberAddedDesc', {
-          name: member.name,
-          role: roleLabel(member.role),
-        }),
-      })
-      setName('')
-      setUsername('')
-      setEmail('')
-      setPassword('')
-      setPasswordConfirm('')
-      setRole('viewer')
-      setShowCreate(false)
-    } catch (error) {
-      setCreateError(errorMessage(error))
-    } finally {
-      setCreating(false)
-    }
-  }
 
   const changeRole = async (id: string, nextRole: MemberRole, memberName: string) => {
     try {
@@ -205,29 +113,7 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
     }
     void changeRole(member.id, nextRole, member.name)
   }
-  const transferAdministrator = async () => {
-    if (!transferTargetId) {
-      setTransferError(t('settings.memberErrorTransferTarget'))
-      return
-    }
-    setTransferError(null)
-    setTransferring(true)
-    try {
-      const target = transferCandidates.find((member) => member.id === transferTargetId)
-      await apiTransferAdministrator({
-        targetUserId: transferTargetId,
-        nextRole: transferRole,
-      })
-      toast.success(t('settings.adminTransferred'), {
-        description: t('settings.adminTransferredDesc', { name: target?.name ?? '' }),
-      })
-      logout()
-    } catch (error) {
-      setTransferError(errorMessage(error))
-    } finally {
-      setTransferring(false)
-    }
-  }
+
   const removeMember = async (id: string, memberName: string) => {
     setRemoveId(null)
     try {
@@ -236,29 +122,6 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
       toast.success(t('settings.memberRemoved'), { description: memberName })
     } catch (error) {
       toast.error(errorMessage(error))
-    }
-  }
-  const resetMemberPassword = async (id: string, memberName: string) => {
-    setResetError(null)
-    if (!resetPassword || !resetConfirm)
-      return setResetError(t('settings.passwordErrorEmpty'))
-    if (resetPassword !== resetConfirm)
-      return setResetError(t('settings.passwordErrorMismatch'))
-    if (!checkPassword(resetPassword, { confirm: resetConfirm }).ok)
-      return setResetError(t('settings.passwordErrorWeak'))
-    setResetting(true)
-    try {
-      await apiAdminResetPassword(id, resetPassword)
-      setResetId(null)
-      setResetPassword('')
-      setResetConfirm('')
-      toast.success(t('settings.passwordReset'), {
-        description: t('settings.passwordResetDesc', { name: memberName }),
-      })
-    } catch (error) {
-      setResetError(errorMessage(error))
-    } finally {
-      setResetting(false)
     }
   }
 
@@ -329,17 +192,7 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
                 </button>
               ))}
             </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                setShowCreate(true)
-                setCreateError(null)
-              }}
-            >
-              <Plus className="size-3.5" />
-              {t('settings.addMember')}
-            </Button>
+            <CreateMemberDialog />
           </div>
           <p className="mb-3 text-[0.75rem] text-muted-foreground">
             {t('settings.memberFilteredCount', {
@@ -347,92 +200,7 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
               total: members.length,
             })}
           </p>
-          <Modal open={showCreate} onOpenChange={setShowCreate}>
-            <ModalContent>
-              <ModalHeader>
-                <ModalTitle>{t('settings.addMemberTitle')}</ModalTitle>
-                <ModalDescription>{t('settings.addMemberHint')}</ModalDescription>
-              </ModalHeader>
-              <ModalBody className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {[
-                    [t('settings.fieldName'), name, setName, 'name'],
-                    [t('settings.fieldUsername'), username, setUsername, 'username'],
-                    [t('settings.fieldEmail'), email, setEmail, 'email'],
-                  ].map(([label, value, setter, autocomplete]) => (
-                    <label key={label as string} className="block space-y-1.5">
-                      <span className="text-[0.75rem] font-medium text-foreground">
-                        {label as string}
-                      </span>
-                      <Input
-                        value={value as string}
-                        onChange={(event) =>
-                          (setter as (value: string) => void)(event.target.value)
-                        }
-                        disabled={creating}
-                        autoComplete={autocomplete as string}
-                      />
-                    </label>
-                  ))}
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <PasswordField
-                    id="member-password"
-                    label={t('settings.fieldTempPassword')}
-                    value={password}
-                    onChange={setPassword}
-                    disabled={creating}
-                    showStrength
-                    confirm={passwordConfirm}
-                  />
-                  <PasswordField
-                    id="member-password-confirm"
-                    label={t('settings.fieldTempConfirm')}
-                    value={passwordConfirm}
-                    onChange={setPasswordConfirm}
-                    disabled={creating}
-                    matchAgainst={password}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {MEMBER_ROLES.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      className={cn(
-                        'rounded-md px-2.5 py-1.5 text-[0.75rem]',
-                        role === item
-                          ? 'bg-foreground text-background'
-                          : 'bg-muted text-muted-foreground',
-                      )}
-                      onClick={() => setRole(item)}
-                    >
-                      {roleLabel(item)}
-                    </button>
-                  ))}
-                </div>
-                <FormError message={createError} />
-              </ModalBody>
-              <ModalFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={creating}
-                  onClick={() => setShowCreate(false)}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  size="lg"
-                  disabled={creating}
-                  onClick={() => void createMember()}
-                >
-                  {creating ? t('settings.addingMember') : t('settings.confirmAddMember')}
-                </Button>
-              </ModalFooter>
-            </ModalContent>
-          </Modal>
+
           {membersQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
@@ -473,26 +241,9 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
                               {roleLabel(member.role)}
                             </span>
                             {member.role === 'admin' ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                disabled={transferCandidates.length === 0}
-                                title={
-                                  transferCandidates.length === 0
-                                    ? t('settings.transferAdminNoCandidate')
-                                    : undefined
-                                }
-                                onClick={() => {
-                                  setTransferTargetId(transferCandidates[0]?.id ?? '')
-                                  setTransferRole('viewer')
-                                  setTransferError(null)
-                                  setTransferOpen(true)
-                                }}
-                              >
-                                <ArrowRightLeft className="size-3.5" />
-                                {t('settings.transferAdmin')}
-                              </Button>
+                              <TransferAdministratorDialog
+                                transferCandidates={transferCandidates}
+                              />
                             ) : null}
                           </>
                         ) : (
@@ -522,11 +273,11 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
                             type="button"
                             variant="ghost"
                             size="icon"
+                            aria-label={t('settings.resetPasswordTitle', {
+                              name: member.name,
+                            })}
                             onClick={() => {
                               setResetId(resetId === member.id ? null : member.id)
-                              setResetPassword('')
-                              setResetConfirm('')
-                              setResetError(null)
                             }}
                           >
                             <KeyRound className="size-3.5" />
@@ -568,48 +319,14 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
                       </div>
                     </div>
                     {resetId === member.id ? (
-                      <div className="space-y-3 rounded-xl bg-muted/25 p-4 ring-1 ring-border/60">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <PasswordField
-                            id={`reset-${member.id}`}
-                            label={t('settings.fieldTempPassword')}
-                            value={resetPassword}
-                            onChange={setResetPassword}
-                            disabled={resetting}
-                            showStrength
-                            confirm={resetConfirm}
-                          />
-                          <PasswordField
-                            id={`reset-confirm-${member.id}`}
-                            label={t('settings.fieldTempConfirm')}
-                            value={resetConfirm}
-                            onChange={setResetConfirm}
-                            disabled={resetting}
-                            matchAgainst={resetPassword}
-                          />
-                        </div>
-                        <FormError message={resetError} />
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setResetId(null)}
-                          >
-                            {t('common.cancel')}
-                          </Button>
-                          <Button
-                            type="button"
-                            disabled={resetting || !resetPassword || !resetConfirm}
-                            onClick={() =>
-                              void resetMemberPassword(member.id, member.name)
-                            }
-                          >
-                            {resetting
-                              ? t('settings.resettingPassword')
-                              : t('settings.confirmResetPassword')}
-                          </Button>
-                        </div>
-                      </div>
+                      <ResetMemberPasswordForm
+                        member={member}
+                        onClose={() =>
+                          setResetId((current) =>
+                            current === member.id ? null : current,
+                          )
+                        }
+                      />
                     ) : null}
                   </li>
                 )
@@ -681,108 +398,7 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
               </ModalFooter>
             </ModalContent>
           </Modal>
-          <Modal open={transferOpen} onOpenChange={setTransferOpen}>
-            <ModalContent>
-              <ModalHeader>
-                <ModalTitle>{t('settings.transferAdminTitle')}</ModalTitle>
-                <ModalDescription>{t('settings.transferAdminDesc')}</ModalDescription>
-              </ModalHeader>
-              <ModalBody className="space-y-5">
-                <label className="block space-y-1.5">
-                  <span className="text-[0.8125rem] font-medium text-foreground">
-                    {t('settings.transferAdminTarget')}
-                  </span>
-                  <Select
-                    value={transferTargetId}
-                    disabled={transferring}
-                    onValueChange={setTransferTargetId}
-                  >
-                    <SelectTrigger
-                      aria-label={t('settings.transferAdminTarget')}
-                      className="h-12 bg-background px-3 text-[0.875rem]"
-                    >
-                      <SelectValue
-                        placeholder={t('settings.transferAdminTargetPlaceholder')}
-                      />
-                    </SelectTrigger>
-                    <SelectContent sideOffset={6}>
-                      {transferCandidates.map((member) => (
-                        <SelectItem
-                          key={member.id}
-                          value={member.id}
-                          className="h-auto py-2 pr-8"
-                        >
-                          <span className="flex items-center gap-2.5">
-                            <UserAvatar
-                              user={member}
-                              className="size-7 shrink-0"
-                              fallbackClassName="text-[0.625rem]"
-                            />
-                            <span className="flex min-w-0 flex-col">
-                              <span className="truncate text-[0.8125rem] font-medium">
-                                {member.name}
-                              </span>
-                              <span className="truncate text-[0.6875rem] text-muted-foreground">
-                                {member.email}
-                              </span>
-                            </span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-                <div className="space-y-1.5">
-                  <p className="text-[0.8125rem] font-medium text-foreground">
-                    {t('settings.transferAdminYourNextRole')}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2" role="group">
-                    {(['maintainer', 'viewer'] as const).map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        disabled={transferring}
-                        aria-pressed={transferRole === item}
-                        onClick={() => setTransferRole(item)}
-                        className={cn(
-                          'rounded-lg px-3 py-2 text-[0.8125rem] font-medium transition-colors',
-                          transferRole === item
-                            ? 'bg-foreground text-background'
-                            : 'bg-muted/40 text-muted-foreground hover:bg-muted/65 hover:text-foreground',
-                        )}
-                      >
-                        {roleLabel(item)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <p className="rounded-xl bg-destructive/10 px-3 py-2.5 text-[0.8125rem] leading-relaxed text-foreground">
-                  {t('settings.transferAdminWarning')}
-                </p>
-                <FormError message={transferError} />
-              </ModalBody>
-              <ModalFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={transferring}
-                  onClick={() => setTransferOpen(false)}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={transferring || !transferTargetId}
-                  onClick={() => void transferAdministrator()}
-                >
-                  {transferring
-                    ? t('settings.transferringAdmin')
-                    : t('settings.confirmTransferAdmin')}
-                </Button>
-              </ModalFooter>
-            </ModalContent>
-          </Modal>
+
           <p className="mt-3 text-[0.75rem] text-muted-foreground">
             {t('settings.membersHint')}
           </p>

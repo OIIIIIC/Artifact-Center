@@ -31,6 +31,7 @@ data/
 # Tooling
 .eslintcache
 .prettiercache
+.playwright-cli/
 
 # Local temp / design scratch
 tmp/
