@@ -6,7 +6,22 @@ import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules'] },
+  {
+    ignores: [
+      'dist',
+      'node_modules',
+      'coverage',
+      'output',
+      '.playwright-cli',
+      '.diagnostics',
+    ],
+  },
+  {
+    files: ['playwright.config.ts', 'e2e/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],
     files: ['**/*.{ts,tsx}'],

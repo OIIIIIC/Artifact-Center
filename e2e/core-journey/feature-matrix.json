@@ -1,0 +1,225 @@
+{
+  "version": 1,
+  "application": { "name": "Artifact Center", "platforms": ["web"] },
+  "execution": {
+    "runner": "npm run test:e2e:core",
+    "visible": false,
+    "session_policy": "New Chromium contexts for authenticated and anonymous users in each run",
+    "restart_policy": "No service restart or automatic test retry; run twice with fresh owned fixtures",
+    "side_effect_policy": {
+      "target": "Confirmed loopback Artifact Center instance only",
+      "fixture_setup": "Create one uniquely named ZIP Application in an existing enabled Product and Project",
+      "publish": "Beta only, inside the owned Application",
+      "download": "Allowed to ignored local evidence directory",
+      "share": "Local fixed-version link, one-day expiry; no external delivery",
+      "personal_preferences": "Capture before browser filtering; restore and verify in finally",
+      "cleanup": "Registered ID plus current run name check; never delete pre-existing data",
+      "audit": "Append-only facts remain according to product behavior"
+    }
+  },
+  "features": [
+    {
+      "id": "core.authentication",
+      "name": "Browser login",
+      "kind": "workflow",
+      "source_refs": ["src/routes/login-page.tsx", "src/store/auth-store.ts"],
+      "scenarios": [
+        {
+          "id": "core.authentication.admin-session",
+          "kind": "normal",
+          "status": "implemented",
+          "preconditions": [
+            "Healthy local instance and externally supplied local admin credentials"
+          ],
+          "actions": ["Enter credentials in the browser login form and sign in"],
+          "expected": [
+            "Authenticated application page is visible and the session can access the current user endpoint"
+          ],
+          "evidence": [
+            {
+              "type": "ui-and-api",
+              "assertion": "Login route leaves /login, Applications heading is visible, /auth/me confirms cleanup authority"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "core.discovery",
+      "name": "Find the owned application",
+      "kind": "workflow",
+      "source_refs": [
+        "src/routes/applications-page.tsx",
+        "src/features/applications/use-applications.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "core.discovery.search-and-open",
+          "kind": "normal",
+          "status": "implemented",
+          "preconditions": [
+            "An owned Application has been registered by ID and unique run name"
+          ],
+          "actions": [
+            "Type the unique application name into browser search and open its result"
+          ],
+          "expected": [
+            "One matching result opens the detail route for the registered application ID"
+          ],
+          "evidence": [
+            {
+              "type": "ui-state",
+              "assertion": "Unique result count, detail URL and exact application heading match"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "core.publication",
+      "name": "Publish a Beta ZIP",
+      "kind": "workflow",
+      "source_refs": [
+        "src/features/upload/step-version.tsx",
+        "src/features/upload/use-upload-flow.ts",
+        "apps/api/src/routes/upload-completion.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "core.publication.beta-zip",
+          "kind": "effect",
+          "status": "implemented",
+          "preconditions": ["Owned ZIP application and generated valid ZIP fixture"],
+          "actions": [
+            "Select the fixture, edit version/build, explicitly select Beta, review and publish through the browser",
+            "Open the application's artifact history"
+          ],
+          "expected": [
+            "Published artifact belongs to the owned application and preserves version, build, Beta channel, file size and SHA-256",
+            "Artifact history displays the published version and Beta/Latest state"
+          ],
+          "evidence": [
+            {
+              "type": "ui-and-response",
+              "assertion": "Real upload completion response matches the source ZIP metadata, success UI and artifact history agree"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "core.download",
+      "name": "Authenticated browser download",
+      "kind": "workflow",
+      "source_refs": [
+        "src/features/applications/use-download-artifact.ts",
+        "apps/api/src/routes/artifacts.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "core.download.authenticated-bytes",
+          "kind": "effect",
+          "status": "implemented",
+          "preconditions": ["Owned Beta artifact has been published"],
+          "actions": [
+            "Click the artifact download button and confirm the test-version notice",
+            "Save the browser's actual download"
+          ],
+          "expected": [
+            "Downloaded distribution filename, byte length and SHA-256 match the published artifact and source ZIP"
+          ],
+          "evidence": [
+            {
+              "type": "downloaded-file",
+              "assertion": "Native browser download compared with source; a toast alone is not accepted"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "core.share",
+      "name": "Fixed-version anonymous share download",
+      "kind": "workflow",
+      "source_refs": [
+        "src/features/share/share-dialog.tsx",
+        "src/routes/share-download-page.tsx",
+        "apps/api/src/routes/public.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "core.share.anonymous-bytes",
+          "kind": "effect",
+          "status": "implemented",
+          "preconditions": ["Owned published Beta artifact"],
+          "actions": [
+            "Create a pinned share with one-day expiry in the browser",
+            "Open the link in a new unauthenticated browser context and confirm download"
+          ],
+          "expected": [
+            "Anonymous page shows the owned application and Beta channel",
+            "Downloaded file has the same distribution filename, byte length and SHA-256"
+          ],
+          "evidence": [
+            {
+              "type": "anonymous-ui-and-file",
+              "assertion": "Separate context without copied auth state completes the actual file download and digest check"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "core.teardown",
+      "name": "Owned-data cleanup and state restoration",
+      "kind": "crud",
+      "source_refs": [
+        "e2e/core-journey/ownership.ts",
+        "apps/api/src/routes/application-details.ts",
+        "src/services/api/workspace.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "core.teardown.owned-only",
+          "kind": "effect",
+          "status": "implemented",
+          "preconditions": [
+            "Fixture ownership entries and original inventory/workspace snapshots recorded"
+          ],
+          "actions": [
+            "Finally verify registered application ID and current run name, delete it, and verify artifact and share invalidation",
+            "Restore original workspace preferences and compare pre-existing inventory and workspace state"
+          ],
+          "expected": [
+            "Owned application and artifact are unavailable, owned share is invalid, original inventory and workspace agree with baseline"
+          ],
+          "evidence": [
+            {
+              "type": "api-and-ui",
+              "assertion": "404 checks, invalid-share page, inventory comparison and workspace comparison are recorded"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": [
+            "Delete only the application whose ID and current run name both match the registry",
+            "Retain mismatch evidence; never broaden cleanup to unrelated applications"
+          ]
+        }
+      ]
+    }
+  ],
+  "scope_exclusions": [
+    "Stable production publication and real APK/AAB/EXE installation packages",
+    "Viewer/maintainer permission matrix and invalid authentication",
+    "Interrupted upload, resume, retry, concurrent publication and storage quota boundaries",
+    "Latest-mode and collection shares, expiry and explicit revocation",
+    "Other browsers, mobile layout, accessibility, visual regression and CI environment provisioning"
+  ],
+  "scope_note": "This matrix covers the bounded core workflow authorized in this task. Implemented means runnable assertions, not a recorded passing run; inspect the run evidence for the actual verdict."
+}
