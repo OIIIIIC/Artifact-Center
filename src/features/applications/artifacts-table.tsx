@@ -9,7 +9,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -71,6 +71,38 @@ export function ArtifactsTable({
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
+  const menuDomId = useId()
+
+  useEffect(() => {
+    if (!menuId) return
+    const close = () => {
+      setMenuId(null)
+      setConfirmDeleteId(null)
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !menuRef.current?.contains(event.target) &&
+        !menuTriggerRef.current?.contains(event.target)
+      )
+        close()
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      event.preventDefault()
+      close()
+      menuTriggerRef.current?.focus()
+    }
+    menuRef.current?.focus()
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [menuId])
 
   const getMenuPosition = (trigger: HTMLElement) => {
     const triggerRect = trigger.getBoundingClientRect()
@@ -366,6 +398,8 @@ export function ArtifactsTable({
                           className="size-8 text-muted-foreground hover:text-foreground"
                           aria-label={t('detail.moreActions')}
                           aria-expanded={menuOpen}
+                          aria-haspopup="menu"
+                          aria-controls={menuOpen ? menuDomId : undefined}
                           disabled={Boolean(rowBusy)}
                           onClick={(event) => {
                             setConfirmDeleteId(null)
@@ -373,6 +407,7 @@ export function ArtifactsTable({
                               setMenuId(null)
                               return
                             }
+                            menuTriggerRef.current = event.currentTarget
                             setMenuPosition(getMenuPosition(event.currentTarget))
                             setMenuId(art.id)
                           }}
@@ -390,6 +425,9 @@ export function ArtifactsTable({
                         {menuOpen
                           ? createPortal(
                               <div
+                                ref={menuRef}
+                                id={menuDomId}
+                                tabIndex={-1}
                                 className={cn(
                                   'fixed z-50 min-w-[11rem] rounded-xl bg-popover p-1 shadow-md ring-1 ring-border',
                                 )}

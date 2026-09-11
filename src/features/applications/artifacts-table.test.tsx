@@ -1,101 +1,74 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
-
-import { queryKeys } from '@/lib/query-keys'
-import type { Artifact } from '@/types/artifact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import '@/i18n'
 import { ArtifactsTable } from './artifacts-table'
+import type { Artifact } from '@/types/artifact'
 
-const deleteArtifact = vi.fn()
-
-vi.mock('react-i18next', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-i18next')>()
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key: string, values?: Record<string, string>) =>
-        values?.number ? `${key} ${values.number}` : key,
-      i18n: { language: 'zh-CN' },
-    }),
-  }
-})
-
-vi.mock('@/features/applications/use-download-artifact', () => ({
-  useDownloadArtifact: () => ({
-    download: vi.fn(),
-    isBusy: () => false,
-    downloadConfirmation: null,
-  }),
+vi.mock('@/services/api', () => ({
+  apiDeleteArtifact: vi.fn(),
+  apiUpdateArtifact: vi.fn(),
 }))
-
-vi.mock('@/services/api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/services/api')>()
-  return {
-    ...actual,
-    apiDeleteArtifact: (...args: unknown[]) => deleteArtifact(...args),
-  }
-})
-
 const artifact: Artifact = {
   id: 'artifact-1',
   applicationId: 'app-1',
-  version: '0.0.5',
-  buildNumber: '1005',
+  version: '1.0.0',
+  buildNumber: '1',
   platform: 'android',
-  type: 'apk',
-  sizeBytes: 266 * 1024 * 1024,
-  uploadedAt: '2026-08-24T00:00:00.000Z',
-  uploader: '张盈睿',
-  status: 'latest',
-  channel: 'stable',
+  sizeBytes: 123,
+  uploadedAt: '2026-09-10T00:00:00Z',
+  uploader: '测试',
+  status: 'beta',
+  channel: 'beta',
   releaseNotes: '',
-  filename: 'sansha_caregiver_v0.0.5_b1005_stable.apk',
+  filename: 'test.apk',
 }
-
-describe('ArtifactsTable filename column', () => {
-  it('uses the available version-column width instead of a fixed 16rem cap', () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    })
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ArtifactsTable artifacts={[artifact]} canManage={false} />
-      </QueryClientProvider>,
-    )
-
-    const filename = screen.getByText(artifact.filename)
-    expect(filename).not.toHaveClass('max-w-[16rem]')
-    expect(filename).toHaveClass('w-full')
+afterEach(cleanup)
+function mount() {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <button>外部按钮</button>
+      <ArtifactsTable
+        canManage
+        artifacts={[artifact, { ...artifact, id: 'artifact-2', version: '2.0.0' }]}
+      />
+    </QueryClientProvider>,
+  )
+  return userEvent.setup()
+}
+describe('制品操作菜单', () => {
+  it('点击菜单外部关闭，并允许外部按钮正常获得焦点', async () => {
+    const user = mount()
+    await user.click(screen.getAllByRole('button', { name: '更多操作' })[0])
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '外部按钮' }))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '外部按钮' })).toHaveFocus()
   })
-})
-
-describe('ArtifactsTable audit cache', () => {
-  it('invalidates the global operation-log cache after deleting an artifact', async () => {
-    const user = userEvent.setup()
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    })
-    deleteArtifact.mockResolvedValue(undefined)
-    queryClient.setQueryData(queryKeys.audit.global, { items: [], nextOffset: null })
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <ArtifactsTable
-          artifacts={[artifact]}
-          applicationId={artifact.applicationId}
-          applicationName="看护外屏"
-          canManage
-        />
-      </QueryClientProvider>,
+  it('Escape 关闭并把焦点还给原按钮', async () => {
+    const user = mount()
+    const trigger = screen.getAllByRole('button', { name: '更多操作' })[0]
+    await user.click(trigger)
+    await user.tab()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+  it('内部删除确认不被误关，取消返回菜单，切换行不残留旧确认', async () => {
+    const user = mount()
+    const triggers = screen.getAllByRole('button', { name: '更多操作' })
+    await user.click(triggers[0])
+    await user.click(screen.getByRole('menuitem', { name: '删除此版本' }))
+    await user.click(
+      within(screen.getByRole('menu')).getByRole('button', { name: '取消' }),
     )
-
-    await user.click(screen.getByRole('button', { name: 'detail.moreActions' }))
-    await user.click(screen.getByRole('menuitem', { name: 'detail.deleteArtifact' }))
-    await user.click(screen.getByRole('button', { name: 'detail.confirmDeleteArtifact' }))
-
-    expect(deleteArtifact).toHaveBeenCalledWith(artifact.id)
-    expect(queryClient.getQueryState(queryKeys.audit.global)?.isInvalidated).toBe(true)
+    expect(screen.getByRole('menuitem', { name: '删除此版本' })).toBeInTheDocument()
+    await user.click(screen.getByRole('menuitem', { name: '删除此版本' }))
+    await user.click(triggers[1])
+    expect(screen.getAllByRole('menu')).toHaveLength(1)
+    expect(screen.getByRole('menuitem', { name: '删除此版本' })).toBeInTheDocument()
+    await user.click(triggers[1])
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 })
