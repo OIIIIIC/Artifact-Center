@@ -367,3 +367,30 @@ describe('产品 → 项目 → 应用（真实 SQL 迁移与 API）', () => {
     ).toBe(400)
   })
 })
+
+it('撤销取消收藏保留原收藏时间，普通重新收藏使用新时间', async () => {
+  const path = '/workspace/favorites/' + ids.legacy
+  expect((await request(path, 'PUT', { favorite: true })).status).toBe(200)
+  await fixture.client.query(
+    "UPDATE user_application_preferences SET favorite_at='2026-01-01T00:00:00Z' WHERE user_id=$1 AND application_id=$2",
+    [ids.admin, ids.legacy],
+  )
+  const saved = async () =>
+    (
+      await fixture.client.query<{ favorite: boolean; favorite_at: Date }>(
+        'SELECT favorite, favorite_at FROM user_application_preferences WHERE user_id=$1 AND application_id=$2',
+        [ids.admin, ids.legacy],
+      )
+    ).rows[0]
+  const original = (await saved()).favorite_at
+  expect((await request(path, 'PUT', { favorite: false })).status).toBe(200)
+  expect((await saved()).favorite).toBe(false)
+  expect(
+    (await request(path, 'PUT', { favorite: true, restoreOrder: true })).status,
+  ).toBe(200)
+  expect((await saved()).favorite).toBe(true)
+  expect((await saved()).favorite_at).toEqual(original)
+  await request(path, 'PUT', { favorite: false })
+  await request(path, 'PUT', { favorite: true })
+  expect((await saved()).favorite_at).not.toEqual(original)
+})

@@ -1,5 +1,5 @@
 import { normalizePlatform } from '../lib/artifact-types.js'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -118,7 +118,7 @@ workspaceRoutes.put('/favorites/:applicationId', async (c) => {
   const user = c.get('user')
   const parsedId = applicationIdSchema.safeParse(c.req.param('applicationId'))
   const parsedBody = z
-    .object({ favorite: z.boolean() })
+    .object({ favorite: z.boolean(), restoreOrder: z.boolean().optional() })
     .safeParse(await c.req.json().catch(() => null))
   if (!parsedId.success || !parsedBody.success) {
     return jsonError(c, 400, 'invalid_body', 'Invalid favorite payload')
@@ -151,7 +151,12 @@ workspaceRoutes.put('/favorites/:applicationId', async (c) => {
       ],
       set: {
         favorite: parsedBody.data.favorite,
-        favoriteAt: parsedBody.data.favorite ? now : null,
+        // Keep the old timestamp on removal so Undo restores its original order.
+        favoriteAt: !parsedBody.data.favorite
+          ? userApplicationPreferences.favoriteAt
+          : parsedBody.data.restoreOrder
+            ? sql`coalesce(${userApplicationPreferences.favoriteAt}, ${now.toISOString()}::timestamptz)`
+            : now,
         updatedAt: now,
       },
     })

@@ -135,7 +135,9 @@ export function WorkspacePage() {
             applications={catalogQuery.catalog}
             workspace={workspace}
             favoritePendingId={favoritePendingId}
-            onToggleFavorite={toggleFavorite}
+            onToggleFavorite={(id) =>
+              toggleFavorite(id, catalogQuery.catalog.find((app) => app.id === id)?.name)
+            }
             onRestoreFilters={(preferences) => {
               const search = buildRestoredApplicationSearch(preferences)
               navigate(`/${search ? `?${search}` : ''}`)

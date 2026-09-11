@@ -27,10 +27,14 @@ export async function apiGetPersonalWorkspace(
 export async function apiSetApplicationFavorite(
   applicationId: string,
   favorite: boolean,
+  restoreOrder = false,
 ): Promise<boolean> {
   const data = await request<{ favorite: boolean }>(
     `/workspace/favorites/${applicationId}`,
-    { method: 'PUT', body: { favorite } },
+    {
+      method: 'PUT',
+      body: { favorite, ...(restoreOrder ? { restoreOrder: true } : {}) },
+    },
   )
   return data.favorite
 }

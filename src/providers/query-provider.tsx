@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
+import { FavoriteActionsProvider } from '@/features/applications/favorite-actions-provider'
 import { useAuthStore } from '@/store/auth-store'
 
 interface QueryProviderProps {
@@ -38,5 +39,9 @@ function QuerySession({ children }: QueryProviderProps) {
     [client],
   )
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={client}>
+      <FavoriteActionsProvider>{children}</FavoriteActionsProvider>
+    </QueryClientProvider>
+  )
 }

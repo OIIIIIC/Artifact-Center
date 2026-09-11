@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useMemo } from 'react'
 
+import { useFavoriteActions } from './use-favorite-actions'
+
 import { queryKeys } from '@/lib/query-keys'
 import {
   apiGetPersonalWorkspace,
-  apiSetApplicationFavorite,
   apiUpdatePersonalWorkspacePreferences,
   type PersonalWorkspace,
   type PersonalWorkspacePreferences,
@@ -36,44 +37,7 @@ export function usePersonalWorkspace() {
     [workspace.favoriteApplicationIds],
   )
 
-  const favoriteMutation = useMutation({
-    mutationFn: ({
-      applicationId,
-      favorite,
-    }: {
-      applicationId: string
-      favorite: boolean
-    }) => apiSetApplicationFavorite(applicationId, favorite),
-    onMutate: async ({ applicationId, favorite }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.personalWorkspace })
-      const previous = queryClient.getQueryData<PersonalWorkspace>(
-        queryKeys.personalWorkspace,
-      )
-      const current = previous ?? EMPTY_WORKSPACE
-      queryClient.setQueryData<PersonalWorkspace>(queryKeys.personalWorkspace, {
-        ...current,
-        favoriteApplicationIds: favorite
-          ? [
-              applicationId,
-              ...current.favoriteApplicationIds.filter((id) => id !== applicationId),
-            ]
-          : current.favoriteApplicationIds.filter((id) => id !== applicationId),
-      })
-      return { previous }
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(queryKeys.personalWorkspace, context.previous)
-      } else {
-        queryClient.removeQueries({ queryKey: queryKeys.personalWorkspace })
-      }
-    },
-    onSettled: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.personalWorkspace }),
-        queryClient.invalidateQueries({ queryKey: ['applications', 'page'] }),
-      ]),
-  })
+  const favoriteActions = useFavoriteActions()
 
   const preferencesMutation = useMutation({
     scope: { id: 'personal-workspace-preferences' },
@@ -121,14 +85,7 @@ export function usePersonalWorkspace() {
     loading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
-    toggleFavorite: (applicationId: string) =>
-      favoriteMutation.mutate({
-        applicationId,
-        favorite: !favoriteIds.has(applicationId),
-      }),
-    favoritePendingId: favoriteMutation.isPending
-      ? favoriteMutation.variables?.applicationId
-      : undefined,
+    ...favoriteActions,
     updatePreferences,
   }
 }

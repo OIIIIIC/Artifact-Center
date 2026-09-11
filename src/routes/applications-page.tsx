@@ -11,7 +11,7 @@ import {
   Star,
   Upload,
 } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 
@@ -109,6 +109,11 @@ export function ApplicationsPage() {
       ),
     [catalog, role],
   )
+  const toggleCardFavorite = useCallback(
+    (id: string) => toggleFavorite(id, filtered.find((app) => app.id === id)?.name),
+    [toggleFavorite, filtered],
+  )
+
   const canUpload = Object.values(summary.data?.maintainableCounts ?? {}).some(
     (count) => count > 0,
   )
@@ -457,7 +462,7 @@ export function ApplicationsPage() {
                 refreshing={refreshing}
                 favoriteIds={favoriteIds}
                 favoritePendingId={favoritePendingId}
-                onToggleFavorite={toggleFavorite}
+                onToggleFavorite={toggleCardFavorite}
               />
             ) : null}
             <CollectionPagination

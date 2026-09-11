@@ -10,6 +10,9 @@ const fixture = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { FavoriteActionsProvider } from '../../../src/features/applications/favorite-actions-provider.tsx';
+import { usePersonalWorkspace } from '../../../src/features/applications/use-personal-workspace.ts';
 import { PersonalWorkspace } from '../../../src/features/applications/personal-workspace.tsx';
 import '../../../src/i18n/index.ts';
 import '../../../src/index.css';
@@ -20,20 +23,20 @@ const application = {
 };
 function Fixture() {
   const location = useLocation();
-  const [favorite, setFavorite] = React.useState(true);
+  const { workspace, toggleFavorite } = usePersonalWorkspace();
+  const favorite = workspace.favoriteApplicationIds.includes(application.id);
   return React.createElement(React.Fragment, null,
     React.createElement('output', { id: 'location' }, location.pathname),
     React.createElement('output', { id: 'favorite' }, String(favorite)),
     React.createElement(PersonalWorkspace, {
       applications: [application],
-      workspace: { favoriteApplicationIds: favorite ? [application.id] : [],
-        recentApplications: [], preferences: { platform: 'all', sort: 'updated',
-          regionId: null, query: '', favoriteOnly: false, responsibleOnly: false } },
-      onToggleFavorite: () => setFavorite(false), onRestoreFilters: () => {},
+      workspace, onToggleFavorite: (id) => toggleFavorite(id, application.name), onRestoreFilters: () => {},
     }));
 }
 createRoot(document.getElementById('root')).render(
-  React.createElement(MemoryRouter, { initialEntries: ['/workspace'] }, React.createElement(Fixture)));
+  React.createElement(QueryClientProvider, { client: new QueryClient({defaultOptions: {queries: {retry: false}}}) },
+    React.createElement(FavoriteActionsProvider, null,
+      React.createElement(MemoryRouter, { initialEntries: ['/workspace'] }, React.createElement(Fixture)))));
 `
 
 const fixtureDirectory = 'output/playwright/workspace-favorite'
@@ -80,6 +83,28 @@ try {
     page.setDefaultTimeout(15000)
     page.on('requestfailed', (request) => console.error(request.url(), request.failure()))
     page.on('pageerror', (error) => console.error(error.message))
+    let savedFavorite = true
+    await page.route('**/api/workspace**', async (route) => {
+      if (route.request().method() === 'PUT') {
+        savedFavorite = route.request().postDataJSON().favorite
+        await route.fulfill({ json: { favorite: savedFavorite } })
+      } else {
+        await route.fulfill({
+          json: {
+            favoriteApplicationIds: savedFavorite ? ['favorite-test'] : [],
+            recentApplications: [],
+            preferences: {
+              platform: 'all',
+              sort: 'updated',
+              regionId: null,
+              query: '',
+              favoriteOnly: false,
+              responsibleOnly: false,
+            },
+          },
+        })
+      }
+    })
     await page.goto(`http://127.0.0.1:${address.port}/`, {
       waitUntil: 'domcontentloaded',
     })
@@ -99,6 +124,48 @@ try {
       `${reducedMotion}: star must not open details`,
     )
     await expect(card).toHaveCount(0)
+    const undo = page.getByRole('button', { name: '撤销', exact: true })
+    await expect(undo).toBeVisible()
+    const capsule = undo.locator('..')
+    const capsuleBox = await capsule.boundingBox()
+    assert.ok(capsuleBox.y < 100, 'undo must appear at the top')
+    assert.ok(
+      Math.abs(
+        capsuleBox.x +
+          capsuleBox.width / 2 -
+          (await page.evaluate(() => document.documentElement.clientWidth)) / 2,
+      ) < 2,
+      'undo must be centered',
+    )
+    await capsule.hover()
+    await page.waitForTimeout(5200)
+    await expect(undo).toBeVisible()
+    await page.screenshot({
+      path: `output/playwright/workspace-undo-${reducedMotion}.png`,
+    })
+    if (reducedMotion === 'no-preference') {
+      const samples = await undo.evaluate(
+        (button) =>
+          new Promise((resolve) => {
+            const surface = button.parentElement.parentElement
+            const values = []
+            button.click()
+            const sample = () => {
+              if (!surface.isConnected) return resolve(values)
+              values.push(Number(getComputedStyle(surface).opacity))
+              requestAnimationFrame(sample)
+            }
+            requestAnimationFrame(sample)
+          }),
+      )
+      assert.ok(
+        samples.some((value) => value > 0 && value < 1),
+        'undo must fade out before removal',
+      )
+    } else {
+      await undo.click()
+    }
+    await expect(card).toHaveCount(1)
     await page.reload()
     await page.getByRole('article').getByRole('link').click()
     // Router transitions may render after Playwright has completed the click.
@@ -118,6 +185,15 @@ try {
       'false',
     )
     assert.equal(await page.locator('#location').textContent(), '/workspace')
+    await expect(undo).toBeVisible()
+    await undo.focus()
+    await page.keyboard.press('Enter')
+    await expect(card).toHaveCount(1)
+    await star.click()
+    await expect(undo).toBeVisible()
+    await page.mouse.move(1400, 850)
+    await expect(undo).toHaveCount(0, { timeout: 7000 })
+    assert.equal(savedFavorite, false, 'expiry must keep the removal')
     console.log(
       `PASS (${reducedMotion}): pointer/keyboard remove favorite; card/avatar open details`,
     )
