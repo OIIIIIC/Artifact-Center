@@ -49,7 +49,8 @@ function SelectContent({
         data-slot="select-content"
         position={position}
         className={cn(
-          'z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-[var(--shadow-md)] ring-1 ring-border/70',
+          // Select portals must sit above Modal's overlay (100) and content (101).
+          'z-[110] max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-[var(--shadow-md)] ring-1 ring-border/70',
           'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           className,
         )}
