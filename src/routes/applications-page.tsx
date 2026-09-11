@@ -193,6 +193,7 @@ export function ApplicationsPage() {
 
   return (
     <AppLayout
+      contentClassName="scrollbar-subtle"
       breadcrumbs={[{ label: t('nav.applications') }]}
       sidebarDirectory={<ApplicationDirectory directory={directory} />}
     >

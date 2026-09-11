@@ -167,7 +167,7 @@ export function ProductDirectory({
           onScroll={(event) =>
             navigation?.change({ scrollTop: event.currentTarget.scrollTop })
           }
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 [scrollbar-width:thin]"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 scrollbar-subtle"
         >
           <button
             type="button"

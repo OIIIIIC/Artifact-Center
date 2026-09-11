@@ -97,7 +97,7 @@ export function OperationLogsSettingsPanel({
 
         {items.length > 0 ? (
           <>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-color:color-mix(in_oklch,var(--muted-foreground)_30%,transparent)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25 [&::-webkit-scrollbar-thumb]:bg-clip-content hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/45 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-subtle">
               <Table
                 className="min-w-[54rem] table-fixed"
                 containerClassName="overflow-visible"

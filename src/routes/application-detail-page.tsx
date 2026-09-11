@@ -43,6 +43,7 @@ export function ApplicationDetailPage() {
   if (loading) {
     return (
       <AppLayout
+        contentClassName="scrollbar-subtle"
         sidebarDirectory={sidebarDirectory}
         breadcrumbs={[{ label: t('detail.breadcrumbApps'), href: '/' }, { label: '…' }]}
       >
@@ -59,6 +60,7 @@ export function ApplicationDetailPage() {
   if (loadError || (!application && !notFound)) {
     return (
       <AppLayout
+        contentClassName="scrollbar-subtle"
         sidebarDirectory={sidebarDirectory}
         breadcrumbs={[
           { label: t('detail.breadcrumbApps'), href: '/' },
@@ -85,6 +87,7 @@ export function ApplicationDetailPage() {
   if (notFound || !application) {
     return (
       <AppLayout
+        contentClassName="scrollbar-subtle"
         sidebarDirectory={sidebarDirectory}
         breadcrumbs={[
           { label: t('detail.breadcrumbApps'), href: '/' },
@@ -126,6 +129,7 @@ export function ApplicationDetailPage() {
 
   return (
     <AppLayout
+      contentClassName="scrollbar-subtle"
       sidebarDirectory={sidebarDirectory}
       breadcrumbs={[
         { label: t('detail.breadcrumbApps'), href: '/' },
