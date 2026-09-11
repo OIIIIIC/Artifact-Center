@@ -60,20 +60,20 @@
 
 #### PERF-04：应用、制品和发布列表没有统一分页
 
-- **状态**：❌，分页模型尚未通过 ADR 锁定。
+- **状态**：主浏览页面已完成（2026-09-10）。ADR-0020 锁定游标分页；旧兼容调用及部分管理选择器仍保留全量语义。
 - **具体表现**：目录规模变大后，打开应用列表或应用详情会越来越慢；浏览器一次渲染大量行，滚动卡顿，API 响应体持续膨胀。
 - **触发条件**：数百个 Application，或单个 Application 下积累数百到数千个 Artifact/Release。
 - **影响**：查询、JSON 序列化、网络和 React 渲染成本同时增长；无法稳定定义“下一页”，也不利于移动端。
-- **根因与证据**：集合接口没有一致的 cursor/offset 请求和响应契约；`CONTEXT.md` 仍将分页模型标记为未决。
+- **根因与证据**：原集合接口无读取上限，目录重复加载完整应用用于计数，详情预取全部历史。现以分页、独立汇总和概览查询修复，见 [容量测量与回归记录](performance-2026-09-10.md)。
 - **完成标准**：ADR 锁定分页语义；集合 API 返回稳定游标或页信息；前端支持加载更多/翻页；数据库集成测试覆盖新增、删除发生在翻页期间的边界。
 
 #### PERF-05：多字段前后通配搜索在数据量上升后会退化
 
-- **状态**：🟡 已完成第一步字段裁剪与基线操作说明；仍缺目标规模的真实执行计划和 P95 数据。
+- **状态**：目标规模已完成索引与查询优化（2026-09-10）：300 应用、90,000 制品，版本搜索 P95 17.54ms，无结果查询 P95 14.84ms。单字符搜索 P95 248.15ms，仍高于具体关键词，且易受机器负载影响。见 [实测记录](performance-2026-09-10.md)。
 - **具体表现**：用户输入名称、包名或版本片段后，搜索结果迟迟不出现；字符越通用，扫描行数越多。
 - **触发条件**：Application/Artifact 数量增长，查询形如 `%关键字%`，并同时匹配多个字段。
 - **影响**：全局搜索和应用筛选是“查找制品”主旅程入口，延迟会直接让用户回到询问开发者的旧流程。
-- **根因与证据**：`apps/api/src/routes/applications.ts` 与 `apps/api/src/routes/search.ts` 对多个字段使用前导 `%` 的 `ILIKE`；尚无 `pg_trgm` 索引与目标规模 `EXPLAIN (ANALYZE, BUFFERS)` 实测。
+- **根因与证据**：原全局查询的跨表 OR 阻碍索引筛选，对制品说明反复匹配。已拆分先鉴权的候选分支，增加单个 pg_trgm 表达式索引并复核逐字段匹配；原始 JSON 包含真实 PostgreSQL 执行计划。
 - **已做工作（Codex · 2026-07-30）**：搜索与应用目录只选择会返回给客户端的 Application 列；全局搜索的 Artifact 结果不再读取或传输 `sha256`、`parsedMeta`、`buildMeta`。结果上限继续限制为应用 40、制品 60，未引入新索引或改变搜索契约。
 - **EXPLAIN 基线步骤**：在接近目标规模的 PostgreSQL 环境，以已登录用户可见的数据执行下列查询并保存完整计划、`Execution Time`、`Rows Removed by Filter` 与 `shared hit/read`；分别测高频词和稀有词，每种至少 20 次并记录 P95。`EXPLAIN (ANALYZE, BUFFERS) SELECT id, name, package_name, updated_at FROM applications WHERE name ILIKE '%关键词%' OR package_name ILIKE '%关键词%' OR owner_name ILIKE '%关键词%' ORDER BY updated_at DESC LIMIT 40;`；制品侧以 `artifacts` 与 `applications` 的同等可见性 join、`version/filename/build_number/release_notes` 条件、`ORDER BY artifacts.uploaded_at DESC LIMIT 60` 执行。若扫描行数或 P95 不可接受，再按 ADR-0006 评估 `pg_trgm` migration。
 - **完成标准**：生成接近目标规模的数据；记录现状执行计划和 P95；按 ADR-0006 增加 trigram 索引或调整搜索策略；以相同数据和查询证明扫描行数与延迟达标。
@@ -175,10 +175,10 @@
 - **状态**：🟡 已移除两处会误导用户或维护者的活跃 Mock，文件内容解析仍未真实化。
 - **修复前表现**：上传选择器用演示 Application ID 把真实目录中的同名记录标成“置顶/最近”，即使用户从未置顶或访问；成员设置虽然读取真实 API，却从 `mock-members.ts` 获取角色定义，让维护者难以判断数据来源。
 - **已修复部分**：角色定义迁入 `member-roles.ts`；选择器移除伪造置顶，根据服务端 `updatedAt` 展示“最近更新”，并用纯函数测试证明排序不修改原目录数组。
-- **剩余表现**：上传预解析仍调用 `mockParseFile`，只能按文件名猜测版本、包名和平台，不能读取 APK/AAB 清单或签名；`src/store/applications-store.ts`、`src/store/artifacts-store.ts` 与 `src/mocks/*` 仍是互相引用的死链，容易被误接回业务入口。
+- **剩余表现**：上传预解析仍调用 `mockParseFile`，只能按文件名猜测版本、包名和平台，不能读取 APK/AAB 清单或签名。旧 store/mock 死链已于 2026-09-10 经入口依赖检查后移除，见 [代码整理记录](code-maintenance-2026-09-10.md)。
 - **影响**：错误元数据可能让制品发布到错误 Application 或使用错误版本；Mock 命名会增加误用和重复实现风险。
-- **根因与证据**：`src/features/upload/use-upload-flow.ts` 仍导入 `mock-parse.ts`；依赖搜索显示旧 store/mock 文件没有真实页面、Provider 或服务入口。
-- **完成标准**：APK/AAB 至少从真实文件读取并校验 package/version/signature；EXE/ZIP 明确区分“可解析字段”和“人工输入字段”；依赖图与构建证明旧 store/mock 死链无入口后再移除，并用真实样本测试覆盖。
+- **根因与证据**：`src/features/upload/use-upload-flow.ts` 仍导入 `mock-parse.ts`；该模块仍在正式上传流程中，不能作为废弃文件直接删除。
+- **完成标准**：APK/AAB 至少从真实文件读取并校验 package/version/signature；EXE/ZIP 明确区分“可解析字段”和“人工输入字段”，并用真实样本测试覆盖。旧 store/mock 死链移除已完成。
 
 ### 2.5 用户体验、可访问性与界面质量
 
@@ -245,10 +245,12 @@
 
 ### 2.6 测试与运维
 
-#### TEST-01：核心旅程没有真实浏览器 E2E
+#### TEST-01：核心旅程已有本地浏览器 E2E，CI 与异常场景仍待补
 
-- **状态**：❌。
-- **具体表现**：组件测试全部通过时，仍可能在线上出现路由跳转错误、Cookie/Authorization/CORS 不一致、下载响应被浏览器拦截或弹窗焦点错误。
+- **状态**：🟡 2026-09-10 已补充并连续两次通过本地 Chromium 核心成功路径；未接入 CI，仍需外部提供本地管理员测试账号。
+- **已验证**：独立浏览器登录、搜索专用应用、发布 Beta ZIP、版本核对、登录下载、匿名固定版本分享下载；两次下载均验证文件名、字节数及 SHA-256。每轮清理专用应用/制品/分享，恢复个人工作台，核对原有 18 个应用与 13 个制品。主线程另核对磁盘 13 个原有文件的路径和大小不变。
+- **证据入口**：[运行契约与覆盖范围](../e2e/core-journey/README.md)、[运行结果](../e2e/core-journey/RESULTS.md)。测试保留脱敏结果与主动选择的截图；默认关闭可能包含凭据的 trace、视频和自动失败截图。
+- **剩余缺口**：其他角色、制品类型、上传中断/重试、边界权限与多浏览器等场景尚未形成浏览器回归基线。
 - **触发条件**：前端、API、数据库和代理组合运行后，执行登录→筛选→上传→下载→分享完整链路。
 - **影响**：发布前无法自动回答“真实用户能否完成任务”，回归依赖人工记忆。
 - **完成标准**：在隔离数据上运行 Playwright 核心旅程；失败保留截图、trace 和服务日志；CI 中稳定执行且不依赖预置个人账号。
