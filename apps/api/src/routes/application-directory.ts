@@ -47,11 +47,9 @@ export function registerApplicationDirectory(
         )!,
       )
     }
-    if (platform !== 'all' && platformEnum.safeParse(platform).success) {
-      conditions.push(
-        eq(applications.platform, platform as 'android' | 'windows' | 'zip'),
-      )
-    }
+    const parsedPlatform = platformEnum.safeParse(platform)
+    if (parsedPlatform.success)
+      conditions.push(eq(applications.platform, parsedPlatform.data))
 
     const where = conditions.length ? and(...conditions) : undefined
 

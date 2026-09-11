@@ -1,3 +1,4 @@
+import { APPLICATION_PLATFORMS, ARTIFACT_TYPES } from '../lib/artifact-types.js'
 import {
   bigint,
   boolean,
@@ -24,7 +25,7 @@ export const applicationMemberRoleEnum = pgEnum('application_member_role', [
   'viewer',
 ])
 
-export const appPlatformEnum = pgEnum('app_platform', ['android', 'windows', 'zip'])
+export const appPlatformEnum = pgEnum('app_platform', APPLICATION_PLATFORMS)
 
 export const appStatusEnum = pgEnum('app_status', [
   'active',
@@ -42,7 +43,7 @@ export const artifactStatusEnum = pgEnum('artifact_status', [
   'archived',
 ])
 
-export const artifactTypeEnum = pgEnum('artifact_type', ['apk', 'aab', 'exe', 'zip'])
+export const artifactTypeEnum = pgEnum('artifact_type', ARTIFACT_TYPES)
 
 export const uploadSessionStatusEnum = pgEnum('upload_session_status', [
   'active',
@@ -250,7 +251,7 @@ export const userWorkspacePreferences = pgTable(
   (t) => [
     check(
       'user_workspace_preferences_platform_valid',
-      sql`${t.platform} in ('all', 'android', 'windows', 'zip')`,
+      sql`${t.platform} in ('all', 'android', 'windows', 'linux')`,
     ),
     check(
       'user_workspace_preferences_sort_valid',

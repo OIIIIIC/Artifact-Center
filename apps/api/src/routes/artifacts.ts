@@ -1,3 +1,4 @@
+import { normalizePlatform } from '../lib/artifact-types.js'
 import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { Readable } from 'node:stream'
@@ -46,9 +47,16 @@ const MAX_UPLOAD_BYTES = 512 * 1024 * 1024 // 512 MB
 const MAX_MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 const channelEnum = z.enum(['stable', 'beta', 'internal', 'deprecated'])
-const platformEnum = z.enum(['android', 'windows', 'zip'])
+const platformEnum = z.preprocess(
+  normalizePlatform,
+  z.enum(['android', 'windows', 'linux']),
+)
 const statusEnum = z.enum(['latest', 'stable', 'beta', 'deprecated', 'archived'])
-type ArtifactType = 'apk' | 'aab' | 'exe' | 'zip'
+import {
+  resolveArtifactType,
+  platformForArtifactType,
+  type ArtifactType,
+} from '../lib/artifact-types.js'
 
 const patchSchema = z.object({
   channel: channelEnum.optional(),
@@ -67,19 +75,6 @@ async function findArtifactForDownload(id: string) {
     .limit(1)
 
   return row ? { ...row.artifact, applicationName: row.applicationName } : undefined
-}
-
-function resolveArtifactType(filename: string): ArtifactType | null {
-  const ext = filename.split('.').pop()?.toLowerCase()
-  if (ext === 'apk' || ext === 'aab' || ext === 'exe' || ext === 'zip') return ext
-  if (ext === 'msi') return 'exe'
-  return null
-}
-
-function platformForArtifactType(type: ArtifactType) {
-  if (type === 'apk' || type === 'aab') return 'android' as const
-  if (type === 'exe') return 'windows' as const
-  return 'zip' as const
 }
 
 function isUniqueViolation(error: unknown): boolean {

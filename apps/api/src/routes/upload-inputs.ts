@@ -1,3 +1,4 @@
+import { normalizePlatform } from '../lib/artifact-types.js'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/client.js'
@@ -14,7 +15,10 @@ export const MAX_PART_COUNT = Math.ceil(MAX_UPLOAD_BYTES / PART_SIZE_BYTES)
 
 export const SESSION_TTL_MS = 24 * 60 * 60 * 1000
 
-export const platformEnum = z.enum(['android', 'windows', 'zip'])
+export const platformEnum = z.preprocess(
+  normalizePlatform,
+  z.enum(['android', 'windows', 'linux']),
+)
 
 export const channelEnum = z.enum(['stable', 'beta', 'internal', 'deprecated'])
 
@@ -35,20 +39,11 @@ export const releaseApplicationQuerySchema = z.object({
   platform: platformEnum.optional(),
 })
 
-export type ArtifactType = 'apk' | 'aab' | 'exe' | 'zip'
-
-export function resolveArtifactType(filename: string): ArtifactType | null {
-  const ext = filename.split('.').pop()?.toLowerCase()
-  if (ext === 'apk' || ext === 'aab' || ext === 'exe' || ext === 'zip') return ext
-  if (ext === 'msi') return 'exe'
-  return null
-}
-
-export function platformForArtifactType(type: ArtifactType) {
-  if (type === 'apk' || type === 'aab') return 'android' as const
-  if (type === 'exe') return 'windows' as const
-  return 'zip' as const
-}
+export {
+  resolveArtifactType,
+  platformForArtifactType,
+  type ArtifactType,
+} from '../lib/artifact-types.js'
 
 export function isUniqueViolation(error: unknown): boolean {
   return (

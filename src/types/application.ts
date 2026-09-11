@@ -1,4 +1,5 @@
-export type ApplicationPlatform = 'android' | 'windows' | 'zip'
+import type { ApplicationPlatform } from '@/lib/artifact-types'
+export type { ApplicationPlatform } from '@/lib/artifact-types'
 
 /**
  * Lifecycle / release signals shown on cards.

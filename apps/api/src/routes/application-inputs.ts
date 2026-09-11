@@ -1,9 +1,13 @@
+import { normalizePlatform } from '../lib/artifact-types.js'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/client.js'
 import { projects } from '../db/schema.js'
 
-export const platformEnum = z.enum(['android', 'windows', 'zip'])
+export const platformEnum = z.preprocess(
+  normalizePlatform,
+  z.enum(['android', 'windows', 'linux']),
+)
 
 export const statusEnum = z.enum(['active', 'new', 'beta', 'deprecated', 'archived'])
 

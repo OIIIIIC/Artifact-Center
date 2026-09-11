@@ -1,3 +1,4 @@
+import { normalizePlatform } from '@/lib/artifact-types'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
@@ -17,11 +18,11 @@ import type {
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { useCollectionPage } from '@/hooks/use-collection-page'
 
-const PLATFORMS = new Set<ApplicationPlatform>(['android', 'windows', 'zip'])
+const PLATFORMS = new Set<ApplicationPlatform>(['android', 'windows', 'linux'])
 const SORTS = new Set<ApplicationSort>(['updated', 'name', 'created'])
 
 export function parseApplicationFilters(params: URLSearchParams): ApplicationFilters {
-  const platform = params.get('platform')
+  const platform = normalizePlatform(params.get('platform'))
   const sort = params.get('sort')
   return {
     query: (params.get('q') ?? '').slice(0, 120),

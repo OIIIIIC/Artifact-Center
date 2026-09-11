@@ -41,7 +41,7 @@ function getReturnTo(state: unknown): string {
 
 function extFor(platform: Application['platform']) {
   if (platform === 'windows') return 'exe'
-  if (platform === 'zip') return 'zip'
+  if (platform === 'linux') return 'zip'
   return 'apk'
 }
 

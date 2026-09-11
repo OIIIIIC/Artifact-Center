@@ -165,7 +165,7 @@
   "platform": {
     "android": "Android",
     "windows": "Windows",
-    "zip": "ZIP",
+    "linux": "Linux",
     "all": "All"
   },
   "status": {
@@ -948,7 +948,7 @@
     "createApplication": "Create application",
     "changeApplication": "Change application",
     "dropHere": "Drop artifact here",
-    "dropHint": "or click to browse · APK / AAB / EXE / ZIP",
+    "dropHint": "or click to browse · {{formats}}",
     "dropTarget": " · target {{platform}}",
     "uploading": "Checking file…",
     "verifying": "Verifying artifact information…",

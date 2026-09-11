@@ -1,3 +1,4 @@
+import { artifactExtension } from './artifact-types.js'
 export type DistributionFilenameInput = {
   regionCode: string
   applicationCode: string
@@ -25,7 +26,9 @@ function filenameSegment(value: string, fallback: string): string {
  */
 export function distributionFilename(input: DistributionFilenameInput): string {
   const extension =
-    EXTENSION_PATTERN.exec(input.originalFilename.trim())?.[1]?.toLowerCase() ?? 'bin'
+    artifactExtension(input.originalFilename)?.slice(1) ??
+    EXTENSION_PATTERN.exec(input.originalFilename.trim())?.[1]?.toLowerCase() ??
+    'bin'
   const region = filenameSegment(input.regionCode, 'region')
   const application = filenameSegment(input.applicationCode, 'application')
   const version = filenameSegment(input.version.replace(/^v/i, ''), 'unknown')

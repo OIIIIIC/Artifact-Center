@@ -122,22 +122,11 @@ export function useUploadFlow() {
     const t2 = window.setTimeout(() => setPhase('hashing'), 800)
     const t3 = window.setTimeout(() => {
       const result = mockParseFile({ name: file.name, size: file.size }, app)
-      if (
-        app &&
-        result.platform &&
-        app.platform !== 'zip' &&
-        result.platform !== app.platform &&
-        !(app.platform === 'android' && (result.kind === 'apk' || result.kind === 'aab'))
-      ) {
-        if (
-          (app.platform === 'windows' && result.platform !== 'windows') ||
-          (app.platform === 'android' && result.platform !== 'android')
-        ) {
-          setPhase('error')
-          setFileError('wrong_platform')
-          setParsed(result)
-          return
-        }
+      if (app && result.platform !== app.platform) {
+        setPhase('error')
+        setFileError('wrong_platform')
+        setParsed(result)
+        return
       }
 
       setParsed(result)

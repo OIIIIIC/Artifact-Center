@@ -16,7 +16,7 @@ server.registerTool('artifact_center_check_authorization', {
 
 server.registerTool('artifact_center_list_applications', {
   description: 'List non-archived Artifact Center applications that this release credential may publish to.',
-  inputSchema: { query: z.string().optional(), platform: z.enum(['android', 'windows', 'zip']).optional() },
+  inputSchema: { query: z.string().optional(), platform: z.enum(['android', 'windows', 'linux', 'zip']).transform(value => value === 'zip' ? 'linux' : value).optional() },
 }, run(async ({ query, platform }) => {
   const params = new URLSearchParams()
   if (query) params.set('q', query); if (platform) params.set('platform', platform)
@@ -29,10 +29,10 @@ server.registerTool('artifact_center_get_application', {
 }, run(async ({ applicationId }) => (await client()).get(`/release/applications/${encodeURIComponent(applicationId)}/target`)))
 
 server.registerTool('artifact_center_upload_artifact', {
-  description: 'Upload a completed APK, AAB, EXE/MSI, or ZIP as beta or stable without replacing latest. Upload is resumable and requires an explicit build number.',
+  description: 'Upload a completed APK, AAB, EXE/MSI, or Linux ZIP/TAR/TAR.GZ/TGZ/DEB/RPM/AppImage as beta or stable without replacing latest. Upload is resumable and requires an explicit build number.',
   inputSchema: {
     applicationId: z.string().min(1), filePath: z.string().min(1), version: z.string().min(1), buildNumber: z.string().min(1),
-    platform: z.enum(['android', 'windows', 'zip']), channel: z.enum(['beta', 'stable']).default('beta'),
+    platform: z.enum(['android', 'windows', 'linux', 'zip']).transform(value => value === 'zip' ? 'linux' : value), channel: z.enum(['beta', 'stable']).default('beta'),
     releaseNotes: z.string().max(8000).default(''),
   },
 }, run(async (input) => (await client()).uploadArtifact(input)))

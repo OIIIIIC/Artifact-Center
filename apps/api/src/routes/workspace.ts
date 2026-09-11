@@ -1,3 +1,4 @@
+import { normalizePlatform } from '../lib/artifact-types.js'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
@@ -19,7 +20,9 @@ const applicationIdSchema = z.string().uuid()
 
 export const workspacePreferencesSchema = z
   .object({
-    platform: z.enum(['all', 'android', 'windows', 'zip']).optional(),
+    platform: z
+      .preprocess(normalizePlatform, z.enum(['all', 'android', 'windows', 'linux']))
+      .optional(),
     sort: z.enum(['updated', 'name', 'created']).optional(),
     regionId: z.string().uuid().nullable().optional(),
     projectId: z.string().uuid().nullable().optional(),

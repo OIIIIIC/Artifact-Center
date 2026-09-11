@@ -32,7 +32,7 @@ import { apiCreateApplication } from '@/services/api'
 import { useAuthStore } from '@/store/auth-store'
 import type { Application, ApplicationPlatform } from '@/types/application'
 
-const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
+const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'linux']
 
 const sectionClass = cn(
   'rounded-2xl bg-muted/25 ring-1 ring-border/60',

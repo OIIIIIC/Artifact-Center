@@ -31,6 +31,7 @@ import {
   getSessionForUser,
   isUniqueViolation,
   platformEnum,
+  platformForArtifactType,
   resolveArtifactType,
 } from './upload-inputs.js'
 
@@ -134,7 +135,11 @@ export function registerUploadCompletion(
     const user = c.get('user')
     const uploaderName =
       credential.kind === 'release-credential' ? credential.name : user.name
-    if (!artifactType) {
+    if (
+      !artifactType ||
+      platform !== app.platform ||
+      platform !== platformForArtifactType(artifactType)
+    ) {
       if (session.storageBackend === 's3') await deleteObject(session.storageKey)
       else await deleteStorageFile(session.storageKey)
       return jsonError(c, 409, 'upload_invalid', 'Upload metadata is no longer valid')

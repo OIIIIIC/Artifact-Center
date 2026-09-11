@@ -1,3 +1,8 @@
+import {
+  resolveArtifactType,
+  platformForArtifactType,
+  ARTIFACT_TYPES,
+} from '@/lib/artifact-types'
 import type { Application } from '@/types/application'
 import type { ApplicationPlatform } from '@/types/application'
 import type { FileKind, ParsedArtifactFile } from '@/types/upload'
@@ -8,11 +13,9 @@ function extOf(name: string): string {
 }
 
 export function detectFileKind(filename: string): FileKind {
+  const supported = resolveArtifactType(filename)
+  if (supported) return supported
   const ext = extOf(filename)
-  if (ext === 'apk') return 'apk'
-  if (ext === 'aab') return 'aab'
-  if (ext === 'exe' || ext === 'msi') return 'exe'
-  if (ext === 'zip') return 'zip'
   if (ext === 'ipa') return 'ipa'
   if (ext === 'bin' || ext === 'img' || ext === 'hex') return 'firmware'
   if (ext === 'tar' || filename.toLowerCase().includes('docker')) return 'docker'
@@ -20,14 +23,11 @@ export function detectFileKind(filename: string): FileKind {
 }
 
 export function platformFromKind(kind: FileKind): ApplicationPlatform | null {
-  if (kind === 'apk' || kind === 'aab') return 'android'
-  if (kind === 'exe') return 'windows'
-  if (kind === 'zip') return 'zip'
-  return null
+  return isEnabledKind(kind) ? platformForArtifactType(kind) : null
 }
 
-export function isEnabledKind(kind: FileKind): boolean {
-  return kind === 'apk' || kind === 'aab' || kind === 'exe' || kind === 'zip'
+export function isEnabledKind(kind: FileKind): kind is (typeof ARTIFACT_TYPES)[number] {
+  return (ARTIFACT_TYPES as readonly string[]).includes(kind)
 }
 
 /** Mock sha256-looking digest from name + size */

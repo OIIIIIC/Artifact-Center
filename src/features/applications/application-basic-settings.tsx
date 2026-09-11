@@ -35,7 +35,7 @@ import { toast } from 'sonner'
 import { Choice, FieldLabel, InfoCell, TextField } from './application-settings-fields'
 
 type EditableField = Exclude<ApplicationEditableField, 'owner'>
-const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
+const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'linux']
 const STATUSES: ApplicationStatus[] = ['active', 'new', 'beta', 'deprecated', 'archived']
 export function ApplicationBasicSettings({ application }: { application: Application }) {
   const { t } = useTranslation()

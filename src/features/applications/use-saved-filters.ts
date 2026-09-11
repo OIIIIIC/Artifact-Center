@@ -1,3 +1,4 @@
+import { normalizePlatform } from '@/lib/artifact-types'
 import type {
   ApplicationFilters,
   ApplicationPlatform,
@@ -10,7 +11,7 @@ const PLATFORMS = new Set<ApplicationPlatform | 'all'>([
   'all',
   'android',
   'windows',
-  'zip',
+  'linux',
 ])
 const SORTS = new Set<ApplicationSort>(['updated', 'name', 'created'])
 
@@ -40,6 +41,7 @@ export function readSavedFilterPrefs(): SavedFilterPrefs {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return { ...DEFAULT_PREFS }
     const parsed = JSON.parse(raw) as Partial<SavedFilterPrefs>
+    parsed.platform = normalizePlatform(parsed.platform) as SavedFilterPrefs['platform']
     const platform =
       parsed.platform && PLATFORMS.has(parsed.platform) ? parsed.platform : 'all'
     const sort = parsed.sort && SORTS.has(parsed.sort) ? parsed.sort : 'updated'

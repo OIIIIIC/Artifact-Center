@@ -124,7 +124,7 @@ export function UploadPage() {
                   {flow.step === 3 ? (
                     <StepVersion
                       version={flow.version}
-                      applicationPlatform={flow.application?.platform ?? 'zip'}
+                      applicationPlatform={flow.application?.platform ?? 'linux'}
                       versionSuggestionMode={flow.versionSuggestionMode}
                       detectedVersion={flow.parsed?.detectedVersion ?? null}
                       onChange={flow.updateVersion}

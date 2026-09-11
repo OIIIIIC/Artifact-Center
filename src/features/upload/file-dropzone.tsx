@@ -1,4 +1,10 @@
 import {
+  acceptedArtifactExtensions,
+  ARTIFACT_REGISTRY,
+  ARTIFACT_TYPES,
+  type ArtifactType,
+} from '@/lib/artifact-types'
+import {
   AlertCircle,
   CheckCircle2,
   FileArchive,
@@ -10,7 +16,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
-import { ACCEPT_ATTR, ENABLED_FILE_TYPES } from '@/features/upload/upload-meta'
+import { ENABLED_FILE_TYPES } from '@/features/upload/upload-meta'
 import { formatFileSize } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Application } from '@/types/application'
@@ -35,6 +41,18 @@ export function FileDropzone({
   onClear,
 }: FileDropzoneProps) {
   const { t } = useTranslation()
+  const accept = acceptedArtifactExtensions(application?.platform)
+  const fileTypes = ENABLED_FILE_TYPES.filter(
+    (item) =>
+      !item.enabled ||
+      !application ||
+      ARTIFACT_REGISTRY[item.kind as ArtifactType].platform === application.platform,
+  )
+  const formats = ARTIFACT_TYPES.filter(
+    (kind) => !application || ARTIFACT_REGISTRY[kind].platform === application.platform,
+  )
+    .map((kind) => ARTIFACT_REGISTRY[kind].label)
+    .join(' / ')
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
 
@@ -111,7 +129,7 @@ export function FileDropzone({
         <input
           ref={inputRef}
           type="file"
-          accept={ACCEPT_ATTR}
+          accept={accept}
           className="sr-only"
           disabled={busy}
           onChange={(e) => {
@@ -129,7 +147,7 @@ export function FileDropzone({
               {t('upload.dropHere')}
             </p>
             <p className="mt-1 max-w-sm text-[0.8125rem] text-muted-foreground">
-              {t('upload.dropHint')}
+              {t('upload.dropHint', { formats })}
               {application
                 ? t('upload.dropTarget', {
                     platform: t(`platform.${application.platform}`),
@@ -245,7 +263,7 @@ export function FileDropzone({
       </div>
 
       <div className="flex flex-wrap justify-center gap-1.5">
-        {ENABLED_FILE_TYPES.map((item) => (
+        {fileTypes.map((item) => (
           <span
             key={item.kind}
             className={cn(

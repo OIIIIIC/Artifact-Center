@@ -1,3 +1,4 @@
+import { normalizePlatform } from './artifact-types.js'
 import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
 import type { Context } from 'hono'
 import { db } from '../db/client.js'
@@ -96,8 +97,9 @@ export async function listApplicationPage(c: Context<{ Variables: AuthVariables 
         ].map((field) => ilike(field, `%${q}%`)),
       ),
     )
-  if (['android', 'windows', 'zip'].includes(query.platform))
-    conditions.push(sql`${applications.platform} = ${query.platform}`)
+  const platform = normalizePlatform(query.platform)
+  if (typeof platform === 'string' && ['android', 'windows', 'linux'].includes(platform))
+    conditions.push(sql`${applications.platform} = ${platform}`)
   const product = query.product ?? query.region
   // Invalid UUID filters must produce a client error, never a database error.
   for (const id of [product, query.project]) {

@@ -3,7 +3,8 @@ import type { UploadChannel } from '@/types/upload'
 
 /** Version / build lifecycle on an artifact row */
 export type ArtifactStatus = 'latest' | 'stable' | 'beta' | 'deprecated' | 'archived'
-export type ArtifactType = 'apk' | 'aab' | 'exe' | 'zip'
+import type { ArtifactType } from '@/lib/artifact-types'
+export type { ArtifactType } from '@/lib/artifact-types'
 export type ArtifactRiskStatus = 'beta' | 'deprecated' | 'archived'
 export type ApplicationDownloadRiskStatus =
   'applicationBeta' | 'applicationDeprecated' | 'applicationArchived'

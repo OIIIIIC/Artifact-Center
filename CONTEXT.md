@@ -16,7 +16,7 @@ artifact-center 是一个**企业内网软件制品管理平台**。核心使命
 | **Application Code**      | Application 在制品分发命名中的可重复短代码；不用于唯一识别应用，可随时修改，修改后仅影响新发布制品的分发文件名。    |
 | **Product**               | 产品目录，替代原 Region 名称；保留原条目与 ID。一个产品包含多个项目。                                               |
 | **Project**               | 属于一个 Product 的应用分类；每个应用归属一个项目，每个产品有稳定的默认项目。                                       |
-| **Artifact**              | 不可变的构建文件，类型 apk/aab/exe/zip。含 sha256、storage_key 等。                                                 |
+| **Artifact**              | 不可变的构建文件，类型 apk/aab/exe/zip/tar/tar.gz/deb/rpm/appimage。含 sha256、storage_key 等。                     |
 | **Distribution Filename** | Artifact 面向下载和分享的规范文件名；由产品代码、Application Code、版本、构建号、渠道和文件类型组成，发布后不可变。 |
 | **Release**               | 一次有意义的发布，(application_id, version) 唯一。可关联多个 Artifact。                                             |
 | **User**                  | 平台用户，role: admin / maintainer / viewer。                                                                       |
@@ -38,6 +38,13 @@ artifact-center 是一个**企业内网软件制品管理平台**。核心使命
 - 数据库 regions / region_id 与既有 Region API 暂留作兼容名称；/regions 页面兼容跳转至 /products。
 - 分享范围改称同产品范围，项目不改变制品文件名、分享令牌或发布归属。
 - 详见 [ADR-0019](docs/adr/0019-product-project-directory.md)。迁移与本地验证已准备，上线前须完成备份及 PostgreSQL 16 预发布演练。
+
+## Linux 平台与文件格式（2026-09-11）
+
+- 平台为 Android / Windows / Linux；`linux` 替代旧平台值 `zip`，API 输入和历史筛选参数兼容旧值。
+- Linux 支持 ZIP、TAR、TAR.GZ/TGZ、DEB、RPM、AppImage。ZIP 仍是文件格式，不再作为平台名称。
+- 前后端共用纯领域类型注册表；完整复合后缀保留到分发文件名。原生包元数据不自动解析，版本仍由用户确认。
+- 新迁移 `0026_linux_platform` 保留历史制品文件名和存储路径。见 [ADR-0021](docs/adr/0021-linux-platform-and-package-types.md)。
 
 ## 数据量性能（2026-09-10）
 

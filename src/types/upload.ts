@@ -1,3 +1,4 @@
+import type { ArtifactType } from '@/lib/artifact-types'
 import type { ApplicationPlatform } from '@/types/application'
 
 export type UploadStep = 1 | 2 | 3 | 4
@@ -37,8 +38,7 @@ export interface UploadTask {
   error: PublishError
 }
 
-export type FileKind =
-  'apk' | 'aab' | 'exe' | 'zip' | 'ipa' | 'firmware' | 'docker' | 'unknown'
+export type FileKind = ArtifactType | 'ipa' | 'firmware' | 'docker' | 'unknown'
 
 export interface ParsedArtifactFile {
   name: string

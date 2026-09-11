@@ -7,6 +7,13 @@ import {
 } from './use-saved-filters'
 
 describe('use-saved-filters', () => {
+  it('保留旧 ZIP 平台偏好并归一化为 Linux', () => {
+    window.localStorage.setItem(
+      'artifact-center.application-filter-prefs.v1',
+      JSON.stringify({ platform: 'zip', sort: 'name' }),
+    )
+    expect(readSavedFilterPrefs()).toEqual({ platform: 'linux', sort: 'name' })
+  })
   afterEach(() => {
     window.localStorage.clear()
   })

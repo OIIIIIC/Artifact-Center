@@ -8,7 +8,7 @@ import type { ApplicationPlatform } from '@/types/application'
 import type { UploadChannel, VersionDraft, VersionSuggestionMode } from '@/types/upload'
 
 const CHANNELS: UploadChannel[] = ['stable', 'beta', 'internal', 'deprecated']
-const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'zip']
+const PLATFORMS: ApplicationPlatform[] = ['android', 'windows', 'linux']
 
 interface StepVersionProps {
   version: VersionDraft

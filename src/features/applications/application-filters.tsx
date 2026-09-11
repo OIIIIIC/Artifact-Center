@@ -9,7 +9,7 @@ import type {
   ApplicationSort,
 } from '@/types/application'
 
-const PLATFORMS: (ApplicationPlatform | 'all')[] = ['all', 'android', 'windows', 'zip']
+const PLATFORMS: (ApplicationPlatform | 'all')[] = ['all', 'android', 'windows', 'linux']
 
 const SORTS: ApplicationSort[] = ['updated', 'name', 'created']
 

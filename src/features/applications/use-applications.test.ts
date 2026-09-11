@@ -58,6 +58,11 @@ afterEach(() => {
 })
 
 describe('Application 列表 URL 筛选', () => {
+  it('旧 ZIP 平台筛选归一化为 Linux', () => {
+    expect(parseApplicationFilters(new URLSearchParams('platform=zip')).platform).toBe(
+      'linux',
+    )
+  })
   it('从 URL 恢复搜索、平台和排序', () => {
     const filters = parseApplicationFilters(
       new URLSearchParams('q=mobile&platform=android&sort=name'),

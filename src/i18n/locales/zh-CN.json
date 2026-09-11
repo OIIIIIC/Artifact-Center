@@ -165,7 +165,7 @@
   "platform": {
     "android": "Android",
     "windows": "Windows",
-    "zip": "ZIP",
+    "linux": "Linux",
     "all": "全部平台"
   },
   "status": {
@@ -948,7 +948,7 @@
     "createApplication": "去创建应用",
     "changeApplication": "更换应用",
     "dropHere": "将制品拖到此处",
-    "dropHint": "或点击选择 · APK / AAB / EXE / ZIP",
+    "dropHint": "或点击选择 · {{formats}}",
     "dropTarget": " · 目标 {{platform}}",
     "uploading": "正在检查文件…",
     "verifying": "正在校验制品信息…",

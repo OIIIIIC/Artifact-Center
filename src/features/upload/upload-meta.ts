@@ -1,3 +1,8 @@
+import {
+  ARTIFACT_TYPES,
+  ARTIFACT_REGISTRY,
+  acceptedArtifactExtensions,
+} from '@/lib/artifact-types'
 import type { FileKind } from '@/types/upload'
 
 export const ENABLED_FILE_TYPES: {
@@ -6,16 +11,18 @@ export const ENABLED_FILE_TYPES: {
   ext: string
   enabled: boolean
 }[] = [
-  { kind: 'apk', label: 'APK', ext: '.apk', enabled: true },
-  { kind: 'aab', label: 'AAB', ext: '.aab', enabled: true },
-  { kind: 'exe', label: 'EXE', ext: '.exe', enabled: true },
-  { kind: 'zip', label: 'ZIP', ext: '.zip', enabled: true },
+  ...ARTIFACT_TYPES.map((kind) => ({
+    kind,
+    label: ARTIFACT_REGISTRY[kind].label,
+    ext: ARTIFACT_REGISTRY[kind].extensions.join(' / '),
+    enabled: true,
+  })),
   { kind: 'ipa', label: 'IPA', ext: '.ipa', enabled: false },
   { kind: 'firmware', label: 'Firmware', ext: '.bin', enabled: false },
   { kind: 'docker', label: 'Docker', ext: 'image', enabled: false },
 ]
 
-export const ACCEPT_ATTR = '.apk,.aab,.exe,.msi,.zip'
+export const ACCEPT_ATTR = acceptedArtifactExtensions()
 
 /** Mock pinned / recent application ids */
 export const PINNED_APP_IDS = [

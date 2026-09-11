@@ -34,6 +34,7 @@ ADR (Architecture Decision Record) 是一种轻量级的架构决策文档，由
 | [0018](0018-distribute-mcp-client-from-artifact-center.md) | 由 Artifact Center 分发独立 MCP 客户端       | accepted |
 | [0019](0019-product-project-directory.md)                  | 产品与项目目录进入主侧栏                     | accepted |
 | [0020](0020-bounded-catalog-history.md)                    | 应用与历史列表采用有界查询                   | accepted |
+| [0021](0021-linux-platform-and-package-types.md)           | Linux 平台与制品文件格式分离                 | accepted |
 
 ## 状态标记
 
