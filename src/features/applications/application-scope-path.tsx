@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Product, Project } from '@/types/application'
@@ -10,7 +11,22 @@ interface ApplicationScopePathProps {
   onSelect: (productId: string, projectId?: string) => void
 }
 
-export function ApplicationScopePath({
+export function ApplicationScopePath(props: ApplicationScopePathProps) {
+  return (
+    <div className="grid h-10 min-w-[4.25rem] items-center sm:min-w-0">
+      <AnimatePresence initial={false} mode="wait">
+        {props.productId !== 'all' ? (
+          <ScopePathContent
+            key={`${props.productId}/${props.projectId}/${props.product?.name}/${props.project?.name}`}
+            {...props}
+          />
+        ) : null}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function ScopePathContent({
   productId,
   projectId,
   product,
@@ -18,7 +34,8 @@ export function ApplicationScopePath({
   onSelect,
 }: ApplicationScopePathProps) {
   const { t } = useTranslation()
-  if (productId === 'all') return null
+  const reduceMotion = useReducedMotion()
+  const isPresent = useIsPresent()
 
   const selectedProduct = product?.id === productId ? product : undefined
   const selectedProject =
@@ -31,7 +48,19 @@ export function ApplicationScopePath({
     'min-w-0 truncate rounded-sm py-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50'
 
   return (
-    <nav aria-label={t('applications.directoryPath')} className="min-w-0 text-xs">
+    <motion.nav
+      aria-label={t('applications.directoryPath')}
+      aria-hidden={!isPresent || undefined}
+      inert={!isPresent}
+      initial={{ opacity: 0, x: reduceMotion ? 0 : -5 }}
+      animate={{
+        opacity: 1,
+        x: 0,
+        transition: { duration: reduceMotion ? 0 : 0.16, ease: [0.2, 0, 0, 1] },
+      }}
+      exit={{ opacity: 0, x: 0, transition: { duration: reduceMotion ? 0 : 0.08 } }}
+      className="min-w-0 text-xs [grid-area:1/1]"
+    >
       <button
         type="button"
         className={`${parentClass} flex items-center gap-1 whitespace-nowrap sm:hidden`}
@@ -79,6 +108,6 @@ export function ApplicationScopePath({
           {currentName}
         </li>
       </ol>
-    </nav>
+    </motion.nav>
   )
 }

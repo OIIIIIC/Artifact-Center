@@ -24,6 +24,7 @@ import { ApplicationGridSkeleton } from '@/features/applications/application-gri
 import { ApplicationSearch } from '@/features/applications/application-search'
 import { ApplicationScopeHeading } from '@/features/applications/application-scope-heading'
 import { ApplicationScopePath } from '@/features/applications/application-scope-path'
+import { AnimatedScopeAction } from '@/features/applications/animated-scope-action'
 import { ApplicationTimeline } from '@/features/applications/application-timeline'
 import { CompactDirectory } from '@/features/products/product-directory'
 import { ApplicationDirectory } from '@/features/products/application-directory'
@@ -228,8 +229,8 @@ export function ApplicationsPage() {
               />
 
               {canCreateApplication || canUpload || role === 'admin' ? (
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {role === 'admin' ? (
+                <div className="-my-1 -mr-1 flex flex-wrap items-center justify-end">
+                  <AnimatedScopeAction visible={role === 'admin'}>
                     <Button
                       type="button"
                       size="lg"
@@ -239,10 +240,14 @@ export function ApplicationsPage() {
                       <ListChecks className="size-3.5" strokeWidth={1.75} />
                       {t('applications.bulkActionsAction')}
                     </Button>
-                  ) : null}
-                  {resolvedRegionScope !== 'all' &&
-                  !!resolvedRegionScope &&
-                  (summary.data?.maintainableCounts[resolvedRegionScope] ?? 0) > 0 ? (
+                  </AnimatedScopeAction>
+                  <AnimatedScopeAction
+                    visible={
+                      resolvedRegionScope !== 'all' &&
+                      !!resolvedRegionScope &&
+                      (summary.data?.maintainableCounts[resolvedRegionScope] ?? 0) > 0
+                    }
+                  >
                     <Button
                       type="button"
                       size="lg"
@@ -252,8 +257,8 @@ export function ApplicationsPage() {
                       <Share2 className="size-3.5" strokeWidth={1.75} />
                       {t('share.collectionAction')}
                     </Button>
-                  ) : null}
-                  <div className="flex items-center gap-2">
+                  </AnimatedScopeAction>
+                  <div className="flex items-center gap-2 p-1">
                     {canCreateApplication ? (
                       <Button asChild size="lg">
                         <Link to={createHref}>

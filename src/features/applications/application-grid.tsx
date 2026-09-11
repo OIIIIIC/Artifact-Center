@@ -1,4 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AnimatedHeight } from '@/components/common/animated-height'
 
 import { ApplicationCard } from '@/features/applications/application-card'
 import { cn } from '@/lib/utils'
@@ -36,36 +37,40 @@ export function ApplicationGrid({
 }: ApplicationGridProps) {
   const reduceMotion = useReducedMotion()
 
+  // Exiting layers still contribute to the grid height until their fade finishes.
+  // Ease that final height change so the next timeline section never snaps upward.
   return (
-    <div className="grid" aria-busy={refreshing}>
-      <AnimatePresence initial={false} mode="sync">
-        <motion.div
-          key={transitionKey}
-          initial={reduceMotion ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={reduceMotion ? undefined : { opacity: 0 }}
-          transition={{ duration: 0.2, ease: easeOut }}
-          className="col-start-1 row-start-1 min-w-0"
-        >
-          <ul
-            className={cn(
-              'grid list-none grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5',
-              className,
-            )}
+    <AnimatedHeight>
+      <div className="grid" aria-busy={refreshing}>
+        <AnimatePresence initial={false} mode="sync">
+          <motion.div
+            key={transitionKey}
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reduceMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: 0.2, ease: easeOut }}
+            className="col-start-1 row-start-1 min-w-0"
           >
-            {applications.map((app) => (
-              <li key={app.id} className="min-w-0">
-                <ApplicationCard
-                  application={app}
-                  favorite={favoriteIds?.has(app.id)}
-                  favoritePending={favoritePendingId === app.id}
-                  onToggleFavorite={onToggleFavorite}
-                />
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-      </AnimatePresence>
-    </div>
+            <ul
+              className={cn(
+                'grid list-none grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5',
+                className,
+              )}
+            >
+              {applications.map((app) => (
+                <li key={app.id} className="min-w-0">
+                  <ApplicationCard
+                    application={app}
+                    favorite={favoriteIds?.has(app.id)}
+                    favoritePending={favoritePendingId === app.id}
+                    onToggleFavorite={onToggleFavorite}
+                  />
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </AnimatedHeight>
   )
 }
