@@ -299,8 +299,8 @@ export function ProjectsManager({
   ) : null
 
   return (
-    <section aria-label={t('directory.projects')} className="mt-9">
-      <div className="mb-3 flex items-center justify-end gap-3">
+    <section aria-label={t('directory.projects')}>
+      <div className="flex items-center justify-end gap-3">
         <Button
           ref={newButton}
           type="button"
