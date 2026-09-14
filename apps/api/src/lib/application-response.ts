@@ -72,7 +72,7 @@ export function mapApp(
   region: typeof regions.$inferSelect,
   members: ApplicationMemberPreview[] = [],
   accessRole: 'admin' | 'maintainer' | 'viewer' = 'viewer',
-  projectName?: string,
+  project?: { name: string; code: string | null },
 ) {
   return {
     id: row.id,
@@ -85,7 +85,8 @@ export function mapApp(
     platform: row.platform,
     region: mapRegion(region),
     projectId: row.projectId,
-    projectName,
+    projectName: project?.name,
+    projectCode: project?.code,
     repository: row.repository,
     status: row.status,
     owner: row.ownerName,

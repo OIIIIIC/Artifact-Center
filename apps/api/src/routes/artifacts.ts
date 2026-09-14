@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { mapArtifact } from '../lib/artifact-response.js'
 
 import { db } from '../db/client.js'
-import { applications, artifacts, regions, releases } from '../db/schema.js'
+import { applications, artifacts, projects, regions, releases } from '../db/schema.js'
 import { distributionFilename } from '../lib/artifact-filename.js'
 import {
   refreshApplicationArtifactStats,
@@ -98,9 +98,14 @@ artifactRoutes.post(
     const user = c.get('user')
 
     const [target] = await db
-      .select({ application: applications, regionCode: regions.code })
+      .select({
+        application: applications,
+        regionCode: regions.code,
+        projectCode: projects.code,
+      })
       .from(applications)
       .innerJoin(regions, eq(regions.id, applications.regionId))
+      .innerJoin(projects, eq(projects.id, applications.projectId))
       .where(eq(applications.id, appId))
       .limit(1)
     if (!target) return jsonError(c, 404, 'not_found', 'Application not found')
@@ -274,6 +279,7 @@ artifactRoutes.post(
     const finalBuildNumber = buildNumber || '1'
     const finalFilename = distributionFilename({
       regionCode: target.regionCode,
+      projectCode: target.projectCode,
       applicationCode: app.applicationCode,
       version,
       buildNumber: finalBuildNumber,

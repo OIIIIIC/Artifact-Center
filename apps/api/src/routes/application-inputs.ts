@@ -96,13 +96,13 @@ export const bulkApplicationAppearanceSchema = z
     message: 'At least one appearance field is required',
   })
 
-export async function projectNameFor(id: string) {
+export async function projectMetadataFor(id: string) {
   const [project] = await db
-    .select({ name: projects.name })
+    .select({ name: projects.name, code: projects.code })
     .from(projects)
     .where(eq(projects.id, id))
     .limit(1)
-  return project?.name
+  return project
 }
 
 export const memberRoleSchema = z.object({ role: z.enum(['maintainer', 'viewer']) })

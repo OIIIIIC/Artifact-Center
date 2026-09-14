@@ -9,7 +9,7 @@ RUN npm ci
 COPY index.html tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts ./
 COPY public ./public
 COPY src ./src
-COPY apps/api/src/lib/artifact-types.ts ./apps/api/src/lib/artifact-types.ts
+COPY apps/api/src/lib/artifact-types.ts apps/api/src/lib/artifact-filename.ts ./apps/api/src/lib/
 COPY plugins/artifact-center-mcp/src ./plugins/artifact-center-mcp/src
 COPY plugins/artifact-center-mcp/scripts ./plugins/artifact-center-mcp/scripts
 RUN npm run build

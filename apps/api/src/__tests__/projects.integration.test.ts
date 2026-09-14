@@ -34,7 +34,7 @@ let defaultProject: string
 let beforeMigration: Record<string, unknown>
 type ResponseBody = {
   region: { id: string }
-  project: { id: string }
+  project: { id: string; code: string | null }
   application: { projectId: string }
   items: { id: string }[]
   error: { code: string }
@@ -98,6 +98,62 @@ afterAll(async () => {
 })
 
 describe('产品 → 项目 → 应用（真实 SQL 迁移与 API）', () => {
+  it('项目编码可配置、按产品唯一且只允许管理员修改', async () => {
+    const response = await request('/settings/projects', 'POST', {
+      productId: ids.product,
+      name: '十堰编码测试',
+      code: ' SHIYAN ',
+    })
+    expect(response.status).toBe(201)
+    const { project } = await response.json()
+    expect(project.code).toBe('shiyan')
+    expect(
+      (
+        await request('/settings/projects', 'POST', {
+          productId: ids.product,
+          name: '重复编码测试',
+          code: 'shiyan',
+        })
+      ).status,
+    ).toBe(409)
+    expect(
+      (
+        await request('/settings/projects', 'POST', {
+          productId: ids.other,
+          name: '跨产品编码测试',
+          code: 'shiyan',
+        })
+      ).status,
+    ).toBe(201)
+    expect(
+      (
+        await request(
+          `/settings/projects/${project.id}`,
+          'PATCH',
+          { code: 'henan' },
+          viewerToken,
+        )
+      ).status,
+    ).toBe(403)
+    for (const code of ['../shiyan', '十堰', '-shiyan', 'shi_yan', '', 'x'.repeat(65)]) {
+      expect(
+        (await request(`/settings/projects/${project.id}`, 'PATCH', { code })).status,
+      ).toBe(400)
+    }
+    expect(
+      (await request(`/settings/projects/${project.id}`, 'PATCH', { code: 'henan' }))
+        .status,
+    ).toBe(200)
+    const renamed = await request(`/settings/projects/${project.id}`, 'PATCH', {
+      name: '十堰项目新名称',
+    })
+    expect((await renamed.json()).project.code).toBe('henan')
+    const cleared = await request(`/settings/projects/${project.id}`, 'PATCH', {
+      code: null,
+    })
+    expect((await cleared.json()).project.code).toBeNull()
+    await request(`/settings/projects/${project.id}`, 'DELETE')
+  })
   it('一次保存完整项目顺序，拒绝过期、重复、遗漏与跨产品的顺序', async () => {
     const { region } = await (
       await request('/settings/regions', 'POST', { name: '排序产品', code: 'ordering' })

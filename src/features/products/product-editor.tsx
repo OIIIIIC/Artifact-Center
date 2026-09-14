@@ -10,6 +10,13 @@ import { directoryError, useDirectoryMutation } from './directory-management'
 
 export type ProductDraft = { name: string; code: string; sortOrder: string }
 
+function automaticProductCode() {
+  // getRandomValues also works on the HTTP intranet, unlike randomUUID.
+  return `product-${Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('')}`
+}
+
 export function ProductEditor({
   product,
   draft,
@@ -31,7 +38,7 @@ export function ProductEditor({
     if (mutation.busy) return
     const body = {
       name: draft.name.trim(),
-      code: draft.code.trim(),
+      code: product?.code ?? (draft.code.trim() || automaticProductCode()),
       sortOrder: Number(draft.sortOrder),
     }
     if (
@@ -83,18 +90,6 @@ export function ProductEditor({
           onChange={(event) => onChange({ ...draft, name: event.target.value })}
         />
       </label>
-      <label className="block space-y-1.5 text-xs text-muted-foreground">
-        <span>{t('settings.regionCode')}</span>
-        <Input
-          maxLength={64}
-          required
-          disabled={mutation.busy}
-          value={draft.code}
-          placeholder="care_product"
-          className="font-mono"
-          onChange={(event) => onChange({ ...draft, code: event.target.value })}
-        />
-      </label>
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer py-1">{t('settings.regionSortOrder')}</summary>
         <label className="mt-2 block space-y-1.5">
@@ -125,11 +120,7 @@ export function ProductEditor({
         >
           {t('common.cancel')}
         </Button>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={mutation.busy || !draft.name.trim() || !draft.code.trim()}
-        >
+        <Button type="submit" size="sm" disabled={mutation.busy || !draft.name.trim()}>
           {mutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
           {t('common.save')}
         </Button>

@@ -35,6 +35,7 @@ import { uploadRoutes } from '../routes/uploads.js'
 import { artifactRoutes } from '../routes/artifacts.js'
 import { applicationRoutes } from '../routes/applications.js'
 import { workspaceRoutes } from '../routes/workspace.js'
+import { settingsRoutes } from '../routes/settings.js'
 import { resolveArtifactType } from '../lib/artifact-types.js'
 
 const app = new Hono()
@@ -42,6 +43,7 @@ const app = new Hono()
   .route('/', artifactRoutes)
   .route('/applications', applicationRoutes)
   .route('/workspace', workspaceRoutes)
+  .route('/settings', settingsRoutes)
 const ids = {
   user: '00000000-0000-4000-8000-000000000001',
   region: '00000000-0000-4000-8000-000000000002',
@@ -227,3 +229,112 @@ it.each(['linux', 'zip'])(
     expect(data.application.platform).toBe('linux')
   },
 )
+
+it('project prefixes apply to every application and both upload paths while old filenames stay frozen', async () => {
+  const projectId = (
+    await fixture.client.query<{ id: string }>(
+      'SELECT project_id AS id FROM applications WHERE id=$1',
+      [ids.app],
+    )
+  ).rows[0].id
+  const setCode = async (code: string | null) => {
+    const response = await request(`/settings/projects/${projectId}`, 'PATCH', { code })
+    expect(response.status, await response.clone().text()).toBe(200)
+  }
+  const bytes = Buffer.from('Project prefix verification')
+  const upload = async (
+    appId: string,
+    buildNumber: string,
+    duringUpload?: () => Promise<void>,
+  ) => {
+    const start = await request(`/applications/${appId}/uploads`, 'POST', {
+      filename: 'agent.tar.gz',
+      resumeKey: `project-prefix-${buildNumber}`,
+      sizeBytes: bytes.length,
+      version: '9.0.0',
+      buildNumber,
+      platform: 'linux',
+      channel: 'stable',
+    })
+    expect(start.status, await start.clone().text()).toBe(201)
+    const { upload: session } = (await start.json()) as { upload: { uploadId: string } }
+    if (duringUpload) await duringUpload()
+    const part = await app.request(`/uploads/${session.uploadId}/parts/1`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Length': String(bytes.length),
+      },
+      body: bytes,
+    })
+    expect(part.status).toBe(201)
+    const completion = await request(`/uploads/${session.uploadId}/complete`, 'POST', {})
+    expect(completion.status, await completion.clone().text()).toBe(201)
+    return ((await completion.json()) as ArtifactResponse).artifact
+  }
+  // Migration leaves existing projects unset; old clients use the product prefix.
+  const fallback = await upload(ids.app, '100', () => setCode('shiyan'))
+  expect(fallback.filename).toBe('linux-test_linux-agent_v9.0.0_b100_stable.tar.gz')
+  const first = await upload(ids.app, '101')
+  expect(first.filename).toBe('shiyan_linux-agent_v9.0.0_b101_stable.tar.gz')
+  const details = await request(`/applications/${ids.app}`)
+  expect(
+    ((await details.json()) as { application: { projectCode: string } }).application
+      .projectCode,
+  ).toBe('shiyan')
+  const catalog = await request('/applications')
+  expect(
+    (
+      (await catalog.json()) as { items: { id: string; projectCode: string }[] }
+    ).items.find((item) => item.id === ids.app)?.projectCode,
+  ).toBe('shiyan')
+  const create = await request('/applications', 'POST', {
+    name: 'Another project app',
+    description: 'Project naming test',
+    applicationCode: 'other-agent',
+    packageName: 'other.agent',
+    platform: 'linux',
+    regionId: ids.region,
+    projectId,
+  })
+  expect(create.status, await create.clone().text()).toBe(201)
+  const { application } = (await create.json()) as { application: { id: string } }
+  const second = await upload(application.id, '102', () => setCode('henan'))
+  expect(second.filename).toBe('shiyan_other-agent_v9.0.0_b102_stable.tar.gz')
+  const next = await upload(ids.app, '103')
+  expect(next.filename).toBe('henan_linux-agent_v9.0.0_b103_stable.tar.gz')
+  const form = new FormData()
+  form.append('file', new Blob([bytes]), 'agent.tar.gz')
+  form.append('version', '9.0.1')
+  form.append('buildNumber', '104')
+  form.append('platform', 'linux')
+  const legacy = await app.request(`/applications/${ids.app}/artifacts`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  })
+  expect(legacy.status, await legacy.clone().text()).toBe(201)
+  const legacyArtifact = ((await legacy.json()) as ArtifactResponse).artifact
+  expect(legacyArtifact.filename).toBe('henan_linux-agent_v9.0.1_b104_stable.tar.gz')
+  const otherProjectResponse = await request('/settings/projects', 'POST', {
+    productId: ids.region,
+    name: '三沙',
+    code: 'sansha',
+  })
+  expect(otherProjectResponse.status).toBe(201)
+  const { project: otherProject } = (await otherProjectResponse.json()) as {
+    project: { id: string }
+  }
+  const moved = await request(`/applications/${application.id}`, 'PATCH', {
+    projectId: otherProject.id,
+  })
+  expect(moved.status, await moved.clone().text()).toBe(200)
+  const other = await upload(application.id, '105')
+  expect(other.filename).toBe('sansha_other-agent_v9.0.0_b105_stable.tar.gz')
+  for (const artifact of [fallback, first, second, next, legacyArtifact, other]) {
+    const download = await request(`/artifacts/${artifact.id}/download`)
+    expect(download.status).toBe(200)
+    expect(download.headers.get('content-disposition')).toContain(artifact.filename)
+    expect(Buffer.from(await download.arrayBuffer())).toEqual(bytes)
+  }
+})

@@ -15,7 +15,7 @@ import { deleteArtifactStorageFile } from '../lib/storage.js'
 import { requireApplicationRole } from '../middleware/application-access.js'
 import { type AuthVariables } from '../middleware/auth.js'
 import { requireMinRole, requireRoles } from '../middleware/require-role.js'
-import { createSchema, projectNameFor, updateSchema } from './application-inputs.js'
+import { createSchema, projectMetadataFor, updateSchema } from './application-inputs.js'
 
 export function registerApplicationDetails(
   applicationRoutes: Hono<{ Variables: AuthVariables }>,
@@ -53,7 +53,7 @@ export function registerApplicationDetails(
         region,
         [],
         membership?.role ?? 'viewer',
-        await projectNameFor(row.projectId),
+        await projectMetadataFor(row.projectId),
       ),
     })
   })
@@ -155,7 +155,7 @@ export function registerApplicationDetails(
           region,
           [],
           user.role === 'admin' ? 'admin' : 'maintainer',
-          await projectNameFor(row.projectId),
+          await projectMetadataFor(row.projectId),
         ),
       },
       201,
@@ -281,7 +281,7 @@ export function registerApplicationDetails(
           targetRegion!,
           [],
           c.get('user').role === 'admin' ? 'admin' : 'maintainer',
-          await projectNameFor(row.projectId),
+          await projectMetadataFor(row.projectId),
         ),
       })
     },

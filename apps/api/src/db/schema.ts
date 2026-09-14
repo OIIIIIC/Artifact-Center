@@ -111,6 +111,7 @@ export const projects = pgTable(
       .notNull()
       .references(() => regions.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 120 }).notNull(),
+    code: varchar('code', { length: 64 }),
     sortOrder: integer('sort_order').notNull().default(0),
     enabled: boolean('enabled').notNull().default(true),
     isDefault: boolean('is_default').notNull().default(false),
@@ -119,6 +120,11 @@ export const projects = pgTable(
   },
   (t) => [
     uniqueIndex('projects_product_name_uidx').on(t.productId, t.name),
+    uniqueIndex('projects_product_code_uidx').on(t.productId, t.code),
+    check(
+      'projects_code_check',
+      sql`${t.code} IS NULL OR ${t.code} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
+    ),
     uniqueIndex('projects_product_id_uidx').on(t.productId, t.id),
     uniqueIndex('projects_default_uidx')
       .on(t.productId)

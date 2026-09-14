@@ -10,22 +10,22 @@ artifact-center 是一个**企业内网软件制品管理平台**。核心使命
 
 ## 核心领域术语
 
-| 术语                      | 定义                                                                                                                |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Application**           | 制品管理的核心入口，属于一个 Project。所有制品归属 Application；包名可重复。                                        |
-| **Application Code**      | Application 在制品分发命名中的可重复短代码；不用于唯一识别应用，可随时修改，修改后仅影响新发布制品的分发文件名。    |
-| **Product**               | 产品目录，替代原 Region 名称；保留原条目与 ID。一个产品包含多个项目。                                               |
-| **Project**               | 属于一个 Product 的应用分类；每个应用归属一个项目，每个产品有稳定的默认项目。                                       |
-| **Artifact**              | 不可变的构建文件，类型 apk/aab/exe/zip/tar/tar.gz/deb/rpm/appimage。含 sha256、storage_key 等。                     |
-| **Distribution Filename** | Artifact 面向下载和分享的规范文件名；由产品代码、Application Code、版本、构建号、渠道和文件类型组成，发布后不可变。 |
-| **Release**               | 一次有意义的发布，(application_id, version) 唯一。可关联多个 Artifact。                                             |
-| **User**                  | 平台用户，role: admin / maintainer / viewer。                                                                       |
-| **Share Link**            | 两种模式: latest(指向最新) 和 artifact(固定指向)。                                                                  |
-| **Share Collection**      | 一个 Share Link 下的交付清单；包含同一 Product 中一个或多个 Application 的分享项，每项独立选择 latest 或 artifact。 |
-| **Audit Log**             | 追加式操作记录，外键可置空但事实保留。                                                                              |
-| **Storage Key**           | 二进制存储抽象键，当前本地文件，未来可切换 MinIO/S3。                                                               |
-| **Release Credential**    | 平台级机器凭据；可向所有 Application 上传测试版和正式版制品，不代表通用用户会话。                                   |
-| **Personal Workspace**    | 属于 User 的个性化页面；保存收藏、最近访问和目录偏好。它是工作入口，但不承载平台统计或 Dashboard 指标。             |
+| 术语                      | 定义                                                                                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Application**           | 制品管理的核心入口，属于一个 Project。所有制品归属 Application；包名可重复。                                                                |
+| **Application Code**      | Application 在制品分发命名中的可重复短代码；不用于唯一识别应用，可随时修改，修改后仅影响新发布制品的分发文件名。                            |
+| **Product**               | 产品目录，替代原 Region 名称；保留原条目与 ID。一个产品包含多个项目。                                                                       |
+| **Project**               | 属于一个 Product 的应用分类；每个应用归属一个项目，每个产品有稳定的默认项目。                                                               |
+| **Artifact**              | 不可变的构建文件，类型 apk/aab/exe/zip/tar/tar.gz/deb/rpm/appimage。含 sha256、storage_key 等。                                             |
+| **Distribution Filename** | Artifact 面向下载和分享的规范文件名；由项目代码（未设置时沿用产品代码）、Application Code、版本、构建号、渠道和文件类型组成，发布后不可变。 |
+| **Release**               | 一次有意义的发布，(application_id, version) 唯一。可关联多个 Artifact。                                                                     |
+| **User**                  | 平台用户，role: admin / maintainer / viewer。                                                                                               |
+| **Share Link**            | 两种模式: latest(指向最新) 和 artifact(固定指向)。                                                                                          |
+| **Share Collection**      | 一个 Share Link 下的交付清单；包含同一 Product 中一个或多个 Application 的分享项，每项独立选择 latest 或 artifact。                         |
+| **Audit Log**             | 追加式操作记录，外键可置空但事实保留。                                                                                                      |
+| **Storage Key**           | 二进制存储抽象键，当前本地文件，未来可切换 MinIO/S3。                                                                                       |
+| **Release Credential**    | 平台级机器凭据；可向所有 Application 上传测试版和正式版制品，不代表通用用户会话。                                                           |
+| **Personal Workspace**    | 属于 User 的个性化页面；保存收藏、最近访问和目录偏好。它是工作入口，但不承载平台统计或 Dashboard 指标。                                     |
 
 ## 产品与项目目录（2026-09-09）
 
@@ -36,9 +36,15 @@ artifact-center 是一个**企业内网软件制品管理平台**。核心使命
 - 产品管理页铺满顶栏下方：左侧选产品、右侧原位维护项目，两栏独立滚动；支持草稿保留、URL 恢复及事务保存项目顺序。
 - 产品、项目为目录元数据，不引入项目管理流程或项目级 ACL；应用权限规则不变。
 - 数据库 regions / region_id 与既有 Region API 暂留作兼容名称；/regions 页面兼容跳转至 /products。
-- 分享范围改称同产品范围，项目不改变制品文件名、分享令牌或发布归属。
+- 分享范围改称同产品范围，项目不改变分享令牌或发布归属；新上传制品优先使用项目编码作为文件名前缀，历史文件名保持不变（ADR-0022）。
 - 创建分享清单时，候选范围跟随当前目录节点：产品节点包含该产品各项目，项目节点仅包含该项目；名称同步使用当前节点。候选在服务端先按维护权限、未归档且有制品筛选，每页 20 个，跨页最多选择 20 个，不读取全量应用目录（2026-09-11）。
 - 详见 [ADR-0019](docs/adr/0019-product-project-directory.md)。迁移与本地验证已准备，上线前须完成备份及 PostgreSQL 16 预发布演练。
+
+## 项目下载前缀（2026-09-14）
+
+- 管理员可在编辑项目时设置项目编码，例如 `shiyan`；同一项目下所有应用的新上传制品使用同一前缀。
+- 编码未设置时继续沿用产品编码；已有项目不自动生成拼音编码。编码修改不改写历史包或已创建的上传会话。
+- 新增迁移 `0027_project_download_codes`，见 [ADR-0022](docs/adr/0022-project-download-prefix.md)。
 
 ## Linux 平台与文件格式（2026-09-11）
 

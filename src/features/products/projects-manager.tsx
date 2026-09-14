@@ -26,7 +26,7 @@ import type { Product, Project } from '@/types/application'
 import { directoryError, useDirectoryMutation } from './directory-management'
 import { DirectoryMenu, DirectoryMenuItem, DirectoryMenuNote } from './directory-menu'
 
-export type ProjectDraft = { id: string; name: string; error?: string }
+export type ProjectDraft = { id: string; name: string; code?: string; error?: string }
 
 function ProjectRow({
   project,
@@ -120,6 +120,11 @@ export function ProjectsManager({
   const save = async () => {
     if (!draft || busy || !draft.name.trim()) return
     const editing = draft
+    const code = editing.code?.trim().toLowerCase() || null
+    if (code && (code.length > 64 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(code))) {
+      onDraftChange({ ...editing, error: t('directory.projectCodeInvalid') })
+      return
+    }
     try {
       let saved: Project | undefined
       await mutation.mutateAsync(async () => {
@@ -127,12 +132,13 @@ export function ProjectsManager({
           editing.id === 'new'
             ? await apiCreateProject(product.id, {
                 name: editing.name.trim(),
+                code,
                 sortOrder: Math.min(
                   9999,
                   Math.max(0, ...projects.map((p) => p.sortOrder)) + 1,
                 ),
               })
-            : await apiUpdateProject(editing.id, { name: editing.name.trim() })
+            : await apiUpdateProject(editing.id, { name: editing.name.trim(), code })
       })
       onDraftChange(undefined)
       if (saved) {
@@ -238,6 +244,31 @@ export function ProjectsManager({
           }
         />
       </label>
+      <label className="block space-y-2 text-xs text-muted-foreground">
+        <span>{t('directory.projectCode')}</span>
+        <Input
+          maxLength={64}
+          aria-label={t('directory.projectCode')}
+          value={draft.code ?? ''}
+          disabled={busy}
+          placeholder="shiyan"
+          className="font-mono"
+          onChange={(event) =>
+            onDraftChange({ ...draft, code: event.target.value, error: undefined })
+          }
+        />
+        <span className="block leading-relaxed">
+          {t('directory.projectCodeHint', { code: product.code })}
+        </span>
+      </label>
+      <p className="break-all text-xs text-muted-foreground">
+        {t('directory.projectFilenamePreview', {
+          prefix: (draft.code?.trim().toLowerCase() || product.code).replace(
+            /[^a-z0-9.-]+/gi,
+            '-',
+          ),
+        })}
+      </p>
       {draft.error ? (
         <p role="alert" className="text-xs text-destructive">
           {draft.error}
@@ -269,13 +300,7 @@ export function ProjectsManager({
 
   return (
     <section aria-label={t('directory.projects')} className="mt-9">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium">
-          {t('directory.projects')}{' '}
-          <span className="ml-2 text-xs font-normal tabular-nums text-muted-foreground">
-            {projects.length}
-          </span>
-        </h3>
+      <div className="mb-3 flex items-center justify-end gap-3">
         <Button
           ref={newButton}
           type="button"
@@ -295,6 +320,13 @@ export function ProjectsManager({
           {t('directory.productDisabled')}
         </p>
       ) : null}
+      <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground sm:gap-3">
+        <span aria-hidden="true" className="w-6 shrink-0" />
+        <span aria-hidden="true" className="hidden w-10 shrink-0 sm:block" />
+        <span className="min-w-0 flex-1">{t('directory.projectName')}</span>
+        <span className="w-20 shrink-0 sm:w-1/4">{t('directory.applicationCount')}</span>
+        <span aria-hidden="true" className="w-20 shrink-0" />
+      </div>
       <Reorder.Group
         ref={listRef}
         axis="y"
@@ -354,18 +386,10 @@ export function ProjectsManager({
                           {t('directory.defaultBadge')}
                         </span>
                       ) : null}
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <Link
-                        className="rounded-sm hover:text-foreground hover:underline focus-visible:outline-ring"
-                        to={`/?product=${product.id}&project=${id}`}
-                      >
-                        {count === null
-                          ? t('directory.countUnavailable')
-                          : t('applications.count', { count })}
-                      </Link>
                       {!project.enabled ? (
-                        <span>· {t('settings.regionInactive')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('settings.regionInactive')}
+                        </span>
                       ) : null}
                     </div>
                     {deletingId === id ? (
@@ -394,7 +418,15 @@ export function ProjectsManager({
                       </div>
                     ) : null}
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5">
+                  <Link
+                    className="w-20 shrink-0 rounded-sm text-xs text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-ring sm:w-1/4 sm:text-sm"
+                    to={`/?product=${product.id}&project=${id}`}
+                  >
+                    {count === null
+                      ? t('directory.countUnavailable')
+                      : t('applications.count', { count })}
+                  </Link>
+                  <div className="flex w-20 shrink-0 items-center justify-end gap-0.5">
                     <Button
                       type="button"
                       data-rename
@@ -407,10 +439,14 @@ export function ProjectsManager({
                       })}
                       onClick={() => {
                         setDeletingId(null)
-                        onDraftChange({ id, name: project.name })
+                        onDraftChange({
+                          id,
+                          name: project.name,
+                          code: project.code ?? '',
+                        })
                       }}
                     >
-                      {t('directory.rename')}
+                      {t('directory.editProjectAction')}
                     </Button>
                     <DirectoryMenu
                       label={t('directory.more', { name: project.name })}

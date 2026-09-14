@@ -1,5 +1,6 @@
 import { Box, Loader2, Plus, Search } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,24 @@ import { ProductDetail } from './product-detail'
 import { ProductEditor, type ProductDraft } from './product-editor'
 import { ProjectsManager, type ProjectDraft } from './projects-manager'
 import { useProjects } from './use-projects'
+
+function NewProductTransition({ children }: { children: ReactNode }) {
+  const reduced = useReducedMotion()
+  const present = useIsPresent()
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: reduced ? 0 : 0.2, ease: 'easeOut' }}
+      className="overflow-hidden"
+      inert={!present}
+      aria-hidden={!present || undefined}
+    >
+      <div className="px-1 pt-1 pb-3">{children}</div>
+    </motion.div>
+  )
+}
 
 export function ProductsWorkspace() {
   const { t } = useTranslation()
@@ -130,20 +149,22 @@ export function ProductsWorkspace() {
           ref={productListRef}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 [scrollbar-width:thin] sm:px-4"
         >
-          {newDraft ? (
-            <div className="px-1 pb-3">
-              <ProductEditor
-                draft={newDraft}
-                onChange={setNewDraft}
-                onCancel={() => setNewDraft(null)}
-                onSaved={(created) => {
-                  setNewDraft(null)
-                  setSearch('')
-                  select(created.id)
-                }}
-              />
-            </div>
-          ) : null}
+          <AnimatePresence initial={false}>
+            {newDraft ? (
+              <NewProductTransition key="new-product">
+                <ProductEditor
+                  draft={newDraft}
+                  onChange={setNewDraft}
+                  onCancel={() => setNewDraft(null)}
+                  onSaved={(created) => {
+                    setNewDraft(null)
+                    setSearch('')
+                    select(created.id)
+                  }}
+                />
+              </NewProductTransition>
+            ) : null}
+          </AnimatePresence>
           {products.loading ? (
             <p className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
@@ -205,6 +226,11 @@ export function ProductsWorkspace() {
         <ProductDetail
           key={product.id}
           product={product}
+          projectCount={
+            projects.loading || projects.error
+              ? null
+              : (grouped.get(product.id)?.length ?? 0)
+          }
           applicationCount={
             applications.data && !applications.isError
               ? (applications.data.productCounts[product.id] ?? 0)

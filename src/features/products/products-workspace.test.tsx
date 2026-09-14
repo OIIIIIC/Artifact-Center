@@ -66,6 +66,7 @@ beforeEach(() => {
       id: 'created-project',
       productId,
       name: body.name,
+      code: body.code,
       isDefault: false,
       sortOrder: 2,
     }
@@ -110,15 +111,22 @@ describe('产品管理连续维护', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '项目名称' }), {
       target: { value: '现场联调' },
     })
+    fireEvent.change(screen.getByRole('textbox', { name: '项目编码（下载前缀）' }), {
+      target: { value: 'SHIYAN' },
+    })
     fireEvent.click(screen.getByRole('button', { name: /^三沙/ }))
     expect(screen.queryByRole('textbox', { name: '项目名称' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('当前地址')).toHaveTextContent('product=p1')
     fireEvent.click(screen.getByRole('button', { name: '返回上个产品' }))
     expect(screen.getByRole('textbox', { name: '项目名称' })).toHaveValue('现场联调')
+    expect(screen.getByRole('textbox', { name: '项目编码（下载前缀）' })).toHaveValue(
+      'SHIYAN',
+    )
+    expect(screen.getByText(/shiyan_caregiver_v1.0.0_b1_stable.apk/)).toBeInTheDocument()
     fireEvent.submit(screen.getByRole('form', { name: '新建项目' }))
-    await screen.findByRole('button', { name: '重命名项目 现场联调' })
+    await screen.findByRole('button', { name: '编辑项目 现场联调' })
     const createdRow = screen
-      .getByRole('button', { name: '重命名项目 现场联调' })
+      .getByRole('button', { name: '编辑项目 现场联调' })
       .closest('li')!
     expect(within(createdRow).getByRole('link', { name: '0 个应用' })).toHaveAttribute(
       'href',
@@ -126,25 +134,33 @@ describe('产品管理连续维护', () => {
     )
     expect(api.apiCreateProject).toHaveBeenCalledWith('p0', {
       name: '现场联调',
+      code: 'shiyan',
       sortOrder: 2,
     })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('重命名只保存名称；保存失败保留输入并显示原因', async () => {
+  it('编辑保存项目名称与编码；保存失败保留输入并显示原因', async () => {
+    projects[1].code = 'shiyan'
     renderWorkspace()
-    fireEvent.click(await screen.findByRole('button', { name: '重命名项目 一期交付' }))
+    fireEvent.click(await screen.findByRole('button', { name: '编辑项目 一期交付' }))
     fireEvent.change(screen.getByRole('textbox', { name: '项目名称' }), {
       target: { value: '二期交付' },
     })
+    expect(screen.getByRole('textbox', { name: '项目编码（下载前缀）' })).toHaveValue(
+      'shiyan',
+    )
     vi.mocked(api.apiUpdateProject).mockRejectedValueOnce({ code: 'project_taken' })
-    fireEvent.submit(screen.getByRole('form', { name: '重命名项目' }))
+    fireEvent.submit(screen.getByRole('form', { name: '编辑项目' }))
     await screen.findByRole('alert')
     expect(screen.getByRole('textbox', { name: '项目名称' })).toHaveValue('二期交付')
-    expect(screen.getByRole('alert')).toHaveTextContent('已存在同名项目')
-    fireEvent.submit(screen.getByRole('form', { name: '重命名项目' }))
-    await screen.findByRole('button', { name: '重命名项目 二期交付' })
-    expect(api.apiUpdateProject).toHaveBeenLastCalledWith('p0-j1', { name: '二期交付' })
+    expect(screen.getByRole('alert')).toHaveTextContent('已存在同名项目或相同项目编码')
+    fireEvent.submit(screen.getByRole('form', { name: '编辑项目' }))
+    await screen.findByRole('button', { name: '编辑项目 二期交付' })
+    expect(api.apiUpdateProject).toHaveBeenLastCalledWith('p0-j1', {
+      name: '二期交付',
+      code: 'shiyan',
+    })
   })
 
   it('键盘排序失败恢复原顺序，不把其他产品的项目发给接口', async () => {

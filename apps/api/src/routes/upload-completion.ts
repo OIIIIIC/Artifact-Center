@@ -4,6 +4,7 @@ import { db } from '../db/client.js'
 import {
   applications,
   artifacts,
+  projects,
   regions,
   releases,
   uploadParts,
@@ -48,9 +49,14 @@ export function registerUploadCompletion(
       return jsonError(c, 409, 'upload_expired', 'Upload session is no longer active')
     }
     const [target] = await db
-      .select({ application: applications, regionCode: regions.code })
+      .select({
+        application: applications,
+        regionCode: regions.code,
+        projectCode: projects.code,
+      })
       .from(applications)
       .innerJoin(regions, eq(regions.id, applications.regionId))
+      .innerJoin(projects, eq(projects.id, applications.projectId))
       .where(eq(applications.id, session.applicationId))
       .limit(1)
     if (!target || target.application.status === 'archived') {
@@ -117,6 +123,7 @@ export function registerUploadCompletion(
       fields.distributionFilename ||
       distributionFilename({
         regionCode: target.regionCode,
+        projectCode: target.projectCode,
         applicationCode: app.applicationCode,
         version: fields.version,
         buildNumber: finalBuildNumber,

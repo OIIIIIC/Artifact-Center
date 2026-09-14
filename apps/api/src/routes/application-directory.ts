@@ -103,11 +103,11 @@ export function registerApplicationDirectory(
     ]
     const projectRows = projectIds.length
       ? await db
-          .select({ id: projects.id, name: projects.name })
+          .select({ id: projects.id, name: projects.name, code: projects.code })
           .from(projects)
           .where(inArray(projects.id, projectIds))
       : []
-    const projectNames = new Map(projectRows.map((p) => [p.id, p.name]))
+    const projectById = new Map(projectRows.map((p) => [p.id, p]))
     const regionRows = await db.select().from(regions)
     const regionById = new Map(regionRows.map((region) => [region.id, region]))
     const applicationIds = rows.map(({ application }) => application.id)
@@ -160,7 +160,7 @@ export function registerApplicationDirectory(
           regionById.get(row.regionId)!,
           membersByApplication.get(row.id),
           accessRole,
-          row.projectId ? projectNames.get(row.projectId) : undefined,
+          row.projectId ? projectById.get(row.projectId) : undefined,
         ),
       ),
       total: rows.length,

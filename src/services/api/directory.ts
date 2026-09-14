@@ -8,7 +8,12 @@ export async function apiListProjects(): Promise<Project[]> {
   return data.items
 }
 
-export type ProjectMutationBody = { name: string; sortOrder?: number; enabled?: boolean }
+export type ProjectMutationBody = {
+  name: string
+  code?: string | null
+  sortOrder?: number
+  enabled?: boolean
+}
 
 export async function apiCreateProject(
   productId: string,

@@ -11,6 +11,14 @@ import { requireRoles } from '../middleware/require-role.js'
 
 export const projectDraftSchema = z.object({
   name: z.string().trim().min(1).max(120),
+  code: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .max(64)
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+    .nullable()
+    .optional(),
   sortOrder: z.number().int().min(0).max(9999).default(0),
   enabled: z.boolean().default(true),
 })
@@ -142,7 +150,7 @@ projectRoutes.post('/projects', requireRoles('admin'), async (c) => {
         c,
         409,
         'project_taken',
-        'Project name already exists in this product',
+        'Project name or code already exists in this product',
       )
     throw error
   }
@@ -184,7 +192,7 @@ projectRoutes.patch('/projects/:id', requireRoles('admin'), async (c) => {
         c,
         409,
         'project_taken',
-        'Project name already exists in this product',
+        'Project name or code already exists in this product',
       )
     throw error
   }

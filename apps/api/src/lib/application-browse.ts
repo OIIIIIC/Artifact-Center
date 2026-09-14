@@ -133,7 +133,7 @@ export async function listApplicationPage(c: Context<{ Variables: AuthVariables 
       .select({
         application: applicationResponseColumns,
         region: regions,
-        projectName: projects.name,
+        project: { name: projects.name, code: projects.code },
         accessRole,
         cursorValue: sql<string>`${column}::text`,
         latestArtifactUploadedAt: sql<
@@ -182,7 +182,7 @@ export async function listApplicationPage(c: Context<{ Variables: AuthVariables 
         r.region,
         members.get(r.application.id),
         r.accessRole,
-        r.projectName,
+        r.project,
       ),
     ),
     total: totals[0].count,

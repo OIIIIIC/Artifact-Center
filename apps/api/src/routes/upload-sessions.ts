@@ -1,7 +1,13 @@
 import { and, asc, eq, gt } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db } from '../db/client.js'
-import { applications, regions, uploadParts, uploadSessions } from '../db/schema.js'
+import {
+  applications,
+  projects,
+  regions,
+  uploadParts,
+  uploadSessions,
+} from '../db/schema.js'
 import { distributionFilename } from '../lib/artifact-filename.js'
 import { jsonError } from '../lib/errors.js'
 import {
@@ -58,9 +64,14 @@ export function registerUploadSessions(
         )
       }
       const [target] = await db
-        .select({ application: applications, regionCode: regions.code })
+        .select({
+          application: applications,
+          regionCode: regions.code,
+          projectCode: projects.code,
+        })
         .from(applications)
         .innerJoin(regions, eq(regions.id, applications.regionId))
+        .innerJoin(projects, eq(projects.id, applications.projectId))
         .where(eq(applications.id, appId))
         .limit(1)
       if (!target) return jsonError(c, 404, 'not_found', 'Application not found')
@@ -128,6 +139,7 @@ export function registerUploadSessions(
 
       const finalFilename = distributionFilename({
         regionCode: target.regionCode,
+        projectCode: target.projectCode,
         applicationCode: app.applicationCode,
         version: input.data.version,
         buildNumber: input.data.buildNumber || '1',

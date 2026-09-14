@@ -15,6 +15,7 @@ import { ProductEditor, type ProductDraft } from './product-editor'
 export function ProductDetail({
   product,
   applicationCount,
+  projectCount,
   draft,
   onDraftChange,
   onDeleted,
@@ -22,6 +23,7 @@ export function ProductDetail({
 }: {
   product: Product
   applicationCount: number | null
+  projectCount: number | null
   draft?: ProductDraft
   onDraftChange: (draft: ProductDraft | undefined) => void
   onDeleted: () => void
@@ -73,11 +75,19 @@ export function ProductDetail({
       ) : (
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="break-all text-2xl font-semibold tracking-tight">
-              {product.name}
+            <h2 className="flex flex-wrap items-center gap-2.5 text-2xl font-semibold tracking-tight">
+              <span className="min-w-0 break-all">{product.name}</span>
+              {projectCount !== null ? (
+                <span
+                  className="inline-flex h-6 min-w-7 shrink-0 items-center justify-center rounded-lg bg-muted/70 px-2 text-xs font-medium tabular-nums tracking-normal text-muted-foreground"
+                  title={t('directory.projectCount', { count: projectCount })}
+                  aria-label={t('directory.projectCount', { count: projectCount })}
+                >
+                  {projectCount}
+                </span>
+              ) : null}
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              <span className="break-all font-mono">{product.code}</span>
               <span
                 className={cn(
                   'inline-flex items-center gap-1.5',

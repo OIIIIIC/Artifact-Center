@@ -53,6 +53,8 @@ export interface Project {
   id: string
   productId: string
   name: string
+  /** Download prefix; absent on legacy responses, null uses the product code. */
+  code?: string | null
   sortOrder: number
   enabled: boolean
   isDefault: boolean
@@ -72,6 +74,7 @@ export interface Application {
   platform: ApplicationPlatform
   region: Region
   /** Present on current APIs; optional only for legacy cached responses. */
+  projectCode?: string | null
   projectName?: string
   projectId?: string
   latestVersion: string

@@ -36,6 +36,8 @@ ADR (Architecture Decision Record) 是一种轻量级的架构决策文档，由
 | [0020](0020-bounded-catalog-history.md)                    | 应用与历史列表采用有界查询                   | accepted |
 | [0021](0021-linux-platform-and-package-types.md)           | Linux 平台与制品文件格式分离                 | accepted |
 
+| [0022](0022-project-download-prefix.md) | 项目编码作为制品下载前缀 | accepted |
+
 ## 状态标记
 
 每篇 ADR 在文件头部标注状态，使用以下标记之一：

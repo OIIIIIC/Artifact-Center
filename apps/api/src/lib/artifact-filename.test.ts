@@ -3,6 +3,19 @@ import { describe, expect, it } from 'vitest'
 import { distributionFilename } from './artifact-filename.js'
 
 describe('distributionFilename', () => {
+  it('uses the project code ahead of the product code', () => {
+    expect(
+      distributionFilename({
+        regionCode: 'default',
+        projectCode: 'shiyan',
+        applicationCode: 'caregiver',
+        version: '0.0.5',
+        buildNumber: '1005',
+        channel: 'stable',
+        originalFilename: 'app.apk',
+      }),
+    ).toBe('shiyan_caregiver_v0.0.5_b1005_stable.apk')
+  })
   it('generates a stable distribution filename from artifact metadata', () => {
     expect(
       distributionFilename({
