@@ -29,7 +29,7 @@ import {
 import { ArtifactReleaseBadges } from '@/features/applications/artifact-release-badges'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
-import { formatFileSize, formatRelativeTime } from '@/lib/format'
+import { formatAbsoluteDateTime, formatFileSize } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
@@ -317,6 +317,18 @@ export function ArtifactsTable({
                       <span aria-hidden>·</span>
                       <span className="font-mono">{formatFileSize(art.sizeBytes)}</span>
                     </p>
+                    <p className="mt-1 text-[0.6875rem] text-muted-foreground md:hidden">
+                      {t('detail.colUploadTime')}{' '}
+                      <time
+                        dateTime={art.uploadedAt}
+                        title={formatAbsoluteDateTime(art.uploadedAt, {
+                          includeTimeZone: true,
+                        })}
+                        className="tabular-nums"
+                      >
+                        {formatAbsoluteDateTime(art.uploadedAt)}
+                      </time>
+                    </p>
                   </div>
                 </TableCell>
                 <TableCell className="hidden px-4 py-3.5 sm:table-cell">
@@ -329,8 +341,14 @@ export function ArtifactsTable({
                   {formatFileSize(art.sizeBytes)}
                 </TableCell>
                 <TableCell className="hidden px-4 py-3.5 text-[0.8125rem] text-muted-foreground md:table-cell">
-                  <time dateTime={art.uploadedAt}>
-                    {formatRelativeTime(art.uploadedAt)}
+                  <time
+                    dateTime={art.uploadedAt}
+                    title={formatAbsoluteDateTime(art.uploadedAt, {
+                      includeTimeZone: true,
+                    })}
+                    className="tabular-nums"
+                  >
+                    {formatAbsoluteDateTime(art.uploadedAt)}
                   </time>
                 </TableCell>
                 <TableCell className="hidden px-4 py-3.5 text-[0.8125rem] text-foreground/90 xl:table-cell">

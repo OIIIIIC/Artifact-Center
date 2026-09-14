@@ -35,6 +35,26 @@ export function formatAbsoluteDate(iso: string): string {
   }).format(date)
 }
 
+/** Unambiguous local date and 24-hour time for tracing a build's history. */
+export function formatAbsoluteDateTime(
+  iso: string,
+  { includeTimeZone = false }: { includeTimeZone?: boolean } = {},
+): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  const pad = (value: number) => String(value).padStart(2, '0')
+  const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  const time = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  const formatted = `${day} ${time}`
+  if (!includeTimeZone) return formatted
+
+  const offset = -date.getTimezoneOffset()
+  const sign = offset < 0 ? '-' : '+'
+  const hours = pad(Math.floor(Math.abs(offset) / 60))
+  const minutes = pad(Math.abs(offset) % 60)
+  return `${formatted} (UTC${sign}${hours}:${minutes})`
+}
+
 export function formatFileSize(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '—'
   if (bytes < 1024) return `${bytes} B`

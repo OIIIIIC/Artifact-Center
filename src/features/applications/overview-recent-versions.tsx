@@ -9,7 +9,7 @@ import { ShareDialog } from '@/features/share/share-dialog'
 import { ArtifactReleaseBadges } from '@/features/applications/artifact-release-badges'
 import { PLATFORM_ICON } from '@/features/applications/platform-meta'
 import { useDownloadArtifact } from '@/features/applications/use-download-artifact'
-import { formatFileSize, formatRelativeTime } from '@/lib/format'
+import { formatAbsoluteDateTime, formatFileSize } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { ApplicationStatus } from '@/types/application'
 import {
@@ -142,8 +142,14 @@ export function OverviewRecentVersions({
                   <span className="text-muted-foreground/35" aria-hidden>
                     ·
                   </span>
-                  <time dateTime={art.uploadedAt}>
-                    {formatRelativeTime(art.uploadedAt)}
+                  <time
+                    dateTime={art.uploadedAt}
+                    title={formatAbsoluteDateTime(art.uploadedAt, {
+                      includeTimeZone: true,
+                    })}
+                    className="whitespace-nowrap tabular-nums"
+                  >
+                    {formatAbsoluteDateTime(art.uploadedAt)}
                   </time>
                   <span className="text-muted-foreground/35" aria-hidden>
                     ·

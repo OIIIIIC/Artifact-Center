@@ -17,7 +17,7 @@ import {
   ModalHeader,
   ModalTitle,
 } from '@/components/ui/modal'
-import { formatRelativeTime } from '@/lib/format'
+import { formatAbsoluteDateTime } from '@/lib/format'
 import { queryKeys } from '@/lib/query-keys'
 import { getRequestErrorMessage } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
@@ -165,12 +165,15 @@ export function ReleaseNotesPanel({
                   {release.artifactCount} {t('detail.artifactsTitle')}
                 </span>
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <time
                   dateTime={release.publishedAt}
-                  className="text-[0.75rem] text-muted-foreground"
+                  title={formatAbsoluteDateTime(release.publishedAt, {
+                    includeTimeZone: true,
+                  })}
+                  className="text-[0.75rem] whitespace-nowrap text-muted-foreground tabular-nums"
                 >
-                  {formatRelativeTime(release.publishedAt)}
+                  {formatAbsoluteDateTime(release.publishedAt)}
                 </time>
                 {canEdit ? (
                   <Button
