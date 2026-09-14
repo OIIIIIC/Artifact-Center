@@ -16,6 +16,7 @@ import { ResetMemberPasswordForm } from './reset-member-password-form'
 import { TransferAdministratorDialog } from './transfer-administrator-dialog'
 
 import { Button } from '@/components/ui/button'
+import { UserAvatar } from '@/components/common/user-avatar'
 import { Input } from '@/components/ui/input'
 import {
   Modal,
@@ -220,19 +221,26 @@ export function MembersSettingsPanel({ hideHeader = false }: { hideHeader?: bool
                 const isSelf = user?.id === member.id
                 return (
                   <li key={member.id} className="space-y-3 bg-card/40 px-4 py-3.5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="truncate text-[0.875rem] font-medium">
-                          {member.name}
-                          {isSelf ? (
-                            <span className="ml-2 text-[0.75rem] font-normal text-muted-foreground">
-                              {t('settings.you')}
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="truncate text-[0.75rem] text-muted-foreground">
-                          {member.email}
-                        </p>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <UserAvatar
+                          user={member}
+                          className="size-9 shrink-0"
+                          fallbackClassName="text-xs"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-[0.875rem] font-medium">
+                            {member.name}
+                            {isSelf ? (
+                              <span className="ml-2 text-[0.75rem] font-normal text-muted-foreground">
+                                {t('settings.you')}
+                              </span>
+                            ) : null}
+                          </p>
+                          <p className="truncate text-[0.75rem] text-muted-foreground">
+                            {member.email}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {isSelf ? (
