@@ -34,6 +34,8 @@ test('the distributed client runs without repository source or node_modules', as
         'artifact_center_check_authorization',
         'artifact_center_list_applications',
         'artifact_center_get_application',
+        'artifact_center_match_repository',
+        'artifact_center_prepare_upload',
         'artifact_center_upload_artifact',
         'artifact_center_update_artifact',
       ],
