@@ -50,4 +50,16 @@ describe('国际化资源', () => {
 
     expect(mismatches).toEqual([])
   })
+
+  it('发布凭据文案不再使用机器人称呼', () => {
+    const credentialKeys = [...zh.keys()].filter(
+      (key) =>
+        key === 'settings.navReleaseRobots' || /settings\..*releaseRobot/i.test(key),
+    )
+
+    expect(credentialKeys.map((key) => zh.get(key)).join('\n')).not.toContain('机器人')
+    expect(credentialKeys.map((key) => en.get(key)).join('\n')).not.toMatch(
+      /\brobots?\b/i,
+    )
+  })
 })

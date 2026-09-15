@@ -24,7 +24,7 @@ artifact-center 是一个**企业内网软件制品管理平台**。核心使命
 | **Share Collection**      | 一个 Share Link 下的交付清单；包含同一 Product 中一个或多个 Application 的分享项，每项独立选择 latest 或 artifact。                         |
 | **Audit Log**             | 追加式操作记录，外键可置空但事实保留。                                                                                                      |
 | **Storage Key**           | 二进制存储抽象键，当前本地文件，未来可切换 MinIO/S3。                                                                                       |
-| **Release Credential**    | 平台级机器凭据；可向所有 Application 上传测试版和正式版制品，不代表通用用户会话。                                                           |
+| **Release Credential**    | 平台级发布凭据；供 Codex MCP、CI 等自动化方式向所有 Application 发布测试版和正式版制品，不代表通用用户会话。                                |
 | **Personal Workspace**    | 属于 User 的个性化页面；保存收藏、最近访问和目录偏好。它是工作入口，但不承载平台统计或 Dashboard 指标。                                     |
 
 ## 产品与项目目录（2026-09-09）

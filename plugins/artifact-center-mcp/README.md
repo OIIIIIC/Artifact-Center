@@ -4,7 +4,7 @@ This Codex plugin connects to Artifact Center without exposing destructive actio
 
 ## Authentication
 
-Before first use, create a platform **Release Credential** in Artifact Center: **Settings → Release robots**. Then configure the MCP environment:
+Before first use, create a platform **Release Credential** in Artifact Center: **Settings → Release credentials**. Then configure the MCP environment:
 
 ```powershell
 $env:ARTIFACT_CENTER_URL = 'https://artifact-center.example.internal'
@@ -18,7 +18,7 @@ Run `artifact_center_check_authorization` first. It uses the release-specific AP
 ## Install in Codex
 
 The recommended installation does not require this repository. In Artifact Center,
-open **Settings → Release robots**, create a credential, copy the generated PowerShell
+open **Settings → Release credentials**, create a credential, copy the generated PowerShell
 setup command, and run it on the Windows device where Codex is installed. The command:
 
 1. downloads the standalone MCP client from the same Artifact Center deployment;

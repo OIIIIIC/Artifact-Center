@@ -19,7 +19,7 @@ Artifact Center 将本地 MCP 构建为单个 Node.js ESM 运行包，并与 Web
 发布。发布内容包含运行包和 SHA-256 校验值，不包含项目检出、测试、源映射或
 开发依赖。
 
-管理员在“设置 → 发布机器人”创建 Release Credential 后，页面直接生成
+管理员在“设置 → 发布凭据”创建 Release Credential 后，页面直接生成
 PowerShell 安装命令。命令从当前 Artifact Center 站点下载运行包，验证校验值，
 保存到当前 Windows 用户的 LocalApplicationData 目录，并使用 `codex mcp add`
 注册 stdio MCP。用户无需知道项目路径，也无需克隆主仓库或执行 `npm install`。

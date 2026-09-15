@@ -68,7 +68,7 @@ releaseCredentialRoutes.post('/', async (c) => {
     action: 'release_credential.create',
     objectType: 'release_credential',
     objectId: row.id,
-    summary: `创建平台发布机器人 ${row.name}`,
+    summary: `创建平台发布凭据 ${row.name}`,
     meta: {
       scope: 'all_applications',
       channels: ['beta', 'stable'],
@@ -96,7 +96,7 @@ releaseCredentialRoutes.delete('/:id', async (c) => {
     action: 'release_credential.revoke',
     objectType: 'release_credential',
     objectId: row.id,
-    summary: `撤销平台发布机器人 ${row.name}`,
+    summary: `撤销平台发布凭据 ${row.name}`,
   })
   return c.json({ ok: true })
 })
