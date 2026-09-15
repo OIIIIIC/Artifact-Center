@@ -1,3 +1,6 @@
+import { motion, useReducedMotion } from 'framer-motion'
+import { useId } from 'react'
+import { DetailTabContent } from '@/features/applications/detail-tab-content'
 import { resolveDetailTab } from '@/features/applications/detail-navigation'
 import { Inbox, RefreshCw, ServerCrash } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -6,7 +9,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '@/components/feedback'
 import { AppLayout, PageContainer } from '@/components/layout'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ActivityPanel } from '@/features/applications/activity-panel'
 import { ApplicationDetailHeader } from '@/features/applications/application-detail-header'
 import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
@@ -24,6 +27,8 @@ import { ApplicationDirectory } from '@/features/products/application-directory'
 
 export function ApplicationDetailPage() {
   const { t } = useTranslation()
+  const motionId = useId()
+  const reducedMotion = useReducedMotion()
   const { id } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const user = useAuthStore((s) => s.user)
@@ -183,9 +188,17 @@ export function ApplicationDetailPage() {
                   className={cn(
                     'h-auto min-h-10 flex-none rounded-none px-3.5 pt-2.5 pb-2.5 text-[0.8125rem]',
                     'data-active:bg-transparent dark:data-active:bg-transparent',
-                    'after:bottom-0 after:h-0.5',
+                    'after:hidden',
                   )}
                 >
+                  {activeTab === tab.value ? (
+                    <motion.span
+                      layoutId={`${motionId}-underline`}
+                      initial={false}
+                      transition={{ duration: reducedMotion ? 0 : 0.18, ease: 'easeOut' }}
+                      className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
+                    />
+                  ) : null}
                   {tab.label}
                   {'count' in tab && tab.count != null ? (
                     <span className="ml-1.5 text-muted-foreground tabular-nums">
@@ -196,7 +209,12 @@ export function ApplicationDetailPage() {
               ))}
             </TabsList>
 
-            <TabsContent value="overview" className="mt-0 space-y-4 outline-none">
+            <DetailTabContent
+              key={`${application.id}-overview`}
+              active={activeTab === 'overview'}
+              value="overview"
+              className="mt-0 space-y-4 outline-none"
+            >
               <div>
                 <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
                   {t('detail.recentVersions')}
@@ -212,9 +230,14 @@ export function ApplicationDetailPage() {
                 applicationStatus={application.status}
                 canManage={canWrite}
               />
-            </TabsContent>
+            </DetailTabContent>
 
-            <TabsContent value="artifacts" className="mt-0 space-y-4 outline-none">
+            <DetailTabContent
+              key={`${application.id}-artifacts`}
+              active={activeTab === 'artifacts'}
+              value="artifacts"
+              className="mt-0 space-y-4 outline-none"
+            >
               <div>
                 <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
                   {t('detail.artifactsTitle')}
@@ -229,18 +252,28 @@ export function ApplicationDetailPage() {
                 application={application}
                 canManage={canWrite}
               />
-            </TabsContent>
+            </DetailTabContent>
 
-            <TabsContent value="release-notes" className="mt-0 outline-none">
+            <DetailTabContent
+              key={`${application.id}-release-notes`}
+              active={activeTab === 'release-notes'}
+              value="release-notes"
+              className="mt-0 outline-none"
+            >
               <ApplicationHistoryPage
                 key={application.id}
                 kind="releases"
                 application={application}
                 canManage={canWrite}
               />
-            </TabsContent>
+            </DetailTabContent>
 
-            <TabsContent value="activity" className="mt-0 space-y-4 outline-none">
+            <DetailTabContent
+              key={`${application.id}-activity`}
+              active={activeTab === 'activity'}
+              value="activity"
+              className="mt-0 space-y-4 outline-none"
+            >
               <div>
                 <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
                   {t('detail.activityTitle')}
@@ -250,10 +283,15 @@ export function ApplicationDetailPage() {
                 </p>
               </div>
               <ActivityPanel applicationId={application.id} />
-            </TabsContent>
+            </DetailTabContent>
 
             {canWrite ? (
-              <TabsContent value="shares" className="mt-0 space-y-4 outline-none">
+              <DetailTabContent
+                key={`${application.id}-shares`}
+                active={activeTab === 'shares'}
+                value="shares"
+                className="mt-0 space-y-4 outline-none"
+              >
                 <div>
                   <h2 className="text-[0.9375rem] font-semibold tracking-tight text-foreground">
                     {t('detail.sharesTitle')}
@@ -263,17 +301,22 @@ export function ApplicationDetailPage() {
                   </p>
                 </div>
                 <ShareLinksPanel applicationId={application.id} />
-              </TabsContent>
+              </DetailTabContent>
             ) : null}
 
             {canWrite ? (
-              <TabsContent value="settings" className="mt-0 outline-none">
+              <DetailTabContent
+                key={`${application.id}-settings`}
+                active={activeTab === 'settings'}
+                value="settings"
+                className="mt-0 outline-none"
+              >
                 <ApplicationSettingsPanel
                   key={application.id}
                   application={application}
                   autoOpenMembers={searchParams.get('addMember') === '1'}
                 />
-              </TabsContent>
+              </DetailTabContent>
             ) : null}
           </Tabs>
         </div>
