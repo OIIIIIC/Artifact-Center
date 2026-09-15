@@ -1,3 +1,6 @@
+import { AnimatePresence } from 'framer-motion'
+import { SettingsTransition } from './settings-transition'
+import { RepositoryBindingsEditor } from './repository-bindings-editor'
 import { StatusBadge } from '@/components/common'
 import { FormError } from '@/components/feedback'
 import { Button } from '@/components/ui/button'
@@ -28,7 +31,7 @@ import type {
   Region,
 } from '@/types/application'
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2, Pencil, X } from 'lucide-react'
+import { Loader2, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -53,6 +56,9 @@ export function ApplicationBasicSettings({ application }: { application: Applica
   const selectedProjectId =
     projectId || projects.find((p) => p.productId === regionId && p.isDefault)?.id || ''
   const [repository, setRepository] = useState(application.repository)
+  const [repositoryBindings, setRepositoryBindings] = useState(
+    application.repositoryBindings ?? [],
+  )
   const [status, setStatus] = useState<ApplicationStatus>(application.status)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -69,7 +75,11 @@ export function ApplicationBasicSettings({ application }: { application: Applica
     projectId !== (application.projectId ?? '') ||
     repository.trim() !== application.repository
   const statusDirty = status !== application.status
-  const dirty = infoDirty || statusDirty
+  const dirty =
+    infoDirty ||
+    statusDirty ||
+    JSON.stringify(repositoryBindings) !==
+      JSON.stringify(application.repositoryBindings ?? [])
   const resetDraft = () => {
     setName(application.name)
     setApplicationCode(application.applicationCode)
@@ -79,6 +89,7 @@ export function ApplicationBasicSettings({ application }: { application: Applica
     setRegionId(application.region.id)
     setProjectId(application.projectId ?? '')
     setRepository(application.repository)
+    setRepositoryBindings(application.repositoryBindings ?? [])
     setStatus(application.status)
     setError(null)
     setFieldErrors({})
@@ -149,9 +160,11 @@ export function ApplicationBasicSettings({ application }: { application: Applica
         regionId,
         projectId: selectedProjectId || undefined,
         repository: repository.trim(),
+        repositoryBindings,
         status,
       })
       queryClient.setQueryData(queryKeys.applications.detail(application.id), updated)
+      setRepositoryBindings(updated.repositoryBindings ?? [])
       await queryClient.invalidateQueries({ queryKey: queryKeys.applications.all })
       setEditing(false)
       toast.success(t('appSettings.saved'))
@@ -170,6 +183,8 @@ export function ApplicationBasicSettings({ application }: { application: Applica
   return (
     <BasicSettings
       application={application}
+      repositoryBindings={repositoryBindings}
+      onBindingsChange={setRepositoryBindings}
       editing={editing}
       saving={saving}
       dirty={dirty}
@@ -218,6 +233,8 @@ export function ApplicationBasicSettings({ application }: { application: Applica
 
 function BasicSettings({
   application,
+  repositoryBindings,
+  onBindingsChange,
   editing,
   saving,
   dirty,
@@ -237,6 +254,8 @@ function BasicSettings({
   onSave,
 }: {
   application: Application
+  repositoryBindings: NonNullable<Application['repositoryBindings']>
+  onBindingsChange: (value: NonNullable<Application['repositoryBindings']>) => void
   editing: boolean
   saving: boolean
   dirty: boolean
@@ -281,146 +300,149 @@ function BasicSettings({
             <Pencil />
             {t('appSettings.edit')}
           </Button>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={saving}
-            onClick={onCancel}
-          >
-            <X />
-            {t('appSettings.cancelEdit')}
-          </Button>
-        )}
+        ) : null}
       </div>
 
-      {!editing ? (
-        <div className="grid gap-x-8 gap-y-5 rounded-xl bg-muted/20 p-5 ring-1 ring-border/60 sm:grid-cols-2">
-          <InfoCell label={t('createApp.fieldName')}>{application.name}</InfoCell>
-          <InfoCell label={t('createApp.fieldApplicationCode')} mono>
-            {application.applicationCode}
-          </InfoCell>
-          <InfoCell label={t('createApp.fieldPackage')} mono>
-            {application.packageName}
-          </InfoCell>
-          <InfoCell label={t('createApp.fieldDescription')} className="sm:col-span-2">
-            {application.description}
-          </InfoCell>
-          <InfoCell label={t('createApp.fieldPlatform')}>
-            {t(`platform.${application.platform}`)}
-          </InfoCell>
-          <InfoCell label={t('createApp.fieldRegion')}>
-            {application.region.name}
-            {projectName ? ` / ${projectName}` : ''}
-          </InfoCell>
-          <InfoCell label={t('createApp.fieldRepository')} mono>
-            {application.repository || t('appSettings.emptyValue')}
-          </InfoCell>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            field="name"
-            label={t('createApp.fieldName')}
-            value={values.name}
-            error={fieldErrors.name}
-            onChange={(value) => onFieldChange('name', value)}
-          />
-          <TextField
-            field="applicationCode"
-            label={t('createApp.fieldApplicationCode')}
-            value={values.applicationCode}
-            error={fieldErrors.applicationCode}
-            mono
-            hint={t('createApp.applicationCodeHint')}
-            onChange={(value) => onFieldChange('applicationCode', value)}
-          />
-          <TextField
-            field="packageName"
-            label={t('createApp.fieldPackage')}
-            value={values.packageName}
-            error={fieldErrors.packageName}
-            mono
-            onChange={(value) => onFieldChange('packageName', value)}
-          />
-          <label className="space-y-1.5 sm:col-span-2">
-            <FieldLabel
-              label={t('createApp.fieldDescription')}
-              value={values.description}
-              max={APPLICATION_FIELD_LIMITS.description}
-            />
-            <textarea
-              value={values.description}
-              rows={4}
-              maxLength={APPLICATION_FIELD_LIMITS.description}
-              onChange={(event) => onFieldChange('description', event.target.value)}
-              className={cn(
-                'min-h-24 w-full resize-y rounded-lg bg-muted/30 px-3 py-2.5 text-[0.875rem] outline-none ring-1 ring-border/60 focus-visible:ring-[3px] focus-visible:ring-ring/30',
-                fieldErrors.description && 'ring-destructive/50',
-              )}
-            />
-            <FormError
-              message={fieldErrors.description}
-              className="[&_p]:text-[0.75rem]"
-            />
-          </label>
-          <div className="space-y-1.5">
-            <span className="text-[0.8125rem] font-medium text-foreground">
-              {t('createApp.fieldPlatform')}
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {PLATFORMS.map((item) => (
-                <Choice
-                  key={item}
-                  active={values.platform === item}
-                  onClick={() => onPlatformChange(item)}
-                >
-                  {t(`platform.${item}`)}
-                </Choice>
-              ))}
+      <AnimatePresence initial={false} mode="wait">
+        <SettingsTransition key={editing ? 'edit' : 'preview'} className="space-y-5">
+          {!editing ? (
+            <div className="grid gap-x-8 gap-y-5 rounded-xl bg-muted/20 p-5 ring-1 ring-border/60 sm:grid-cols-2">
+              <InfoCell label={t('createApp.fieldName')}>{application.name}</InfoCell>
+              <InfoCell label={t('createApp.fieldApplicationCode')} mono>
+                {application.applicationCode}
+              </InfoCell>
+              <InfoCell label={t('createApp.fieldPackage')} mono>
+                {application.packageName}
+              </InfoCell>
+              <InfoCell label={t('createApp.fieldDescription')} className="sm:col-span-2">
+                {application.description}
+              </InfoCell>
+              <InfoCell label={t('createApp.fieldPlatform')}>
+                {t(`platform.${application.platform}`)}
+              </InfoCell>
+              <InfoCell label={t('createApp.fieldRegion')}>
+                {application.region.name}
+                {projectName ? ` / ${projectName}` : ''}
+              </InfoCell>
+              <InfoCell label={t('createApp.fieldRepository')} mono>
+                {application.repository || t('appSettings.emptyValue')}
+              </InfoCell>
             </div>
-          </div>
-          <label className="space-y-1.5">
-            <span className="text-[0.8125rem] font-medium text-foreground">
-              {t('createApp.fieldRegion')}
-            </span>
-            <Select value={values.regionId} onValueChange={onRegionChange}>
-              <SelectTrigger className="h-8 text-[0.8125rem]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {regions.map((region) => (
-                  <SelectItem
-                    key={region.id}
-                    value={region.id}
-                    disabled={!region.enabled && region.id !== application.region.id}
-                  >
-                    {region.name}
-                    {!region.enabled ? ` · ${t('settings.regionInactive')}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-          <ProjectSelect
-            productId={values.regionId}
-            value={projectId}
-            onChange={onProjectChange}
+          ) : (
+            <div className="grid items-start gap-x-6 gap-y-5 rounded-xl bg-muted/20 p-5 ring-1 ring-border/60 sm:grid-cols-2">
+              <TextField
+                field="name"
+                label={t('createApp.fieldName')}
+                value={values.name}
+                error={fieldErrors.name}
+                onChange={(value) => onFieldChange('name', value)}
+              />
+              <TextField
+                field="applicationCode"
+                label={t('createApp.fieldApplicationCode')}
+                value={values.applicationCode}
+                error={fieldErrors.applicationCode}
+                mono
+                hint={t('createApp.applicationCodeHint')}
+                onChange={(value) => onFieldChange('applicationCode', value)}
+              />
+              <TextField
+                field="packageName"
+                label={t('createApp.fieldPackage')}
+                value={values.packageName}
+                error={fieldErrors.packageName}
+                mono
+                onChange={(value) => onFieldChange('packageName', value)}
+              />
+              <div className="space-y-1.5">
+                <span className="text-[0.8125rem] font-medium text-foreground">
+                  {t('createApp.fieldPlatform')}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {PLATFORMS.map((item) => (
+                    <Choice
+                      key={item}
+                      active={values.platform === item}
+                      onClick={() => onPlatformChange(item)}
+                    >
+                      {t(`platform.${item}`)}
+                    </Choice>
+                  ))}
+                </div>
+              </div>
+              <label className="space-y-1.5">
+                <span className="text-[0.8125rem] font-medium text-foreground">
+                  {t('createApp.fieldRegion')}
+                </span>
+                <Select value={values.regionId} onValueChange={onRegionChange}>
+                  <SelectTrigger className="h-8 text-[0.8125rem]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {regions.map((region) => (
+                      <SelectItem
+                        key={region.id}
+                        value={region.id}
+                        disabled={!region.enabled && region.id !== application.region.id}
+                      >
+                        {region.name}
+                        {!region.enabled ? ` · ${t('settings.regionInactive')}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <ProjectSelect
+                productId={values.regionId}
+                value={projectId}
+                onChange={onProjectChange}
+                disabled={saving}
+                currentProjectId={application.projectId}
+              />
+              <label className="group block min-w-0 space-y-1.5 sm:col-span-2">
+                <FieldLabel
+                  label={t('createApp.fieldDescription')}
+                  value={values.description}
+                  max={APPLICATION_FIELD_LIMITS.description}
+                />
+                <textarea
+                  value={values.description}
+                  rows={3}
+                  maxLength={APPLICATION_FIELD_LIMITS.description}
+                  onChange={(event) => onFieldChange('description', event.target.value)}
+                  className={cn(
+                    'min-h-20 w-full resize-y rounded-lg bg-muted/30 px-3 py-2.5 text-[0.875rem] outline-none ring-1 ring-border/60 focus-visible:ring-[3px] focus-visible:ring-ring/30',
+                    fieldErrors.description && 'ring-destructive/50',
+                  )}
+                />
+                {fieldErrors.description ? (
+                  <FormError
+                    message={fieldErrors.description}
+                    className="[&_p]:text-[0.75rem]"
+                  />
+                ) : null}
+              </label>
+              <div className="sm:col-span-2">
+                <TextField
+                  field="repository"
+                  label={t('createApp.fieldRepository')}
+                  value={values.repository}
+                  error={fieldErrors.repository}
+                  mono
+                  optional
+                  onChange={(value) => onFieldChange('repository', value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <RepositoryBindingsEditor
+            value={editing ? repositoryBindings : (application.repositoryBindings ?? [])}
+            onChange={editing ? onBindingsChange : undefined}
             disabled={saving}
-            currentProjectId={application.projectId}
           />
-          <TextField
-            field="repository"
-            label={t('createApp.fieldRepository')}
-            value={values.repository}
-            error={fieldErrors.repository}
-            mono
-            optional
-            onChange={(value) => onFieldChange('repository', value)}
-          />
-        </div>
-      )}
+        </SettingsTransition>
+      </AnimatePresence>
 
       <div className="border-t border-border/60 pt-5">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -458,14 +480,22 @@ function BasicSettings({
       </div>
 
       {error ? <FormError message={error} /> : null}
-      {dirty ? (
-        <div className="flex justify-end">
-          <Button type="button" size="lg" disabled={saving} onClick={onSave}>
-            {saving ? <Loader2 className="animate-spin" /> : null}
-            {saving ? t('appSettings.saving') : t('appSettings.save')}
-          </Button>
-        </div>
-      ) : null}
+      <AnimatePresence initial={false}>
+        {editing || dirty ? (
+          <SettingsTransition
+            key="actions"
+            className="sticky bottom-0 z-10 flex justify-end gap-2 border-t border-border/60 bg-background/95 py-3 backdrop-blur-sm"
+          >
+            <Button type="button" variant="outline" disabled={saving} onClick={onCancel}>
+              {t('appSettings.cancelEdit')}
+            </Button>
+            <Button type="button" disabled={saving || !dirty} onClick={onSave}>
+              {saving ? <Loader2 className="animate-spin" /> : null}
+              {saving ? t('appSettings.saving') : t('appSettings.save')}
+            </Button>
+          </SettingsTransition>
+        ) : null}
+      </AnimatePresence>
     </section>
   )
 }

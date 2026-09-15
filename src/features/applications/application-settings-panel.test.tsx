@@ -90,9 +90,97 @@ describe('应用设置模块', () => {
     deleteApplication.mockReset().mockResolvedValue(undefined)
   })
 
+  it('新增仓库绑定随应用保存，取消编辑恢复原绑定', async () => {
+    updateApplication.mockResolvedValue(application)
+    renderSettings()
+    fireEvent.click(screen.getByRole('button', { name: 'appSettings.edit' }))
+    await screen.findByRole('textbox', { name: /createApp.fieldName/ })
+    fireEvent.click(screen.getByRole('button', { name: 'repositoryBindings.add' }))
+    fireEvent.change(screen.getByLabelText('repositoryBindings.repository 1'), {
+      target: { value: 'https://git.example/team/app.git' },
+    })
+    fireEvent.change(screen.getByLabelText('repositoryBindings.branch 1'), {
+      target: { value: 'main' },
+    })
+    fireEvent.change(screen.getByLabelText('repositoryBindings.directory 1'), {
+      target: { value: 'apps/care' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'appSettings.save' }))
+    await waitFor(() =>
+      expect(updateApplication).toHaveBeenCalledWith(
+        'app-1',
+        expect.objectContaining({
+          repositoryBindings: [
+            {
+              repository: 'https://git.example/team/app.git',
+              branch: 'main',
+              directory: 'apps/care',
+            },
+          ],
+        }),
+      ),
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'appSettings.edit' }),
+      ).toBeInTheDocument(),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'appSettings.edit' }))
+    await screen.findByRole('textbox', { name: /createApp.fieldName/ })
+    fireEvent.click(screen.getByRole('button', { name: 'appSettings.cancelEdit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'appSettings.edit' }))
+    await screen.findByRole('textbox', { name: /createApp.fieldName/ })
+    expect(screen.queryByLabelText('repositoryBindings.branch 1')).not.toBeInTheDocument()
+  })
+
+  it('移除仓库绑定使用明显的危险操作并要求二次确认', async () => {
+    application.repositoryBindings = [
+      {
+        repository: 'https://git.example/team/app.git',
+        branch: 'main',
+        directory: 'apps/care',
+      },
+    ]
+    try {
+      renderSettings()
+      fireEvent.click(screen.getByRole('button', { name: 'appSettings.edit' }))
+      await screen.findByRole('textbox', { name: /createApp.fieldName/ })
+
+      const removeButton = screen.getByRole('button', {
+        name: 'repositoryBindings.remove',
+      })
+      expect(removeButton).toHaveAttribute('data-variant', 'destructive')
+      fireEvent.click(removeButton)
+
+      expect(screen.getByRole('dialog')).toHaveTextContent(
+        'https://git.example/team/app.git',
+      )
+      expect(screen.getByLabelText('repositoryBindings.repository 1')).toBeInTheDocument()
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'repositoryBindings.confirmRemove' }),
+      )
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(
+        screen.queryByLabelText('repositoryBindings.repository 1'),
+      ).not.toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'appSettings.save' }))
+      await waitFor(() =>
+        expect(updateApplication).toHaveBeenCalledWith(
+          'app-1',
+          expect.objectContaining({ repositoryBindings: [] }),
+        ),
+      )
+    } finally {
+      application.repositoryBindings = []
+    }
+  })
+
   it('切换页签保留编辑草稿，保存时提交原应用及项目归属', async () => {
     renderSettings()
     fireEvent.click(screen.getByRole('button', { name: 'appSettings.edit' }))
+    await screen.findByRole('textbox', { name: /createApp.fieldName/ })
     fireEvent.change(screen.getByRole('textbox', { name: /createApp.fieldName/ }), {
       target: { value: '新版护理终端' },
     })
@@ -122,14 +210,16 @@ describe('应用设置模块', () => {
     )
   })
 
-  it('取消编辑恢复原值且不提交请求', () => {
+  it('取消编辑恢复原值且不提交请求', async () => {
     renderSettings()
     fireEvent.click(screen.getByRole('button', { name: 'appSettings.edit' }))
+    await screen.findByRole('textbox', { name: /createApp.fieldName/ })
     fireEvent.change(screen.getByRole('textbox', { name: /createApp.fieldName/ }), {
       target: { value: '未保存' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'appSettings.cancelEdit' }))
     fireEvent.click(screen.getByRole('button', { name: 'appSettings.edit' }))
+    await screen.findByRole('textbox', { name: /createApp.fieldName/ })
     expect(screen.getByRole('textbox', { name: /createApp.fieldName/ })).toHaveValue(
       application.name,
     )

@@ -1210,5 +1210,20 @@
     "next": "Next",
     "searchArtifacts": "Search version, build or filename",
     "searchReleases": "Search version or release notes"
+  },
+  "repositoryBindings": {
+    "title": "Repository publishing bindings",
+    "hint": "Match the repository URL, exact branch and code directory. An application may bind multiple branches.",
+    "empty": "No binding configured for automatic target discovery.",
+    "repository": "Repository URL",
+    "branch": "Branch",
+    "directory": "Code directory",
+    "root": "Repository root",
+    "add": "Add binding",
+    "remove": "Remove binding",
+    "itemLabel": "Binding {{index}}",
+    "removeTitle": "Remove repository binding?",
+    "removeDescription": "This repository and branch will no longer match this application automatically. Save the application settings to apply the change.",
+    "confirmRemove": "Remove binding"
   }
 }

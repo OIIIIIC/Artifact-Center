@@ -26,6 +26,7 @@ type ApiApplication = {
   region: Region
   projectName?: string
   projectId?: string
+  repositoryBindings?: Application['repositoryBindings']
   repository: string
   status: ApplicationStatus
   owner: string
@@ -56,6 +57,7 @@ function mapApp(a: ApiApplication): Application {
     projectId: a.projectId,
     projectName: a.projectName,
     repository: a.repository,
+    repositoryBindings: a.repositoryBindings ?? [],
     status: a.status,
     owner: a.owner,
     accessRole: a.accessRole,
@@ -183,6 +185,7 @@ export type CreateApplicationBody = {
   packageName: string
   platform: ApplicationPlatform
   regionId: string
+  repositoryBindings?: Application['repositoryBindings']
   repository?: string
 }
 
@@ -206,6 +209,7 @@ export type UpdateApplicationBody = {
   packageName?: string
   platform?: ApplicationPlatform
   regionId?: string
+  repositoryBindings?: Application['repositoryBindings']
   repository?: string
   status?: ApplicationStatus
   ownerName?: string

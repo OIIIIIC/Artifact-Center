@@ -5,7 +5,14 @@ import {
   type ApplicationEditableField,
 } from '@/lib/application-fields'
 import { cn } from '@/lib/utils'
-import { type ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
+import { CircleHelp } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { useTranslation } from 'react-i18next'
 
 type EditableField = Exclude<ApplicationEditableField, 'owner'>
@@ -31,15 +38,19 @@ export function TextField({
   hint?: string
   onChange: (value: string) => void
 }) {
+  const id = useId()
   return (
-    <label className="space-y-1.5">
+    <div className="group block min-w-0 space-y-1.5">
       <FieldLabel
         label={label}
+        htmlFor={id}
+        hint={hint}
         value={value}
         max={APPLICATION_FIELD_LIMITS[field]}
         optional={optional ? 'optional' : undefined}
       />
       <Input
+        id={id}
         value={value}
         disabled={disabled}
         maxLength={APPLICATION_FIELD_LIMITS[field]}
@@ -50,13 +61,8 @@ export function TextField({
         )}
         aria-invalid={Boolean(error) || undefined}
       />
-      <FormError message={error} className="[&_p]:text-[0.75rem]" />
-      {!error && hint ? (
-        <span className="block text-[0.75rem] leading-relaxed text-muted-foreground">
-          {hint}
-        </span>
-      ) : null}
-    </label>
+      {error ? <FormError message={error} className="[&_p]:text-[0.75rem]" /> : null}
+    </div>
   )
 }
 
@@ -65,24 +71,53 @@ export function FieldLabel({
   value,
   max,
   optional,
+  htmlFor,
+  hint,
 }: {
+  htmlFor?: string
+  hint?: string
   label: string
   value: string
   max: number
   optional?: string
 }) {
   const { t } = useTranslation()
+  const Label = htmlFor ? 'label' : 'span'
   return (
     <span className="flex items-baseline justify-between gap-3">
-      <span className="text-[0.8125rem] font-medium text-foreground">
-        {label}
+      <span className="inline-flex items-center gap-1.5 text-[0.8125rem] font-medium text-foreground">
+        <Label htmlFor={htmlFor}>{label}</Label>
+        {hint ? (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`${label} · ${t('common.help', { defaultValue: '说明' })}`}
+                  className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-ring"
+                >
+                  <CircleHelp className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-72 leading-relaxed">
+                {hint}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
         {optional ? (
           <span className="ml-1.5 font-normal text-muted-foreground">
             {t('createApp.optional')}
           </span>
         ) : null}
       </span>
-      <span className="text-[0.6875rem] tabular-nums text-muted-foreground">
+      <span
+        aria-hidden="true"
+        className={cn(
+          'text-[0.6875rem] tabular-nums text-muted-foreground transition-opacity group-focus-within:opacity-100',
+          value.length < max * 0.9 && 'opacity-0',
+        )}
+      >
         {value.length} / {max}
       </span>
     </span>
@@ -104,7 +139,7 @@ export function Choice({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium',
+        'rounded-lg px-3 py-1.5 text-[0.8125rem] font-medium transition-colors duration-150 motion-reduce:transition-none',
         active
           ? 'bg-foreground text-background'
           : 'bg-muted/40 text-muted-foreground hover:text-foreground',

@@ -1210,5 +1210,20 @@
     "next": "下一页",
     "searchArtifacts": "搜索版本、构建号或文件名",
     "searchReleases": "搜索版本或发布说明"
+  },
+  "repositoryBindings": {
+    "title": "仓库发布绑定",
+    "hint": "按仓库地址、分支和代码子目录精确匹配发布目标。一个应用可以绑定多个分支。",
+    "empty": "尚未绑定，自动发布无法识别此应用。",
+    "repository": "仓库地址",
+    "branch": "分支",
+    "directory": "代码子目录",
+    "root": "仓库根目录",
+    "add": "添加绑定",
+    "remove": "移除绑定",
+    "itemLabel": "绑定 {{index}}",
+    "removeTitle": "移除仓库绑定？",
+    "removeDescription": "该仓库和分支将无法再自动匹配此应用。确认后还需保存应用设置才会生效。",
+    "confirmRemove": "确认移除"
   }
 }

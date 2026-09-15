@@ -94,6 +94,7 @@ export interface Application {
   artifactCount: number
   status: ApplicationStatus
   /** Mock git-style remote for detail summary */
+  repositoryBindings?: Array<{ repository: string; branch: string; directory: string }>
   repository: string
 }
 
