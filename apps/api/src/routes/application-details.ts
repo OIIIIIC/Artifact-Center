@@ -118,6 +118,7 @@ export function registerApplicationDetails(
           regionId: data.regionId,
           projectId: data.projectId,
           repository: data.repository?.trim() || '',
+          repositoryBindings: data.repositoryBindings ?? [],
           status: 'new',
           ownerId: user.sub,
           ownerName: user.name,
@@ -258,6 +259,9 @@ export function registerApplicationDetails(
           ...(data.projectId !== undefined ? { projectId: data.projectId } : {}),
           ...(data.repository !== undefined
             ? { repository: data.repository.trim() }
+            : {}),
+          ...(data.repositoryBindings !== undefined
+            ? { repositoryBindings: data.repositoryBindings }
             : {}),
           ...(data.status !== undefined ? { status: data.status } : {}),
           ...(data.ownerName !== undefined ? { ownerName: data.ownerName.trim() } : {}),

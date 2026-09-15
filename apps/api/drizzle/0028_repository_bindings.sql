@@ -1,0 +1,1 @@
+ALTER TABLE "applications" ADD COLUMN "repository_bindings" jsonb DEFAULT '[]'::jsonb NOT NULL;

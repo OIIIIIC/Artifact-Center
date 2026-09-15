@@ -30,6 +30,7 @@ export type ApplicationResponseRow = Pick<
   | 'platform'
   | 'regionId'
   | 'repository'
+  | 'repositoryBindings'
   | 'status'
   | 'ownerName'
   | 'latestVersion'
@@ -54,6 +55,7 @@ export const applicationResponseColumns = {
   regionId: applications.regionId,
   projectId: applications.projectId,
   repository: applications.repository,
+  repositoryBindings: applications.repositoryBindings,
   status: applications.status,
   ownerName: applications.ownerName,
   latestVersion: applications.latestVersion,
@@ -88,6 +90,7 @@ export function mapApp(
     projectName: project?.name,
     projectCode: project?.code,
     repository: row.repository,
+    repositoryBindings: row.repositoryBindings ?? [],
     status: row.status,
     owner: row.ownerName,
     members,

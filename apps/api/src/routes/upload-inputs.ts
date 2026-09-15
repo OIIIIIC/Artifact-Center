@@ -1,3 +1,4 @@
+import { repositoryBindingSchema } from '../lib/repository-binding.js'
 import { normalizePlatform } from '../lib/artifact-types.js'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
@@ -34,10 +35,18 @@ export const createUploadSchema = z.object({
   markLatest: z.boolean().optional().default(true),
 })
 
-export const releaseApplicationQuerySchema = z.object({
-  q: z.string().trim().max(200).optional().default(''),
-  platform: platformEnum.optional(),
-})
+export const releaseApplicationQuerySchema = z
+  .object({
+    q: z.string().trim().max(200).optional().default(''),
+    repository: repositoryBindingSchema.shape.repository.optional(),
+    branch: repositoryBindingSchema.shape.branch.optional(),
+    directory: repositoryBindingSchema.shape.directory.optional(),
+    platform: platformEnum.optional(),
+  })
+  .refine(
+    (value) => !value.repository || (!!value.branch && value.directory !== undefined),
+    'Repository matching requires branch and directory',
+  )
 
 export {
   resolveArtifactType,

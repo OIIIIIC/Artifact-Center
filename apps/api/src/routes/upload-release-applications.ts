@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, ilike, ne, or } from 'drizzle-orm'
+import { normalizeRepository } from '../lib/repository-binding.js'
+import { and, asc, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db } from '../db/client.js'
 import { applicationMembers, applications, regions } from '../db/schema.js'
@@ -15,13 +16,16 @@ export function registerReleaseApplications(
   uploadRoutes.get('/release/applications', requireUploadAuth, async (c) => {
     const parsed = releaseApplicationQuerySchema.safeParse({
       q: c.req.query('q'),
+      repository: c.req.query('repository'),
+      branch: c.req.query('branch'),
+      directory: c.req.query('directory'),
       platform: c.req.query('platform'),
     })
     if (!parsed.success) {
       return jsonError(c, 400, 'invalid_query', 'Invalid application query')
     }
 
-    const { q, platform } = parsed.data
+    const { q, platform, repository, branch, directory } = parsed.data
     const searchCondition = q
       ? (() => {
           const pattern = `%${q}%`
@@ -39,10 +43,16 @@ export function registerReleaseApplications(
         ? and(searchCondition, eq(applications.platform, platform))
         : eq(applications.platform, platform)
       : searchCondition
-    const filter = selectableFilter
+    const baseFilter = selectableFilter
       ? and(ne(applications.status, 'archived'), selectableFilter)
       : ne(applications.status, 'archived')
 
+    const filter = repository
+      ? and(
+          baseFilter,
+          sql`${applications.repositoryBindings} @> ${JSON.stringify([{ repositoryKey: normalizeRepository(repository), branch, directory }])}::jsonb`,
+        )
+      : baseFilter
     const user = c.get('user')
     const rows =
       user.role === 'admin'
@@ -52,7 +62,7 @@ export function registerReleaseApplications(
             .innerJoin(regions, eq(regions.id, applications.regionId))
             .where(filter)
             .orderBy(desc(applications.updatedAt), asc(applications.name))
-            .limit(100)
+            .limit(repository ? 1001 : 100)
         : await db
             .select({ application: applications, region: regions })
             .from(applications)
@@ -69,16 +79,33 @@ export function registerReleaseApplications(
             )
             .where(filter)
             .orderBy(desc(applications.updatedAt), asc(applications.name))
-            .limit(100)
+            .limit(repository ? 1001 : 100)
 
+    if (repository && rows.length > 1000)
+      return jsonError(
+        c,
+        409,
+        'too_many_targets',
+        'Narrow the repository binding directory',
+      )
+    const matches = repository
+      ? rows.filter((row) =>
+          row.application.repositoryBindings.some(
+            (binding) =>
+              binding.branch === branch &&
+              binding.directory === directory &&
+              normalizeRepository(binding.repository) === normalizeRepository(repository),
+          ),
+        )
+      : rows
     return c.json({
-      items: rows.map((row) =>
+      items: matches.map((row) =>
         mapReleaseApplicationTarget({
           ...row,
           accessRole: user.role === 'admin' ? 'admin' : 'maintainer',
         }),
       ),
-      total: rows.length,
+      total: matches.length,
     })
   })
 }

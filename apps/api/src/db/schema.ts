@@ -155,6 +155,10 @@ export const applications = pgTable(
       .notNull()
       .references(() => regions.id, { onDelete: 'restrict' }),
     repository: varchar('repository', { length: 500 }).notNull().default(''),
+    repositoryBindings: jsonb('repository_bindings')
+      .$type<Array<{ repository: string; branch: string; directory: string }>>()
+      .notNull()
+      .default([]),
     status: appStatusEnum('status').notNull().default('new'),
     ownerId: uuid('owner_id').references(() => users.id),
     ownerName: varchar('owner_name', { length: 120 }).notNull().default(''),

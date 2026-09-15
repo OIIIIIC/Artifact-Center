@@ -103,6 +103,54 @@ describe('发布目标发现', () => {
     expect(chain.innerJoin).toHaveBeenCalledTimes(2)
   })
 
+  it('按仓库、分支和代码子目录精确匹配，并保留多目标供选择', async () => {
+    const binding = {
+      repository: 'git@git.example:team/app.git',
+      branch: 'main',
+      directory: 'apps/care',
+    }
+    chain.limit.mockResolvedValue([
+      { ...row, application: { ...row.application, repositoryBindings: [binding] } },
+      {
+        ...row,
+        application: { ...row.application, id: 'second', repositoryBindings: [binding] },
+      },
+      {
+        ...row,
+        application: {
+          ...row.application,
+          id: 'wrong',
+          repositoryBindings: [{ ...binding, branch: 'other' }],
+        },
+      },
+    ])
+    const app = new Hono()
+    app.route('/', uploadRoutes)
+    const params = new URLSearchParams({
+      repository: 'https://git.example/team/app',
+      branch: 'main',
+      directory: 'apps/care',
+    })
+    const response = await app.request(`/release/applications?${params}`)
+    expect(response.status).toBe(200)
+    const result = (await response.json()) as { items: Array<{ id: string }> }
+    expect(result.items.map((item: { id: string }) => item.id)).toEqual([
+      row.application.id,
+      'second',
+    ])
+    expect(chain.innerJoin).toHaveBeenCalledTimes(2)
+  })
+
+  it('仓库匹配缺少分支或目录时拒绝请求', async () => {
+    const app = new Hono()
+    app.route('/', uploadRoutes)
+    const response = await app.request(
+      '/release/applications?repository=https://git.example/team/app',
+    )
+    expect(response.status).toBe(400)
+    expect(chain.from).not.toHaveBeenCalled()
+  })
+
   it('拒绝不支持的平台筛选条件', () => {
     expect(releaseApplicationQuerySchema.safeParse({ platform: 'ios' }).success).toBe(
       false,

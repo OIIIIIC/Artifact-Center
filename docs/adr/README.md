@@ -57,3 +57,5 @@ ADR (Architecture Decision Record) 是一种轻量级的架构决策文档，由
 
 - [Documenting Architecture Decisions - Michael Nygard](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
 - [ADR GitHub Organization](https://adr.github.io/)
+
+- [0023 — 仓库绑定与确认后上传](0023-repository-publishing-preview.md)（accepted）

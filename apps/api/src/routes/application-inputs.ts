@@ -1,3 +1,4 @@
+import { repositoryBindingsSchema } from '../lib/repository-binding.js'
 import { normalizePlatform } from '../lib/artifact-types.js'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
@@ -57,6 +58,7 @@ export const createSchema = z.object({
   regionId: z.string().uuid(),
   projectId: z.string().uuid().optional(),
   repository: z.string().max(500).optional(),
+  repositoryBindings: repositoryBindingsSchema.optional(),
 })
 
 export const updateSchema = z.object({
@@ -70,6 +72,7 @@ export const updateSchema = z.object({
   regionId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
   repository: z.string().max(500).optional(),
+  repositoryBindings: repositoryBindingsSchema.optional(),
   status: statusEnum.optional(),
   ownerName: z.string().max(120).optional(),
 })

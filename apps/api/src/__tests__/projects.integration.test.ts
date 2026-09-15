@@ -268,6 +268,8 @@ describe('产品 → 项目 → 应用（真实 SQL 迁移与 API）', () => {
     expect(row.project_id).toBe(defaultProject)
     const original = { ...row }
     delete original.project_id
+    expect(original.repository_bindings).toEqual([])
+    delete original.repository_bindings
     expect(original).toEqual(beforeMigration)
     expect(
       (await fixture.client.query('SELECT name FROM regions WHERE id=$1', [ids.product]))
