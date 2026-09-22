@@ -3,8 +3,8 @@
 
 param(
   [string]$BaseUrl = 'http://localhost:4001',
-  [string]$Identifier = 'oiiic',
-  [string]$Password = '***REMOVED***'
+  [string]$Identifier = 'artifact-demo',
+  [string]$Password = 'ArtifactCenter-Demo-Only-2026!'
 )
 
 $ErrorActionPreference = 'Stop'

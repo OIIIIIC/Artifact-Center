@@ -29,7 +29,7 @@ async function main() {
     })
     .returning()
 
-  console.log('Seeded admin user:', user.email, '/', env.seedPassword)
+  console.log('Seeded admin user:', user.email)
   process.exit(0)
 }
 

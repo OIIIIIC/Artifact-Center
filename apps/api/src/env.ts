@@ -119,9 +119,9 @@ export const env = {
   publicRateLimitMaxRequests: positiveNumber('PUBLIC_RATE_LIMIT_MAX_REQUESTS', 120),
   /** 上传后仍必须保留的最小可用磁盘空间，防止写满宿主机。 */
   storageMinFreeBytes: positiveNumber('STORAGE_MIN_FREE_BYTES', 512 * 1024 * 1024),
-  /** 本地开发环境的初始化管理员 */
-  seedUsername: 'oiiic',
-  seedEmail: 'oiiic@enterprise.local',
-  seedPassword: '***REMOVED***',
-  seedName: 'oiiic',
+  /** 本地开发环境的初始化管理员；可通过 SEED_* 覆盖。 */
+  seedUsername: process.env.SEED_USERNAME ?? 'artifact-demo',
+  seedEmail: process.env.SEED_EMAIL ?? 'artifact-demo@enterprise.local',
+  seedPassword: process.env.SEED_PASSWORD ?? 'ArtifactCenter-Demo-Only-2026!',
+  seedName: process.env.SEED_NAME ?? 'Artifact Demo',
 }

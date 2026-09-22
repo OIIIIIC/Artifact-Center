@@ -48,7 +48,7 @@ npm run dev:api
 - API: http://localhost:3001
 - 存活检查：`GET /health/live`
 - 就绪检查：`GET /health/ready`（验证数据库与制品目录）
-- 演示账号: `oiiic` / `***REMOVED***`
+- 演示账号: `artifact-demo` / `ArtifactCenter-Demo-Only-2026!`
 
 ## 环境变量
 

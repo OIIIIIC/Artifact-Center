@@ -48,7 +48,7 @@ Invoke-RestMethod http://localhost:4001/health/ready
 可用仓库脚本：
 
 ```powershell
-.\scripts\smoke-p0.ps1 -BaseUrl http://localhost:4001 -Identifier oiiic -Password '***REMOVED***'
+.\scripts\smoke-p0.ps1 -BaseUrl http://localhost:4001 -Identifier artifact-demo -Password 'ArtifactCenter-Demo-Only-2026!'
 ```
 
 或手工：
