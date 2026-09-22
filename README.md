@@ -1,95 +1,82 @@
-# Artifact Center
+<div align="center">
+  <img src="./public/images/artifact-center-logo.png" width="96" alt="Artifact Center logo" />
 
-面向企业内网的现代化制品（Artifact）管理平台。
+  <h1>Artifact Center</h1>
 
-用于管理 Android APK / AAB、Windows EXE、ZIP 等构建产物；体验对标 Linear、GitHub、Vercel 等现代产品，而非传统 ERP 后台。
+  <p>企业内部的软件制品管理平台。</p>
 
-## 当前阶段
+  <p>
+    <a href="https://github.com/OIIIIIC/Artifact-Center/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/OIIIIIC/Artifact-Center/ci.yml?branch=main&amp;style=flat-square&amp;label=CI" alt="CI status" /></a>
+    <img src="https://img.shields.io/badge/status-P1%20MVP-2563eb?style=flat-square" alt="P1 MVP" />
+  </p>
+</div>
 
-**P1 MVP — 前端产品页已齐 + 后端脚手架就绪**
+<img src="./public/images/application-hero.png" width="100%" alt="Artifact Center" />
 
-- 文档规范：`docs/`
-- **前端**：Vite + React + TS，应用目录 / 上传 / 详情 / 分享（当前仍可用 mock）
-- **后端**：`apps/api` — Hono + PostgreSQL + 本地文件存储
-- **首页**：`/` Applications（应用目录，非 Dashboard）
+## 关于
 
-## 规范（必读）
+Artifact Center 用来集中管理 Android APK、AAB、Windows EXE 和 ZIP 等构建产物。项目以应用为入口，覆盖上传、版本管理、发布说明、下载和分享。
 
-| 文档                                           | 说明             |
-| ---------------------------------------------- | ---------------- |
-| [02-DESIGN](./docs/02-DESIGN.md)               | 设计准则         |
-| [07-UI-PRINCIPLES](./docs/07-UI-PRINCIPLES.md) | UI 决策原则      |
-| [08-DESIGN-SYSTEM](./docs/08-DESIGN-SYSTEM.md) | 设计系统执行规范 |
-| [API README](./apps/api/README.md)             | 后端启动与接口   |
+目前处于 P1 MVP 阶段，前端主要流程、API 和 Linux 部署方案已经就绪。
 
 ## 技术栈
 
-**前端**
+- Web：React 19、TypeScript、Vite、Tailwind CSS v4、shadcn/ui
+- API：Hono、Drizzle ORM、PostgreSQL 16
+- 存储：本地文件或 S3 兼容对象存储
+- 测试：Vitest、Playwright
 
-- React 19 · TypeScript · Vite
-- Tailwind CSS v4 · shadcn/ui
-- Framer Motion · Lucide · TanStack Query · React Router · Zustand
+## 本地开发
 
-**后端（MVP）**
-
-- Hono · Drizzle ORM · PostgreSQL 16
-- JWT（jose）· bcrypt · 本地 `data/files` 存储
-
-## 开发
-
-### 前端
-
-需同时运行后端（见下），Vite 将 `/api` 代理到 `http://localhost:3001`。
+需要 Node.js 22、npm 10 和 Docker。
 
 ```bash
+git clone https://github.com/OIIIIIC/Artifact-Center.git
+cd Artifact-Center
+
 npm install
-npm run dev
-```
-
-打开 [http://localhost:5173](http://localhost:5173)  
-登录：`oiiic` / `***REMOVED***`
-
-### 后端
-
-需要本机 Docker（PostgreSQL）。
-
-```bash
-# 数据库
+npm install --prefix apps/api
 npm run db:up
-
-# API 依赖 + 迁移 + 演示账号
-cd apps/api
-npm install
-npm run db:generate   # 首次 / schema 变更
-npm run db:setup      # migrate + seed
-npm run dev           # http://localhost:3001
+npm run db:setup
 ```
 
-演示账号：`oiiic` / `***REMOVED***`
+分别启动 API 和 Web：
 
-根目录也可：`npm run dev:api`、`npm run db:setup`。
+```bash
+# Terminal 1 · http://localhost:3001
+npm run dev:api
 
-## Linux 生产部署
+# Terminal 2 · http://localhost:5173
+npm run dev:web
+```
 
-仓库提供生产镜像与 Compose 配置，包含前端 Nginx、API、PostgreSQL、自动迁移、首次管理员引导、健康检查和持久化卷。
+本地 seed 账号：`artifact-demo` / `ArtifactCenter-Demo-Only-2026!`
+
+## 生产部署
 
 ```bash
 cp deploy/.env.example deploy/.env
-# 修改 deploy/.env 中的密码、管理员与访问地址
+# 修改 deploy/.env 中的密码、管理员和访问地址
 docker compose --env-file deploy/.env -f compose.prod.yml up -d --build
 ```
 
-完整的首次部署、HTTPS、升级与备份恢复流程见 [Linux 生产部署](./docs/11-DEPLOYMENT.md)。
+HTTPS、升级、备份和恢复见 [生产部署文档](./docs/11-DEPLOYMENT.md)。
 
-### 常用脚本
+## 文档
+
+- [产品设计](./docs/02-DESIGN.md)
+- [UI 原则](./docs/07-UI-PRINCIPLES.md)
+- [设计系统](./docs/08-DESIGN-SYSTEM.md)
+- [API 开发](./apps/api/README.md)
+- [领域模型](./CONTEXT.md)
+
+## 检查
 
 ```bash
-npm run build
 npm run lint
 npm run typecheck
 npm run typecheck:api
+npm test
+npm run test:api
+npm run build
 ```
-
-## 仓库
-
-- GitHub: https://github.com/OIIIIIC/Artifact-Center
