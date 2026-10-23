@@ -31,6 +31,7 @@ export function CreateMemberDialog() {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
   const [showCreate, setShowCreate] = useState(false)
+  const [createdName, setCreatedName] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -70,6 +71,7 @@ export function CreateMemberDialog() {
       setPasswordConfirm('')
       setRole('viewer')
       setShowCreate(false)
+      setCreatedName(member.name)
     } catch (error) {
       setCreateError(errorMessage(error))
     } finally {
@@ -172,6 +174,22 @@ export function CreateMemberDialog() {
             >
               {creating ? t('settings.addingMember') : t('settings.confirmAddMember')}
             </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal
+        open={createdName !== null}
+        onOpenChange={(open) => !open && setCreatedName(null)}
+      >
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>{t('settings.memberAdded')}</ModalTitle>
+            <ModalDescription>
+              {t('settings.memberPasswordDeliveryHint', { name: createdName })}
+            </ModalDescription>
+          </ModalHeader>
+          <ModalFooter>
+            <Button onClick={() => setCreatedName(null)}>{t('common.close')}</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

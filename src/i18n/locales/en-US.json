@@ -397,7 +397,7 @@
     "appearanceDesc": "Theme and language apply immediately and stay on this device.",
     "membersTitle": "Members & permissions",
     "membersDesc": "Admins create accounts and assign platform roles. Configure access to applications within products in Regional access.",
-    "membersHint": "Members are stored on the server. Share the initial password securely.",
+    "memberPasswordDeliveryHint": "{{name}} has been created. Share the initial password with them through a secure channel.",
     "membersAdminOnly": "Only admins can view and manage members.",
     "memberCount": "{{count}} members",
     "memberSearchPlaceholder": "Search members by name or email…",

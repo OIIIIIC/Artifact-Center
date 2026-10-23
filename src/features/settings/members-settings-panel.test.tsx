@@ -72,6 +72,59 @@ describe('成员权限设置', () => {
     )
   }
 
+  it('窗口变矮后减少每页条数，保留浏览位置，搜索后回到有效页', async () => {
+    let height = 274
+    const callbacks = new Set<() => void>()
+    const heightSpy = vi
+      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+      .mockImplementation(() => height)
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        callback: () => void
+        constructor(callback: () => void) {
+          this.callback = callback
+          callbacks.add(callback)
+        }
+        observe() {}
+        disconnect() {
+          callbacks.delete(this.callback)
+        }
+      },
+    )
+    listUsers.mockResolvedValue(
+      Array.from({ length: 19 }, (_, index) => ({
+        id: `member-${index}`,
+        name: `Member ${index}`,
+        email: `member${index}@example.com`,
+        role: 'viewer',
+      })),
+    )
+    try {
+      renderPanel()
+      await screen.findByText('Member 0')
+      expect(screen.getAllByRole('listitem')).toHaveLength(4)
+      fireEvent.click(screen.getByRole('button', { name: 'common.nextPage' }))
+      expect(screen.getByText('Member 4')).toBeInTheDocument()
+      act(() => {
+        height = 138
+        ;[...callbacks].forEach((callback) => callback())
+      })
+      expect(screen.getAllByRole('listitem')).toHaveLength(2)
+      expect(screen.getByText('Member 4')).toBeInTheDocument()
+      fireEvent.change(
+        screen.getByRole('textbox', { name: 'settings.memberSearchPlaceholder' }),
+        { target: { value: 'member18@' } },
+      )
+      expect(screen.getByText('Member 18')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'common.previousPage' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'common.nextPage' })).toBeDisabled()
+    } finally {
+      heightSpy.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('管理员本人不能在角色按钮组中直接降级，只能发起移交', async () => {
     renderPanel()
 
@@ -137,6 +190,14 @@ describe('成员权限设置', () => {
         password: 'TestPass123!',
         role: 'viewer',
       }),
+    )
+    expect(
+      await screen.findByText('settings.memberPasswordDeliveryHint'),
+    ).toBeInTheDocument()
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getAllByRole('button', {
+        name: 'common.close',
+      })[0],
     )
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(listUsers.mock.calls.length).toBeGreaterThan(1)

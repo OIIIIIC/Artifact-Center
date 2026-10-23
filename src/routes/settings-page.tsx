@@ -16,6 +16,7 @@ import { AppLayout, PageContainer } from '@/components/layout'
 import { AccessPermissionsPanel } from '@/features/settings/access-permissions-panel'
 import { AppearanceSettingsPanel } from '@/features/settings/appearance-settings-panel'
 import { MembersSettingsPanel } from '@/features/settings/members-settings-panel'
+import { MemberRoleLegend } from '@/features/settings/member-role-legend'
 import { OperationLogsSettingsPanel } from '@/features/settings/operation-logs-settings-panel'
 import { ProfileSecurityPanel } from '@/features/settings/profile-security-panel'
 import { ReleaseRobotsSettingsPanel } from '@/features/settings/release-robots-settings-panel'
@@ -93,16 +94,27 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
       breadcrumbs={[{ label: t('settings.title') }]}
       contentClassName="lg:overflow-hidden"
     >
-      <PageContainer rhythm="product" className={cn('lg:h-full lg:py-0')}>
+      <PageContainer
+        rhythm="product"
+        className={cn(
+          'lg:h-full lg:py-0',
+          section === 'members' && 'h-full py-4 sm:pt-4 md:pt-4',
+        )}
+      >
         <div
           className={cn(
             'flex flex-col gap-8 lg:h-full lg:min-h-0 lg:flex-row lg:gap-10 xl:gap-12',
+            section === 'members' && 'h-full gap-4',
           )}
         >
-          <aside className="shrink-0 lg:h-full lg:w-[var(--settings-nav-width)] lg:overflow-hidden lg:py-8">
+          <aside className="shrink-0 lg:h-full lg:w-[var(--settings-nav-width)] lg:overflow-y-auto lg:py-8">
             <nav
               aria-label={t('settings.sectionNav')}
-              className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
+              className={cn(
+                'flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0',
+                section === 'members' &&
+                  'max-lg:[&>div]:flex-row max-lg:[&>div]:border-0 max-lg:[&>div]:pt-0',
+              )}
             >
               <SettingsNavGroup label={t('settings.groupPersonal')}>
                 {PERSONAL_SECTIONS.map(renderNavItem)}
@@ -119,12 +131,28 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
                 </SettingsNavGroup>
               ) : null}
             </nav>
+            {isAdmin && section === 'members' ? (
+              <>
+                <div className="mt-6 hidden lg:block">
+                  <MemberRoleLegend />
+                </div>
+                <details className="mt-3 lg:hidden">
+                  <summary className="cursor-pointer px-3 text-xs text-muted-foreground">
+                    {t('settings.roleLegendTitle')}
+                  </summary>
+                  <div className="pt-3">
+                    <MemberRoleLegend />
+                  </div>
+                </details>
+              </>
+            ) : null}
           </aside>
 
           <div
             className={cn(
               'min-w-0 flex-1 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:px-1 lg:py-8 lg:[scrollbar-gutter:stable]',
               '[&_[data-slot=form-stack]]:max-w-none',
+              section === 'members' && 'min-h-80',
             )}
           >
             {section === 'general' ? <ProfileSecurityPanel /> : null}
