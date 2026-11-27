@@ -557,6 +557,138 @@ export const auditLogs = pgTable(
   ],
 )
 
+/** Jenkins 连接；Token 仅以独立密钥加密后的密文保存。 */
+export const jenkinsConnections = pgTable('jenkins_connections', {
+  id: varchar('id', { length: 16 }).primaryKey().default('default'),
+  baseUrl: varchar('base_url', { length: 500 }).notNull(),
+  username: varchar('username', { length: 120 }).notNull(),
+  tokenCiphertext: text('token_ciphertext').notNull(),
+  enabled: boolean('enabled').notNull().default(false),
+  revision: integer('revision').notNull().default(1),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export type BuildOutputTarget = { name: string; pattern: string; applicationId: string }
+
+/** 应用构建配置仅绑定受管理员信任的现有任务，不保存编译脚本或构建密钥。 */
+export const applicationBuildConfigs = pgTable('application_build_configs', {
+  applicationId: uuid('application_id')
+    .primaryKey()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  enabled: boolean('enabled').notNull().default(false),
+  jobPath: varchar('job_path', { length: 300 }).notNull(),
+  artifactPattern: varchar('artifact_pattern', { length: 300 }).notNull(),
+  outputTargets: jsonb('output_targets')
+    .$type<BuildOutputTarget[]>()
+    .notNull()
+    .default([]),
+  parameters: jsonb('parameters')
+    .$type<Array<{ name: string; value: string; choices?: string[] }>>()
+    .notNull()
+    .default([]),
+  revision: integer('revision').notNull().default(1),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const applicationBuilds = pgTable(
+  'application_builds',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    applicationId: uuid('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    requestKey: uuid('request_key').notNull(),
+    requestedById: uuid('requested_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    requestedByName: varchar('requested_by_name', { length: 120 }).notNull(),
+    baseUrl: varchar('base_url', { length: 500 }).notNull(),
+    username: varchar('username', { length: 120 }).notNull(),
+    jobPath: varchar('job_path', { length: 300 }).notNull(),
+    configRevision: integer('config_revision').notNull(),
+    artifactPattern: varchar('artifact_pattern', { length: 300 }).notNull(),
+    outputTargets: jsonb('output_targets')
+      .$type<BuildOutputTarget[]>()
+      .notNull()
+      .default([]),
+    parameters: jsonb('parameters')
+      .$type<Array<{ name: string; value: string }>>()
+      .notNull()
+      .default([]),
+    status: varchar('status', { length: 24 }).notNull().default('pending'),
+    queueId: bigint('queue_id', { mode: 'number' }),
+    buildNumber: integer('build_number'),
+    commits: jsonb('commits').$type<string[]>().notNull().default([]),
+    files: jsonb('files')
+      .$type<Array<{ fileName: string; relativePath: string }>>()
+      .notNull()
+      .default([]),
+    error: text('error'),
+    cancelRequestedAt: timestamp('cancel_requested_at', { withTimezone: true }),
+    leaseId: uuid('lease_id'),
+    leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    nextSyncAt: timestamp('next_sync_at', { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('application_builds_request_key_uidx').on(t.applicationId, t.requestKey),
+    uniqueIndex('application_builds_active_uidx')
+      .on(t.applicationId)
+      .where(sql`${t.status} in ('pending','submitting','queued','running')`),
+    index('application_builds_history_idx').on(t.applicationId, t.createdAt, t.id),
+    index('application_builds_sync_idx')
+      .on(t.nextSyncAt)
+      .where(sql`${t.status} in ('pending','submitting','queued','running','unknown')`),
+    check(
+      'application_builds_status_check',
+      sql`${t.status} in ('pending','submitting','queued','running','success','failure','unstable','aborted','unknown')`,
+    ),
+  ],
+)
+
+export const buildPublications = pgTable(
+  'build_publications',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    buildId: uuid('build_id')
+      .notNull()
+      .references(() => applicationBuilds.id, { onDelete: 'cascade' }),
+    relativePath: varchar('relative_path', { length: 1000 }).notNull(),
+    targetApplicationId: uuid('target_application_id').references(() => applications.id, {
+      onDelete: 'restrict',
+    }),
+    version: varchar('version', { length: 64 }).notNull(),
+    channel: varchar('channel', { length: 16 }).notNull().default('beta'),
+    releaseNotes: text('release_notes').notNull().default(''),
+    requestedById: uuid('requested_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    requestedByName: varchar('requested_by_name', { length: 120 }).notNull(),
+    status: varchar('status', { length: 16 }).notNull().default('pending'),
+    artifactId: uuid('artifact_id').references(() => artifacts.id, {
+      onDelete: 'set null',
+    }),
+    storageKey: text('storage_key'),
+    error: text('error'),
+    leaseId: uuid('lease_id'),
+    leaseUntil: timestamp('lease_until', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('build_publications_file_uidx').on(t.buildId, t.relativePath),
+    index('build_publications_pending_idx').on(t.status, t.leaseUntil),
+    check(
+      'build_publications_status_check',
+      sql`${t.status} in ('pending','importing','published','failed')`,
+    ),
+    check('build_publications_channel_check', sql`${t.channel} in ('beta','stable')`),
+  ],
+)
+
 export type User = typeof users.$inferSelect
 export type Region = typeof regions.$inferSelect
 export type Application = typeof applications.$inferSelect
