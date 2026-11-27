@@ -24,6 +24,7 @@ type ApiApplication = {
   packageName: string
   platform: ApplicationPlatform
   region: Region
+  projectCode?: string
   projectName?: string
   projectId?: string
   repositoryBindings?: Application['repositoryBindings']
@@ -56,6 +57,7 @@ function mapApp(a: ApiApplication): Application {
     region: a.region,
     projectId: a.projectId,
     projectName: a.projectName,
+    projectCode: a.projectCode,
     repository: a.repository,
     repositoryBindings: a.repositoryBindings ?? [],
     status: a.status,
