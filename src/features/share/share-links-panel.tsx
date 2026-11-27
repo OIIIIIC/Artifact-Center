@@ -14,6 +14,7 @@ import { apiListShares, apiRevokeShare } from '@/services/api'
 import { shareUrlForToken } from '@/store/share-store'
 
 interface ShareLinksPanelProps {
+  active?: boolean
   applicationId: string
   className?: string
 }
@@ -21,7 +22,11 @@ interface ShareLinksPanelProps {
 /**
  * Active server share links for an application (create elsewhere; revoke here).
  */
-export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelProps) {
+export function ShareLinksPanel({
+  applicationId,
+  className,
+  active: isActive = true,
+}: ShareLinksPanelProps) {
   const { t, i18n } = useTranslation()
   void i18n.language
   const queryClient = useQueryClient()
@@ -29,7 +34,8 @@ export function ShareLinksPanel({ applicationId, className }: ShareLinksPanelPro
   const query = useQuery({
     queryKey: ['shares', applicationId],
     queryFn: () => apiListShares(applicationId),
-    refetchInterval: 60_000,
+    enabled: isActive,
+    refetchInterval: isActive ? 60_000 : false,
   })
 
   const items = (query.data ?? []).filter((s) => !s.revokedAt)

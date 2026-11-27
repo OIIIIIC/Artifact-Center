@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { apiListAudit, type AuditLogItem } from '@/services/api'
 
 interface ActivityPanelProps {
+  active?: boolean
   applicationId: string
 }
 
@@ -87,10 +88,11 @@ function Row({ item, isLast }: { item: AuditLogItem; isLast: boolean }) {
 /**
  * Application activity timeline (audit log filtered by app).
  */
-export function ActivityPanel({ applicationId }: ActivityPanelProps) {
+export function ActivityPanel({ applicationId, active = true }: ActivityPanelProps) {
   const { t } = useTranslation()
   const query = useInfiniteQuery({
     queryKey: queryKeys.audit.byApp(applicationId),
+    enabled: active,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       apiListAudit({ applicationId, limit: 30, offset: pageParam }),

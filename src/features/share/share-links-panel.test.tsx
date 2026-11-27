@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -68,4 +68,43 @@ describe('分享链接列表', () => {
     expect(screen.getByText(/距到期/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '吊销' })).toHaveClass('text-destructive')
   })
+})
+
+it('pauses polling while hidden and resumes when activated', async () => {
+  vi.useFakeTimers()
+  listShares.mockClear()
+  listShares.mockResolvedValue([])
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
+  })
+  const view = (active: boolean) => (
+    <QueryClientProvider client={client}>
+      <ShareLinksPanel applicationId="polling-app" active={active} />
+    </QueryClientProvider>
+  )
+  const { rerender, unmount } = render(view(true))
+  try {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10)
+    })
+    expect(listShares).toHaveBeenCalledTimes(1)
+    rerender(view(false))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_000)
+    })
+    expect(listShares).toHaveBeenCalledTimes(1)
+    rerender(view(true))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10)
+    })
+    expect(listShares).toHaveBeenCalledTimes(2)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000)
+    })
+    expect(listShares).toHaveBeenCalledTimes(3)
+  } finally {
+    unmount()
+    client.clear()
+    vi.useRealTimers()
+  }
 })

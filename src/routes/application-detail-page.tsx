@@ -248,6 +248,7 @@ export function ApplicationDetailPage() {
               </div>
               <ApplicationHistoryPage
                 key={application.id}
+                active={activeTab === 'artifacts'}
                 kind="artifacts"
                 application={application}
                 canManage={canWrite}
@@ -262,6 +263,7 @@ export function ApplicationDetailPage() {
             >
               <ApplicationHistoryPage
                 key={application.id}
+                active={activeTab === 'release-notes'}
                 kind="releases"
                 application={application}
                 canManage={canWrite}
@@ -282,7 +284,10 @@ export function ApplicationDetailPage() {
                   {t('detail.activityHint')}
                 </p>
               </div>
-              <ActivityPanel applicationId={application.id} />
+              <ActivityPanel
+                active={activeTab === 'activity'}
+                applicationId={application.id}
+              />
             </DetailTabContent>
 
             {canWrite ? (
@@ -300,7 +305,10 @@ export function ApplicationDetailPage() {
                     {t('detail.sharesHint')}
                   </p>
                 </div>
-                <ShareLinksPanel applicationId={application.id} />
+                <ShareLinksPanel
+                  active={activeTab === 'shares'}
+                  applicationId={application.id}
+                />
               </DetailTabContent>
             ) : null}
 

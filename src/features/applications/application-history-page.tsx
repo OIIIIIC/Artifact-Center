@@ -14,32 +14,37 @@ import type { Application } from '@/types/application'
 export function ApplicationHistoryPage({
   application,
   canManage,
+  active = true,
   kind,
 }: {
   application: Application
   canManage: boolean
+  active?: boolean
   kind: 'artifacts' | 'releases'
 }) {
   // Separate child components keep each page's data and cursor types independent.
   return kind === 'artifacts' ? (
-    <ArtifactHistory application={application} canManage={canManage} />
+    <ArtifactHistory application={application} canManage={canManage} active={active} />
   ) : (
-    <ReleaseHistory application={application} canManage={canManage} />
+    <ReleaseHistory application={application} canManage={canManage} active={active} />
   )
 }
 
 function ArtifactHistory({
   application,
   canManage,
+  active = true,
 }: {
   application: Application
   canManage: boolean
+  active?: boolean
 }) {
   const { t } = useTranslation()
   const [draft, setQuery] = useState('')
   const q = useDebouncedValue(draft)
   const anchor = useRef<HTMLDivElement>(null)
   const page = useCollectionPage({
+    enabled: active,
     queryKey: [...queryKeys.artifacts.byApp(application.id), 'page', q],
     cacheKey: `artifacts:${application.id}`,
     queryFn: (cursor, signal) =>
@@ -96,15 +101,18 @@ function ArtifactHistory({
 function ReleaseHistory({
   application,
   canManage,
+  active = true,
 }: {
   application: Application
   canManage: boolean
+  active?: boolean
 }) {
   const { t } = useTranslation()
   const [draft, setQuery] = useState('')
   const q = useDebouncedValue(draft)
   const anchor = useRef<HTMLDivElement>(null)
   const page = useCollectionPage({
+    enabled: active,
     queryKey: [...queryKeys.releases.byApp(application.id), 'page', q],
     cacheKey: `releases:${application.id}`,
     queryFn: (cursor, signal) =>
