@@ -45,7 +45,7 @@ describe('发布机器人设置面板', () => {
         id: 'robot-1',
         name: 'Codex 发布机器人',
         channels: ['beta', 'stable'],
-        expiresAt: '2026-11-11T00:00:00.000Z',
+        expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
         lastUsedAt: null,
         revokedAt: null,
         createdAt: '2026-08-13T00:00:00.000Z',
