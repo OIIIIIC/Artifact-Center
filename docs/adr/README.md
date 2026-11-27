@@ -59,3 +59,4 @@ ADR (Architecture Decision Record) 是一种轻量级的架构决策文档，由
 - [ADR GitHub Organization](https://adr.github.io/)
 
 - [0023 — 仓库绑定与确认后上传](0023-repository-publishing-preview.md)（accepted）
+- [0026 — 账号绑定的 MCP 管理能力](0026-account-bound-management-mcp.md)（accepted）

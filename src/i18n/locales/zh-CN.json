@@ -1,4 +1,24 @@
 {
+  "mcp": {
+    "title": "个人 MCP 凭据",
+    "description": "将 MCP 绑定到当前账号，操作权限跟随账号，由服务端实时校验。",
+    "security": "凭据可执行你有权进行的管理操作。修改密码、角色或账号状态会使已有凭据失效；也可单独撤销。请妥善保管安装命令。",
+    "name": "凭据名称",
+    "days": "有效天数（1–365）",
+    "create": "创建凭据",
+    "once": "凭据仅在创建时显示。复制安装命令，在本机 PowerShell 执行后重新连接 MCP。",
+    "setup": "MCP 安装命令",
+    "copy": "复制安装命令",
+    "copied": "已复制",
+    "saved": "已保存，隐藏凭据",
+    "loading": "正在加载…",
+    "failed": "操作失败，请重试",
+    "empty": "尚无个人 MCP 凭据",
+    "expires": "到期时间",
+    "revoked": "已撤销",
+    "expired": "已过期",
+    "revoke": "撤销"
+  },
   "common": {
     "cancel": "取消",
     "done": "完成",

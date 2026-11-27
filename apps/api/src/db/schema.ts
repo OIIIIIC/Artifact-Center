@@ -84,6 +84,20 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/** 绑定个人账号的 MCP 凭据；只存摘要，权限始终读取当前账号。 */
+export const mcpCredentials = pgTable('mcp_credentials', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 120 }).notNull(),
+  tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+  tokenVersion: integer('token_version').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 /** 产品目录；保留 regions 表名和 ID，兼容已有客户端与分享链接。 */
 export const regions = pgTable(
   'regions',

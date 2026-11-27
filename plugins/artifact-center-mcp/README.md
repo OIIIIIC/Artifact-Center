@@ -1,6 +1,18 @@
 # Artifact Center MCP
 
-This Codex plugin connects to Artifact Center without exposing destructive actions. It uses a platform Release Credential to discover permitted publishing targets, upload a completed build, update release notes, and explicitly promote a beta build to stable. It deliberately provides **no deletion tool**. Delete an artifact only in the Artifact Center web application.
+This local MCP connects to Artifact Center with either an account-bound **Personal MCP Credential** (`acmt_`) for platform management, or a legacy **Release Credential** (`acrt_`) for publishing only. Management permissions follow the bound account's current platform role and application membership, enforced by existing server handlers on every request.
+
+## Account-bound management
+
+Open **Settings → Personal MCP credentials**, enter a device name and validity (1–365 days, default 90), create a credential, and run the generated PowerShell setup command on the device running Codex. The command downloads the standalone client, checks SHA-256 and registers `artifact-center`; reconnect MCP afterwards. No repository checkout is needed. The credential is shown only once and is stored in the local Codex configuration; keep the setup command private.
+
+Every account can create and individually revoke its own credentials. Account deletion, disabling, password resets and role changes revoke credentials using the existing token-version rules. Application membership changes take effect immediately. Expired or revoked credentials require a newly created credential. Delegated MCP credentials cannot mint new personal credentials or obtain browser JWTs via profile/password updates.
+
+New named tools cover users and administrator transfer, products/projects, application settings and membership, batch access grants, artifacts/latest/deletion, releases, shares/collections, retention/cleanup, release credentials, audit, search, personal workspace, Jenkins connection/build configuration/build execution/logs/publications and download tickets. See `src/management.js` for the complete explicit operation catalog; MCP tool discovery returns each operation, required resource IDs, body guidance and query parameters. JSON body validation and all authorization remain server-side. This is not an arbitrary HTTP proxy.
+
+Use `artifact_center_check_authorization` or `artifact_center_whoami` to inspect the bound account. `artifact_center_browse_applications` includes accessible viewer applications; the original `artifact_center_list_applications` returns publishing targets only. `artifact_center_manage_artifact` supports explicit latest selection and status/channel updates; `artifact_center_delete_artifact` and other delete tools use the existing permission checks. Download ticket tools return short-lived controlled download paths rather than loading binaries into the conversation. Management audit entries preserve the account and add `meta.source=mcp`.
+
+Upgrade the API database with `0033_account_mcp_credentials` before deploying the new API/Web; back up and rehearse migrations before production. Re-run the website setup command to update the local bundled client. Existing `acrt_` credentials remain publishing-only and are never automatically upgraded.
 
 ## Authentication
 
@@ -56,7 +68,7 @@ Restart Codex after registration, then run `artifact_center_check_authorization`
 - `artifact_center_upload_artifact` — accepts only `planId` and `confirmed: true` after the user confirms the preview
 - `artifact_center_update_artifact`
 
-There is intentionally no delete tool and no hidden delete request path.
+The seven original publishing tools remain compatible. Additional management tools require an account-bound `acmt_` credential. Publishing credentials cannot access the account management APIs.
 
 ## Local development
 
@@ -99,7 +111,7 @@ Call `artifact_center_prepare_upload` with `directory`, optional selected `appli
 
 Then call `artifact_center_upload_artifact` with only `{ "planId": "<returned id>", "confirmed": true }`. It rechecks the target and file, uploads the reviewed snapshot, verifies the stored artifact, and returns `pagePath`. Resolve `pagePath` against the Artifact Center website origin for the user. A changed or expired preview must be prepared and confirmed again. Accepted uploads consume their plan even if verification fails; inspect the reported artifact ID before creating another upload.
 
-Plans last 30 minutes in the current MCP process (maximum ten pending plans); restarting requires a fresh preview. Temporary snapshots use up to the artifact size in local temporary storage. `latest` selection and deletion remain website operations.
+Plans last 30 minutes in the current MCP process (maximum ten pending plans); restarting requires a fresh preview. Temporary snapshots use up to the artifact size in local temporary storage. Publishing never implicitly selects latest; account-bound management tools can explicitly select latest or delete according to server permissions.
 
 ### Upgrade
 

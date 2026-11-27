@@ -232,6 +232,13 @@
       "when": 1791874332814,
       "tag": "0032_build_output_targets",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792472426224,
+      "tag": "0033_account_mcp_credentials",
+      "breakpoints": true
     }
   ]
 }

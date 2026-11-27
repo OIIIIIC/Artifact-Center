@@ -4,7 +4,8 @@ import { createMiddleware } from 'hono/factory'
 import { db } from '../db/client.js'
 import { users } from '../db/schema.js'
 import { jsonError } from '../lib/errors.js'
-import { verifyAccessToken, type AccessTokenPayload } from '../lib/jwt.js'
+import { type AccessTokenPayload } from '../lib/jwt.js'
+import { verifyAccountToken } from '../lib/mcp-credential.js'
 
 export type AuthVariables = {
   user: AccessTokenPayload
@@ -43,7 +44,7 @@ export const requireAuth = createMiddleware<{ Variables: AuthVariables }>(
     }
     const token = header.slice('Bearer '.length).trim()
     try {
-      const user = await verifyAccessToken(token)
+      const user = await verifyAccountToken(token)
       const currentUser = await validateCurrentAuthUser(user)
       if (!currentUser) throw new Error('revoked_token')
       c.set('user', currentUser)

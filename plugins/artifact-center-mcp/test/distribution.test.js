@@ -3,6 +3,7 @@ import { copyFile, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import test from 'node:test'
+import { managementOperations } from '../src/management.js'
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
@@ -38,6 +39,7 @@ test('the distributed client runs without repository source or node_modules', as
         'artifact_center_prepare_upload',
         'artifact_center_upload_artifact',
         'artifact_center_update_artifact',
+        ...managementOperations.map(([name]) => `artifact_center_${name}`),
       ],
     )
   } finally {
@@ -47,6 +49,8 @@ test('the distributed client runs without repository source or node_modules', as
 })
 
 test('the distribution publishes a SHA-256 checksum', async () => {
-  const checksum = (await readFile(resolve('dist/artifact-center-mcp.sha256'), 'utf8')).trim()
+  const checksum = (
+    await readFile(resolve('dist/artifact-center-mcp.sha256'), 'utf8')
+  ).trim()
   assert.match(checksum, /^[a-f0-9]{64}$/)
 })

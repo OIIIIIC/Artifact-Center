@@ -8,7 +8,7 @@ import {
   hashReleaseCredentialToken,
   isReleaseCredentialToken,
 } from '../lib/release-credential.js'
-import { verifyAccessToken } from '../lib/jwt.js'
+import { verifyAccountToken } from '../lib/mcp-credential.js'
 import { validateCurrentAuthUser, type AuthVariables } from './auth.js'
 
 export type UploadCredential =
@@ -37,7 +37,7 @@ export const requireUploadAuth = createMiddleware<{
 
   try {
     if (!isReleaseCredentialToken(token)) {
-      const currentUser = await validateCurrentAuthUser(await verifyAccessToken(token))
+      const currentUser = await validateCurrentAuthUser(await verifyAccountToken(token))
       if (!currentUser) throw new Error('revoked_token')
       user = currentUser
       credential = { kind: 'user' }

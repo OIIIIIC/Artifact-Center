@@ -3,8 +3,11 @@ import type { Context } from 'hono'
 import { db } from '../db/client.js'
 import { auditLogs } from '../db/schema.js'
 import type { AuthVariables } from '../middleware/auth.js'
+import { isMcpAuthorization } from './mcp-credential.js'
 
 export type AuditAction =
+  | 'mcp_credential.create'
+  | 'mcp_credential.revoke'
   | 'settings.project_reorder'
   | 'settings.project_create'
   | 'settings.project_update'
@@ -38,6 +41,7 @@ export type AuditAction =
   | 'release_credential.revoke'
 
 export type AuditObjectType =
+  | 'mcp_credential'
   | 'project'
   | 'application'
   | 'artifact'
@@ -97,7 +101,9 @@ export async function writeAudit(
       objectId: input.objectId ?? null,
       applicationId: input.applicationId ?? null,
       summary: input.summary.slice(0, 500),
-      meta: input.meta ?? null,
+      meta: isMcpAuthorization(c.req.header('authorization'))
+        ? { ...input.meta, source: 'mcp' }
+        : (input.meta ?? null),
       ip: clientIp(c) ?? null,
     })
   } catch (err) {

@@ -71,7 +71,7 @@ export class ArtifactCenterClient {
       channel,
       releaseNotes,
       // MCP uploads never replace latest. Formal latest publication remains a
-      // deliberate website/release workflow outside this plugin.
+      // separate explicit management operation.
       markLatest: false,
     })
     const upload = created.upload
@@ -108,10 +108,10 @@ export class ArtifactCenterClient {
 export function releaseCredentialClient(env = process.env, fetchImpl = fetch) {
   const token = env.ARTIFACT_CENTER_TOKEN?.trim()
   if (!token) {
-    throw new ArtifactCenterError('ARTIFACT_CENTER_TOKEN is required. Configure a platform Release Credential before using this MCP.')
+    throw new ArtifactCenterError('ARTIFACT_CENTER_TOKEN is required. Configure an account MCP credential or a platform Release Credential before using this MCP.')
   }
-  if (!token.startsWith('acrt_')) {
-    throw new ArtifactCenterError('ARTIFACT_CENTER_TOKEN must be an Artifact Center Release Credential (acrt_...).')
+  if (!token.startsWith('acrt_') && !token.startsWith('acmt_')) {
+    throw new ArtifactCenterError('ARTIFACT_CENTER_TOKEN must be an account MCP credential (acmt_...) or Release Credential (acrt_...).')
   }
   return new ArtifactCenterClient({ baseUrl: env.ARTIFACT_CENTER_URL, token, fetchImpl })
 }

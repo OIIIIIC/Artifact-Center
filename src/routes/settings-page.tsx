@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 
 import { AppLayout, PageContainer } from '@/components/layout'
+import { McpCredentialsPanel } from '@/features/settings/mcp-credentials-panel'
 import { AccessPermissionsPanel } from '@/features/settings/access-permissions-panel'
 import { AppearanceSettingsPanel } from '@/features/settings/appearance-settings-panel'
 import { MembersSettingsPanel } from '@/features/settings/members-settings-panel'
@@ -26,6 +27,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
 type SettingsSection =
+  | 'mcp'
   | 'general'
   | 'appearance'
   | 'retention'
@@ -36,7 +38,7 @@ type SettingsSection =
   | 'audit'
 type SettingsStandalone = Extract<SettingsSection, 'members' | 'regions' | 'access'>
 
-const PERSONAL_SECTIONS: SettingsSection[] = ['general', 'appearance']
+const PERSONAL_SECTIONS: SettingsSection[] = ['general', 'appearance', 'mcp']
 const PLATFORM_SECTIONS: SettingsSection[] = ['retention']
 const MANAGEMENT_SECTIONS: SettingsSection[] = [
   'robots',
@@ -56,6 +58,7 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
   }
 
   const sectionMeta = {
+    mcp: { label: t('mcp.title'), icon: Bot },
     general: { label: t('settings.navGeneral'), icon: UserRound },
     appearance: { label: t('settings.navAppearance'), icon: Palette },
     retention: { label: t('settings.navRetention'), icon: HardDrive },
@@ -156,6 +159,7 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
             )}
           >
             {section === 'general' ? <ProfileSecurityPanel /> : null}
+            {section === 'mcp' ? <McpCredentialsPanel /> : null}
             {section === 'appearance' ? <AppearanceSettingsPanel hideHeader /> : null}
             {section === 'retention' ? (
               <RetentionSettingsPanel isAdmin={isAdmin} hideHeader />

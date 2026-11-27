@@ -8,6 +8,7 @@ import { users } from '../db/schema.js'
 import { writeAudit } from '../lib/audit.js'
 import { jsonError } from '../lib/errors.js'
 import { signAccessToken } from '../lib/jwt.js'
+import { isMcpAuthorization } from '../lib/mcp-credential.js'
 import { hashPassword, verifyPassword } from '../lib/password.js'
 import { validatePassword } from '../lib/password-policy.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
@@ -187,7 +188,9 @@ authRoutes.patch('/me', requireAuth, async (c) => {
     .where(eq(users.id, current.id))
     .returning()
 
-  const token = await issueToken(user)
+  const token = isMcpAuthorization(c.req.header('authorization'))
+    ? undefined
+    : await issueToken(user)
   await writeAudit(c, {
     action: 'auth.profile_update',
     objectType: 'user',
@@ -254,5 +257,10 @@ authRoutes.post('/change-password', requireAuth, async (c) => {
     summary: `修改登录密码`,
   })
 
-  return c.json({ ok: true, token: await issueToken(updated) })
+  return c.json({
+    ok: true,
+    token: isMcpAuthorization(c.req.header('authorization'))
+      ? undefined
+      : await issueToken(updated),
+  })
 })

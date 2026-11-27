@@ -1,4 +1,24 @@
 {
+  "mcp": {
+    "title": "Personal MCP credentials",
+    "description": "Bind MCP to your account. The server checks your current permissions for every operation.",
+    "security": "Credentials can perform management operations allowed for your account. Password, role or account status changes invalidate existing credentials. You can revoke each credential separately. Keep setup commands private.",
+    "name": "Credential name",
+    "days": "Valid days (1–365)",
+    "create": "Create credential",
+    "once": "The credential is shown only once. Copy and run this command in local PowerShell, then reconnect MCP.",
+    "setup": "MCP setup command",
+    "copy": "Copy setup command",
+    "copied": "Copied",
+    "saved": "Saved, hide credential",
+    "loading": "Loading…",
+    "failed": "Operation failed. Please retry.",
+    "empty": "No personal MCP credentials yet",
+    "expires": "Expires",
+    "revoked": "Revoked",
+    "expired": "Expired",
+    "revoke": "Revoke"
+  },
   "common": {
     "cancel": "Cancel",
     "done": "Done",

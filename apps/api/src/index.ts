@@ -14,6 +14,7 @@ import { applicationRoutes } from './routes/applications.js'
 import { artifactRoutes } from './routes/artifacts.js'
 import { auditRoutes } from './routes/audit.js'
 import { authRoutes } from './routes/auth.js'
+import { mcpCredentialRoutes } from './routes/mcp-credentials.js'
 import { healthRoutes } from './routes/health.js'
 import { publicRoutes } from './routes/public.js'
 import { releaseCredentialRoutes } from './routes/release-credentials.js'
@@ -71,6 +72,7 @@ app.use(
 
 app.route('/', healthRoutes)
 app.route('/auth', authRoutes)
+app.route('/account/mcp-credentials', mcpCredentialRoutes)
 // Public share routes before authenticated trees
 app.route('/public', publicRoutes)
 app.route('/users', userRoutes)

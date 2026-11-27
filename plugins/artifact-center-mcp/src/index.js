@@ -8,6 +8,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { ArtifactCenterError, releaseCredentialClient } from './client.js'
+import { registerManagementTools } from './management.js'
 
 const server = new McpServer({ name: 'artifact-center', version: '0.1.0' })
 const text = (value) => ({
@@ -20,7 +21,12 @@ const fail = (error) => ({
       type: 'text',
       text:
         error instanceof ArtifactCenterError
-          ? `${error.message}${error.code ? ` (${error.code})` : ''}`
+          ? JSON.stringify({
+              message: error.message,
+              code: error.code,
+              status: error.status,
+              details: error.details,
+            })
           : `Unexpected error: ${error.message}`,
     },
   ],
@@ -39,10 +45,13 @@ server.registerTool(
   'artifact_center_check_authorization',
   {
     description:
-      'Check that ARTIFACT_CENTER_TOKEN is a usable release credential and list the applications it may publish to.',
+      'Check the configured credential. For account MCP credentials, return the bound account and current role; for publishing credentials, list publishable applications.',
     inputSchema: {},
   },
-  run(async () => (await client()).get('/release/applications')),
+  run(async () => {
+    const api = await client()
+    return api.get(api.token.startsWith('acmt_') ? '/auth/me' : '/release/applications')
+  }),
 )
 
 server.registerTool(
@@ -127,7 +136,7 @@ server.registerTool(
   'artifact_center_update_artifact',
   {
     description:
-      'Update release notes or explicitly promote one beta artifact to stable. There is intentionally no delete tool; deletion must be performed manually in Artifact Center.',
+      'Update release notes or explicitly promote one beta artifact to stable using the publishing API. For broader account-authorized changes or deletion, use the account management tools.',
     inputSchema: {
       artifactId: z.string().min(1),
       releaseNotes: z.string().max(8000).optional(),
@@ -147,5 +156,7 @@ server.registerTool(
     )
   }),
 )
+
+registerManagementTools(server, client, run)
 
 await server.connect(new StdioServerTransport())
