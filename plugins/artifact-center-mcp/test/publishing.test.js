@@ -173,3 +173,30 @@ test('a second edit to an already dirty tracked file invalidates the preview', a
   )
   assert.equal(f.uploaded(), undefined)
 })
+
+test('editing untracked source invalidates the preview before uploading', async (t) => {
+  const f = await fixture(t)
+  await writeFile(join(f.directory, 'source.ts'), 'export const value = 1')
+  const preview = await prepareUpload(f.client, f.input)
+  f.hash(preview.sha256)
+  await writeFile(join(f.directory, 'source.ts'), 'export const value = 2')
+  await assert.rejects(
+    confirmUpload(f.client, { planId: preview.planId, confirmed: true }),
+    /Repository or target changed/,
+  )
+  assert.equal(f.uploaded(), undefined)
+})
+
+test('ignored build output does not invalidate the source context', async (t) => {
+  const f = await fixture(t)
+  await writeFile(join(f.directory, '.gitignore'), 'generated.bin\n')
+  await writeFile(join(f.directory, 'generated.bin'), 'first')
+  const preview = await prepareUpload(f.client, f.input)
+  f.hash(preview.sha256)
+  await writeFile(join(f.directory, 'generated.bin'), 'second')
+  const result = await confirmUpload(f.client, {
+    planId: preview.planId,
+    confirmed: true,
+  })
+  assert.equal(result.available, true)
+})

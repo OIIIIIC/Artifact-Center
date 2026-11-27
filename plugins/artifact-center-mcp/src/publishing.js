@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream, rmSync } from 'node:fs'
-import { mkdtemp, readFile, realpath, rm, stat } from 'node:fs/promises'
+import { lstat, mkdtemp, readFile, readlink, realpath, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, isAbsolute, join, relative, resolve } from 'node:path'
 import { pipeline } from 'node:stream/promises'
@@ -29,7 +29,7 @@ const git = async (cwd, args) =>
     await exec('git', ['-C', cwd, ...args], { windowsHide: true, maxBuffer: 1024 * 1024 })
   ).stdout.trim()
 
-export async function inspectRepository(directory, remote = 'origin') {
+export async function inspectRepository(directory, remote = 'origin', artifactPath) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(remote))
     throw new ArtifactCenterError('Invalid remote name')
   const cwd = await realpath(resolve(directory))
@@ -53,12 +53,52 @@ export async function inspectRepository(directory, remote = 'origin') {
     diffSha256: createHash('sha256')
       .update(await git(root, ['diff', '--no-ext-diff', '--binary', 'HEAD']))
       .digest('hex'),
+    untrackedSha256: await digestUntracked(
+      root,
+      artifactPath ? resolve(cwd, artifactPath) : undefined,
+    ),
     remote,
   }
 }
 
-export async function matchRepository(client, { directory, remote = 'origin' }) {
-  const context = await inspectRepository(directory, remote)
+async function digestUntracked(root, artifactPath) {
+  // Git's exclusions keep ignored dependencies/build output out of this snapshot.
+  // NUL delimiters preserve spaces, Unicode, and newlines in file names.
+  const { stdout } = await exec(
+    'git',
+    ['-C', root, 'ls-files', '--others', '--exclude-standard', '-z'],
+    {
+      windowsHide: true,
+      maxBuffer: 1024 * 1024,
+    },
+  )
+  const hash = createHash('sha256')
+  let total = 0
+  for (const name of stdout.split('\0').filter(Boolean).sort()) {
+    const path = join(root, name)
+    // The selected package has its own full digest and immutable preview snapshot.
+    if (path === artifactPath) continue
+    const info = await lstat(path)
+    total += info.size
+    if (info.size > 16 * 1024 * 1024 || total > 64 * 1024 * 1024)
+      throw new ArtifactCenterError(
+        'Untracked files exceed preview limits; add source files to Git and ignore generated build outputs',
+      )
+    if (!info.isFile() && !info.isSymbolicLink())
+      throw new ArtifactCenterError(
+        'Unsupported untracked file; add source files to Git before previewing',
+      )
+    const content = info.isSymbolicLink() ? await readlink(path) : await digest(path)
+    hash.update(JSON.stringify([name, info.mode, info.isSymbolicLink(), content]))
+  }
+  return hash.digest('hex')
+}
+
+export async function matchRepository(
+  client,
+  { directory, remote = 'origin', filePath },
+) {
+  const context = await inspectRepository(directory, remote, filePath)
   const query = new URLSearchParams({
     repository: context.repository,
     branch: context.branch,
