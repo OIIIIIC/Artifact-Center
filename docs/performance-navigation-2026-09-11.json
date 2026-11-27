@@ -1,0 +1,1927 @@
+{
+  "date": "2026-09-11",
+  "revision": "42da2e8f + working-tree changes",
+  "entry": {
+    "scenario": "Refresh workspace, click Applications; compare subsequent entry. Real 18-app data, 1440x960, trusted pointer clicks; workspace preferences mocked consistently; browser routing disables HTTP cache.",
+    "results": [
+      {
+        "label": "5178-refresh-1",
+        "heading": 357.2,
+        "cards": 783.5,
+        "frameP95": 18.5,
+        "maxFrame": 246.2,
+        "framesOver50ms": 3,
+        "tasks": [
+          {
+            "at": 291.1,
+            "duration": 63
+          },
+          {
+            "at": 409.1,
+            "duration": 100
+          },
+          {
+            "at": 546.6,
+            "duration": 231
+          }
+        ],
+        "missingLayoutFrames": 0,
+        "resources": [
+          {
+            "url": "/src/routes/applications-page.tsx?t=1789118025824",
+            "at": 7.4,
+            "duration": 120.7,
+            "end": 128.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/favicon.svg",
+            "at": 122.5,
+            "duration": 14.9,
+            "end": 137.4,
+            "initiator": "other"
+          },
+          {
+            "url": "/src/features/applications/application-filters.tsx",
+            "at": 142.3,
+            "duration": 12.1,
+            "end": 154.4,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/bulk-application-actions-dialog.tsx?t=1789117782044",
+            "at": 142.5,
+            "duration": 13,
+            "end": 155.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-grid-skeleton.tsx",
+            "at": 142.5,
+            "duration": 13.1,
+            "end": 155.6,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-search.tsx",
+            "at": 142.6,
+            "duration": 13.1,
+            "end": 155.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-scope-heading.tsx?t=1789115639426",
+            "at": 142.7,
+            "duration": 18.5,
+            "end": 161.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-scope-path.tsx?t=1789117122097",
+            "at": 142.7,
+            "duration": 19.4,
+            "end": 162.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/animated-scope-action.tsx?t=1789116271480",
+            "at": 142.8,
+            "duration": 19.3,
+            "end": 162.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-timeline.tsx?t=1789117899146",
+            "at": 142.9,
+            "duration": 19.3,
+            "end": 162.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/products/product-directory.tsx?t=1789112579544",
+            "at": 142.9,
+            "duration": 19.3,
+            "end": 162.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/products/application-directory.tsx?t=1789117782044",
+            "at": 142.9,
+            "duration": 20.8,
+            "end": 163.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/products/use-projects.ts?t=1789117782044",
+            "at": 142.9,
+            "duration": 23,
+            "end": 165.9,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/share/share-collection-dialog.tsx?t=1789117782044",
+            "at": 142.9,
+            "duration": 24.2,
+            "end": 167.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/use-workspace-filter-preference-sync.ts",
+            "at": 143,
+            "duration": 25.2,
+            "end": 168.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/regions/use-regions.ts?t=1789117782044",
+            "at": 143.1,
+            "duration": 25.7,
+            "end": 168.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/lib/roles.ts",
+            "at": 143.2,
+            "duration": 26.2,
+            "end": 169.4,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/hooks/use-content-scroll-restoration.ts",
+            "at": 143.2,
+            "duration": 25.7,
+            "end": 168.9,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/use-directory-summary.ts?t=1789117782044",
+            "at": 143.3,
+            "duration": 26.5,
+            "end": 169.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/common/collection-pagination.tsx",
+            "at": 143.3,
+            "duration": 28,
+            "end": 171.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/ui/modal.tsx",
+            "at": 165.4,
+            "duration": 9.7,
+            "end": 175.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/bulk-application-avatar-dialog.tsx?t=1789117782044",
+            "at": 165.5,
+            "duration": 10.7,
+            "end": 176.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/bulk-application-code-dialog.tsx?t=1789117782044",
+            "at": 165.5,
+            "duration": 11.7,
+            "end": 177.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-activity.ts",
+            "at": 170.7,
+            "duration": 7.1,
+            "end": 177.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-grid.tsx?t=1789117899146",
+            "at": 170.8,
+            "duration": 10.7,
+            "end": 181.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/detail-navigation.ts?t=1789112778103",
+            "at": 171,
+            "duration": 10.9,
+            "end": 181.9,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/ui/input.tsx",
+            "at": 171.8,
+            "duration": 11.1,
+            "end": 182.9,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/lib/clipboard.ts",
+            "at": 171.9,
+            "duration": 10.9,
+            "end": 182.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/lib/request-error.ts",
+            "at": 171.9,
+            "duration": 11.6,
+            "end": 183.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/store/share-store.ts",
+            "at": 172,
+            "duration": 15.5,
+            "end": 187.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/lib/application-code.ts",
+            "at": 178.9,
+            "duration": 9.1,
+            "end": 188,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/common/animated-height.tsx",
+            "at": 184.7,
+            "duration": 9.7,
+            "end": 194.4,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-card.tsx?t=1789117899146",
+            "at": 184.8,
+            "duration": 10.7,
+            "end": 195.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/common/index.ts?t=1789117899146",
+            "at": 200.4,
+            "duration": 5.9,
+            "end": 206.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-status-meta.ts",
+            "at": 200.5,
+            "duration": 6.8,
+            "end": 207.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/common/status-badge.tsx",
+            "at": 208.2,
+            "duration": 8.4,
+            "end": 216.6,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/ui/badge.tsx",
+            "at": 218.9,
+            "duration": 4.1,
+            "end": 223,
+            "initiator": "script"
+          },
+          {
+            "url": "/api/settings/regions",
+            "at": 331.2,
+            "duration": 71.9,
+            "end": 403.1,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/settings/projects",
+            "at": 332.2,
+            "duration": 78,
+            "end": 410.2,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications/summary",
+            "at": 333.2,
+            "duration": 34.3,
+            "end": 367.5,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications?sort=updated&limit=24",
+            "at": 337.7,
+            "duration": 29.6,
+            "end": 367.3,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications/summary",
+            "at": 345.5,
+            "duration": 69.6,
+            "end": 415.1,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications?sort=updated&limit=24",
+            "at": 347.8,
+            "duration": 114.1,
+            "end": 461.9,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/avatar-library/avatar-21.jpg",
+            "at": 776.2,
+            "duration": 19.7,
+            "end": 795.9,
+            "initiator": "img"
+          }
+        ],
+        "marks": [
+          {
+            "at": 3.2,
+            "state": "oiiic，继续上次的工作|4|1|false"
+          },
+          {
+            "at": 357.2,
+            "state": "全部应用|0|1|false"
+          },
+          {
+            "at": 783.5,
+            "state": "全部应用|18|1|false"
+          }
+        ],
+        "trusted": true,
+        "visibility": "visible"
+      },
+      {
+        "label": "5178-warm-1",
+        "heading": 338.4,
+        "cards": 338.4,
+        "frameP95": 14.2,
+        "maxFrame": 83.3,
+        "framesOver50ms": 1,
+        "tasks": [
+          {
+            "at": 255.5,
+            "duration": 78
+          }
+        ],
+        "missingLayoutFrames": 0,
+        "resources": [
+          {
+            "url": "/favicon.svg",
+            "at": 43.5,
+            "duration": 6.6,
+            "end": 50.1,
+            "initiator": "other"
+          }
+        ],
+        "marks": [
+          {
+            "at": 4.2,
+            "state": "oiiic，继续上次的工作|4|1|false"
+          },
+          {
+            "at": 338.4,
+            "state": "全部应用|18|1|false"
+          }
+        ],
+        "trusted": true,
+        "visibility": "visible"
+      },
+      {
+        "label": "5178-refresh-2",
+        "heading": 214.7,
+        "cards": 774.8,
+        "frameP95": 27.8,
+        "maxFrame": 228.1,
+        "framesOver50ms": 4,
+        "tasks": [
+          {
+            "at": 158.8,
+            "duration": 52
+          },
+          {
+            "at": 277.4,
+            "duration": 115
+          },
+          {
+            "at": 425.1,
+            "duration": 89
+          },
+          {
+            "at": 549.9,
+            "duration": 220
+          }
+        ],
+        "missingLayoutFrames": 0,
+        "resources": [
+          {
+            "url": "/src/routes/applications-page.tsx?t=1789118025824",
+            "at": 8.6,
+            "duration": 12.7,
+            "end": 21.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/favicon.svg",
+            "at": 16.5,
+            "duration": 8.7,
+            "end": 25.2,
+            "initiator": "other"
+          },
+          {
+            "url": "/src/features/applications/application-filters.tsx",
+            "at": 24.9,
+            "duration": 8.4,
+            "end": 33.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/bulk-application-actions-dialog.tsx?t=1789117782044",
+            "at": 25,
+            "duration": 10.5,
+            "end": 35.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-grid-skeleton.tsx",
+            "at": 25,
+            "duration": 17.2,
+            "end": 42.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-search.tsx",
+            "at": 25.1,
+            "duration": 18.5,
+            "end": 43.6,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-scope-heading.tsx?t=1789115639426",
+            "at": 25.1,
+            "duration": 18.6,
+            "end": 43.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-scope-path.tsx?t=1789117122097",
+            "at": 25.1,
+            "duration": 18.7,
+            "end": 43.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/animated-scope-action.tsx?t=1789116271480",
+            "at": 25.2,
+            "duration": 18.7,
+            "end": 43.9,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-timeline.tsx?t=1789117899146",
+            "at": 25.3,
+            "duration": 18.8,
+            "end": 44.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/products/product-directory.tsx?t=1789112579544",
+            "at": 25.4,
+            "duration": 21.5,
+            "end": 46.9,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/products/use-projects.ts?t=1789117782044",
+            "at": 25.4,
+            "duration": 23.8,
+            "end": 49.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/share/share-collection-dialog.tsx?t=1789117782044",
+            "at": 25.4,
+            "duration": 25.3,
+            "end": 50.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/products/application-directory.tsx?t=1789117782044",
+            "at": 25.4,
+            "duration": 23.1,
+            "end": 48.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/use-workspace-filter-preference-sync.ts",
+            "at": 25.5,
+            "duration": 26.5,
+            "end": 52,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/regions/use-regions.ts?t=1789117782044",
+            "at": 25.6,
+            "duration": 27.9,
+            "end": 53.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/hooks/use-content-scroll-restoration.ts",
+            "at": 25.7,
+            "duration": 28.1,
+            "end": 53.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/lib/roles.ts",
+            "at": 25.7,
+            "duration": 29.1,
+            "end": 54.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/common/collection-pagination.tsx",
+            "at": 25.8,
+            "duration": 29.9,
+            "end": 55.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/use-directory-summary.ts?t=1789117782044",
+            "at": 25.8,
+            "duration": 29.3,
+            "end": 55.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/ui/modal.tsx",
+            "at": 45.7,
+            "duration": 14.6,
+            "end": 60.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/bulk-application-avatar-dialog.tsx?t=1789117782044",
+            "at": 45.7,
+            "duration": 15.7,
+            "end": 61.4,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/bulk-application-code-dialog.tsx?t=1789117782044",
+            "at": 45.9,
+            "duration": 16.2,
+            "end": 62.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-activity.ts",
+            "at": 51.2,
+            "duration": 15,
+            "end": 66.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-grid.tsx?t=1789117899146",
+            "at": 51.2,
+            "duration": 15.8,
+            "end": 67,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/ui/input.tsx",
+            "at": 59.6,
+            "duration": 14.1,
+            "end": 73.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/lib/clipboard.ts",
+            "at": 60.2,
+            "duration": 14.2,
+            "end": 74.4,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/lib/request-error.ts",
+            "at": 60.3,
+            "duration": 14.4,
+            "end": 74.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/store/share-store.ts",
+            "at": 60.9,
+            "duration": 14.2,
+            "end": 75.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/detail-navigation.ts?t=1789112778103",
+            "at": 62.3,
+            "duration": 16.8,
+            "end": 79.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/lib/application-code.ts",
+            "at": 66.2,
+            "duration": 18.8,
+            "end": 85,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/common/animated-height.tsx",
+            "at": 79.5,
+            "duration": 9.3,
+            "end": 88.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-card.tsx?t=1789117899146",
+            "at": 79.5,
+            "duration": 10.3,
+            "end": 89.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/common/index.ts?t=1789117899146",
+            "at": 91.3,
+            "duration": 4.4,
+            "end": 95.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/features/applications/application-status-meta.ts",
+            "at": 91.4,
+            "duration": 5.1,
+            "end": 96.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/common/status-badge.tsx",
+            "at": 98.5,
+            "duration": 5.3,
+            "end": 103.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/src/components/ui/badge.tsx",
+            "at": 105.4,
+            "duration": 3.6,
+            "end": 109,
+            "initiator": "script"
+          },
+          {
+            "url": "/api/settings/regions",
+            "at": 189.5,
+            "duration": 81,
+            "end": 270.5,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/settings/projects",
+            "at": 191.6,
+            "duration": 122.5,
+            "end": 314.1,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications/summary",
+            "at": 192.5,
+            "duration": 32.4,
+            "end": 224.9,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications?sort=updated&limit=24",
+            "at": 194.7,
+            "duration": 30.1,
+            "end": 224.8,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications/summary",
+            "at": 198.9,
+            "duration": 108.9,
+            "end": 307.8,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications?sort=updated&limit=24",
+            "at": 200.3,
+            "duration": 242,
+            "end": 442.3,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/avatar-library/avatar-21.jpg",
+            "at": 769.2,
+            "duration": 6.1,
+            "end": 775.3,
+            "initiator": "img"
+          }
+        ],
+        "marks": [
+          {
+            "at": 4.1,
+            "state": "oiiic，继续上次的工作|4|1|false"
+          },
+          {
+            "at": 214.7,
+            "state": "全部应用|0|1|false"
+          },
+          {
+            "at": 774.8,
+            "state": "全部应用|18|1|false"
+          }
+        ],
+        "trusted": true,
+        "visibility": "visible"
+      },
+      {
+        "label": "5178-warm-2",
+        "heading": 339.8,
+        "cards": 339.8,
+        "frameP95": 14.7,
+        "maxFrame": 110.3,
+        "framesOver50ms": 2,
+        "tasks": [
+          {
+            "at": 229.8,
+            "duration": 104
+          }
+        ],
+        "missingLayoutFrames": 0,
+        "resources": [
+          {
+            "url": "/favicon.svg",
+            "at": 48.4,
+            "duration": 7.2,
+            "end": 55.6,
+            "initiator": "other"
+          }
+        ],
+        "marks": [
+          {
+            "at": 2.7,
+            "state": "oiiic，继续上次的工作|4|1|false"
+          },
+          {
+            "at": 339.8,
+            "state": "全部应用|18|1|false"
+          }
+        ],
+        "trusted": true,
+        "visibility": "visible"
+      },
+      {
+        "label": "5180-refresh-1",
+        "heading": 113.5,
+        "cards": 326.7,
+        "frameP95": 14.1,
+        "maxFrame": 101.8,
+        "framesOver50ms": 2,
+        "tasks": [
+          {
+            "at": 228.6,
+            "duration": 92
+          },
+          {
+            "at": 321.7,
+            "duration": 51
+          }
+        ],
+        "missingLayoutFrames": 0,
+        "resources": [
+          {
+            "url": "/assets/applications-page-COF56vBX.js",
+            "at": 5.2,
+            "duration": 38.8,
+            "end": 44,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/arrow-left-DqYBRFnX.js",
+            "at": 5.5,
+            "duration": 20.6,
+            "end": 26.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/check-CMBI6pD_.js",
+            "at": 5.7,
+            "duration": 21.4,
+            "end": 27.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/modal-C8mD5Oui.js",
+            "at": 5.9,
+            "duration": 33.2,
+            "end": 39.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/use-regions-COxoWRaZ.js",
+            "at": 6.1,
+            "duration": 35.5,
+            "end": 41.6,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/folder-CrBgP6UP.js",
+            "at": 6.2,
+            "duration": 25.4,
+            "end": 31.6,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/common-CWk2c1p1.js",
+            "at": 6.3,
+            "duration": 35.2,
+            "end": 41.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/badge-DBNP94C-.js",
+            "at": 6.6,
+            "duration": 33.5,
+            "end": 40.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/application-directory-BMGBKbOI.js",
+            "at": 6.8,
+            "duration": 37,
+            "end": 43.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/use-projects-ChC1QS3P.js",
+            "at": 6.9,
+            "duration": 45.5,
+            "end": 52.4,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/use-directory-summary-gxfG3-A4.js",
+            "at": 7.2,
+            "duration": 44.5,
+            "end": 51.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/plus-B_L_4du9.js",
+            "at": 7.4,
+            "duration": 45.8,
+            "end": 53.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/shares-CdxXWHD0.js",
+            "at": 7.7,
+            "duration": 46.2,
+            "end": 53.9,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/request-error-DyoxHd95.js",
+            "at": 7.8,
+            "duration": 46.2,
+            "end": 54,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/input-CAJYHkWf.js",
+            "at": 8.2,
+            "duration": 46.4,
+            "end": 54.6,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/roles-GUohsO8x.js",
+            "at": 8.4,
+            "duration": 49.4,
+            "end": 57.8,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/application-code-CGSPsiUy.js",
+            "at": 8.6,
+            "duration": 49.6,
+            "end": 58.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/favicon.svg",
+            "at": 11.4,
+            "duration": 47.6,
+            "end": 59,
+            "initiator": "other"
+          },
+          {
+            "url": "/api/settings/regions",
+            "at": 107,
+            "duration": 35.8,
+            "end": 142.8,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/settings/projects",
+            "at": 107.5,
+            "duration": 31.3,
+            "end": 138.8,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications/summary",
+            "at": 108,
+            "duration": 32.1,
+            "end": 140.1,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications?sort=updated&limit=24",
+            "at": 109.8,
+            "duration": 78.9,
+            "end": 188.7,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/avatar-library/avatar-21.jpg",
+            "at": 319.9,
+            "duration": 10.7,
+            "end": 330.6,
+            "initiator": "img"
+          }
+        ],
+        "marks": [
+          {
+            "at": 2.3,
+            "state": "oiiic，继续上次的工作|4|1|false"
+          },
+          {
+            "at": 113.5,
+            "state": "全部应用|0|1|false"
+          },
+          {
+            "at": 326.7,
+            "state": "全部应用|18|1|false"
+          }
+        ],
+        "trusted": true,
+        "visibility": "visible"
+      },
+      {
+        "label": "5180-warm-1",
+        "heading": 114.4,
+        "cards": 114.4,
+        "frameP95": 14.8,
+        "maxFrame": 54.5,
+        "framesOver50ms": 1,
+        "tasks": [],
+        "missingLayoutFrames": 0,
+        "resources": [
+          {
+            "url": "/favicon.svg",
+            "at": 24.4,
+            "duration": 6.6,
+            "end": 31,
+            "initiator": "other"
+          }
+        ],
+        "marks": [
+          {
+            "at": 3.3,
+            "state": "oiiic，继续上次的工作|4|1|false"
+          },
+          {
+            "at": 114.4,
+            "state": "全部应用|18|1|false"
+          }
+        ],
+        "trusted": true,
+        "visibility": "visible"
+      },
+      {
+        "label": "5180-refresh-2",
+        "heading": 78.5,
+        "cards": 261.9,
+        "frameP95": 19.1,
+        "maxFrame": 82.9,
+        "framesOver50ms": 1,
+        "tasks": [
+          {
+            "at": 182.1,
+            "duration": 75
+          }
+        ],
+        "missingLayoutFrames": 0,
+        "resources": [
+          {
+            "url": "/assets/applications-page-COF56vBX.js",
+            "at": 3.4,
+            "duration": 20.9,
+            "end": 24.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/arrow-left-DqYBRFnX.js",
+            "at": 3.5,
+            "duration": 18.6,
+            "end": 22.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/check-CMBI6pD_.js",
+            "at": 3.7,
+            "duration": 19,
+            "end": 22.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/modal-C8mD5Oui.js",
+            "at": 4,
+            "duration": 20.2,
+            "end": 24.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/use-regions-COxoWRaZ.js",
+            "at": 4.1,
+            "duration": 20.3,
+            "end": 24.4,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/folder-CrBgP6UP.js",
+            "at": 4.3,
+            "duration": 19,
+            "end": 23.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/common-CWk2c1p1.js",
+            "at": 4.3,
+            "duration": 26.9,
+            "end": 31.2,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/badge-DBNP94C-.js",
+            "at": 4.4,
+            "duration": 27,
+            "end": 31.4,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/use-projects-ChC1QS3P.js",
+            "at": 4.6,
+            "duration": 27.9,
+            "end": 32.5,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/application-directory-BMGBKbOI.js",
+            "at": 4.6,
+            "duration": 29,
+            "end": 33.6,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/use-directory-summary-gxfG3-A4.js",
+            "at": 4.7,
+            "duration": 27.9,
+            "end": 32.6,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/plus-B_L_4du9.js",
+            "at": 4.9,
+            "duration": 27.8,
+            "end": 32.7,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/shares-CdxXWHD0.js",
+            "at": 5,
+            "duration": 33,
+            "end": 38,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/request-error-DyoxHd95.js",
+            "at": 5.1,
+            "duration": 33.9,
+            "end": 39,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/input-CAJYHkWf.js",
+            "at": 5.2,
+            "duration": 33.9,
+            "end": 39.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/roles-GUohsO8x.js",
+            "at": 5.3,
+            "duration": 33.8,
+            "end": 39.1,
+            "initiator": "script"
+          },
+          {
+            "url": "/assets/application-code-CGSPsiUy.js",
+            "at": 5.4,
+            "duration": 33.9,
+            "end": 39.3,
+            "initiator": "script"
+          },
+          {
+            "url": "/favicon.svg",
+            "at": 10,
+            "duration": 29.3,
+            "end": 39.3,
+            "initiator": "other"
+          },
+          {
+            "url": "/api/settings/regions",
+            "at": 73,
+            "duration": 31.4,
+            "end": 104.4,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/settings/projects",
+            "at": 73.4,
+            "duration": 32.3,
+            "end": 105.7,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications/summary",
+            "at": 73.8,
+            "duration": 32.9,
+            "end": 106.7,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/api/applications?sort=updated&limit=24",
+            "at": 75,
+            "duration": 83.5,
+            "end": 158.5,
+            "initiator": "fetch"
+          },
+          {
+            "url": "/avatar-library/avatar-21.jpg",
+            "at": 257.1,
+            "duration": 6.4,
+            "end": 263.5,
+            "initiator": "img"
+          }
+        ],
+        "marks": [
+          {
+            "at": 1.8,
+            "state": "oiiic，继续上次的工作|4|1|false"
+          },
+          {
+            "at": 78.5,
+            "state": "全部应用|0|1|false"
+          },
+          {
+            "at": 261.9,
+            "state": "全部应用|18|1|false"
+          }
+        ],
+        "trusted": true,
+        "visibility": "visible"
+      },
+      {
+        "label": "5180-warm-2",
+        "heading": 121.3,
+        "cards": 121.3,
+        "frameP95": 12.6,
+        "maxFrame": 50.4,
+        "framesOver50ms": 1,
+        "tasks": [],
+        "missingLayoutFrames": 0,
+        "resources": [
+          {
+            "url": "/favicon.svg",
+            "at": 25.2,
+            "duration": 8,
+            "end": 33.2,
+            "initiator": "other"
+          }
+        ],
+        "marks": [
+          {
+            "at": 4.5,
+            "state": "oiiic，继续上次的工作|4|1|false"
+          },
+          {
+            "at": 121.3,
+            "state": "全部应用|18|1|false"
+          }
+        ],
+        "trusted": true,
+        "visibility": "visible"
+      }
+    ]
+  },
+  "tree": {
+    "date": "2026-09-11T09:18:34.288Z",
+    "environment": "Production preview build, Chromium, 1440x960, normal CPU",
+    "realApps": 18,
+    "synthetic": {
+      "apps": 300,
+      "products": 30,
+      "projects": 60,
+      "artifactCountPerApp": 300,
+      "notes": "browser-only metadata fixtures, no artifact bodies or database workload"
+    },
+    "measurement": "click handler to first matching result DOM; RAF intervals include transition windows; not INP or GPU FPS; workspace writes mocked to avoid changing preferences",
+    "baselineFrameP50": 8.3,
+    "baselineFrameP95": 8.9,
+    "results": [
+      {
+        "name": "real-first-visit",
+        "clicks": 8,
+        "readyP50": 124.9,
+        "readyP95": 257.2,
+        "notReadyWithinWindow": 0,
+        "frameP95": 20,
+        "maxFrame": 91.9,
+        "framesOver50ms": 2,
+        "frameCount": 573,
+        "longTasks": 1,
+        "maxLongTask": 83,
+        "minTreeButtons": 50,
+        "maxCards": 38,
+        "treeRetained": true,
+        "getRequests": 16,
+        "directoryReloads": 0,
+        "leafListRequests": 0
+      },
+      {
+        "name": "real-cached",
+        "clicks": 16,
+        "readyP50": 35.2,
+        "readyP95": 87.2,
+        "notReadyWithinWindow": 0,
+        "frameP95": 14.2,
+        "maxFrame": 47.3,
+        "framesOver50ms": 0,
+        "frameCount": 1249,
+        "longTasks": 0,
+        "maxLongTask": 0,
+        "minTreeButtons": 50,
+        "maxCards": 5,
+        "treeRetained": true,
+        "getRequests": 16,
+        "directoryReloads": 0,
+        "leafListRequests": 0
+      },
+      {
+        "name": "real-rapid",
+        "clicks": 24,
+        "readyP50": 55.1,
+        "readyP95": 94.7,
+        "notReadyWithinWindow": 0,
+        "frameP95": 26.1,
+        "maxFrame": 43.9,
+        "framesOver50ms": 0,
+        "frameCount": 225,
+        "longTasks": 0,
+        "maxLongTask": 0,
+        "minTreeButtons": 50,
+        "maxCards": 11,
+        "treeRetained": true,
+        "getRequests": 24,
+        "directoryReloads": 0,
+        "leafListRequests": 0
+      },
+      {
+        "name": "real-application-switch",
+        "clicks": 12,
+        "readyP50": 18.2,
+        "readyP95": 93,
+        "notReadyWithinWindow": 0,
+        "frameP95": 9.2,
+        "maxFrame": 20.8,
+        "framesOver50ms": 0,
+        "frameCount": 1011,
+        "longTasks": 0,
+        "maxLongTask": 0,
+        "minTreeButtons": 50,
+        "maxCards": 1,
+        "treeRetained": true,
+        "getRequests": 2,
+        "directoryReloads": 0,
+        "leafListRequests": 0
+      },
+      {
+        "name": "300-apps-first-visit-50ms",
+        "clicks": 8,
+        "readyP50": 246.6,
+        "readyP95": 360.8,
+        "notReadyWithinWindow": 0,
+        "frameP95": 40.1,
+        "maxFrame": 74.6,
+        "framesOver50ms": 12,
+        "frameCount": 455,
+        "longTasks": 1,
+        "maxLongTask": 61,
+        "minTreeButtons": 63,
+        "maxCards": 58,
+        "treeRetained": true,
+        "getRequests": 16,
+        "directoryReloads": 0,
+        "leafListRequests": 0
+      },
+      {
+        "name": "300-apps-cached",
+        "clicks": 16,
+        "readyP50": 106.9,
+        "readyP95": 137.6,
+        "notReadyWithinWindow": 0,
+        "frameP95": 24,
+        "maxFrame": 81.8,
+        "framesOver50ms": 10,
+        "frameCount": 1075,
+        "longTasks": 1,
+        "maxLongTask": 64,
+        "minTreeButtons": 63,
+        "maxCards": 20,
+        "treeRetained": true,
+        "getRequests": 16,
+        "directoryReloads": 0,
+        "leafListRequests": 0
+      },
+      {
+        "name": "300-apps-rapid-350ms",
+        "clicks": 24,
+        "readyP50": null,
+        "readyP95": null,
+        "notReadyWithinWindow": 24,
+        "frameP95": 38.8,
+        "maxFrame": 57.7,
+        "framesOver50ms": 2,
+        "frameCount": 171,
+        "longTasks": 0,
+        "maxLongTask": 0,
+        "minTreeButtons": 63,
+        "maxCards": 20,
+        "treeRetained": true,
+        "getRequests": 21,
+        "directoryReloads": 0,
+        "leafListRequests": 0
+      }
+    ],
+    "finalReal": "青岛",
+    "finalScale": "容量产品18",
+    "finalScaleCards": 10,
+    "requestCounts": {
+      "GET /": 2,
+      "GET /assets/index-qu2iK0kC.js": 3,
+      "GET /assets/QueryClientProvider-BpgG5dCm.js": 3,
+      "GET /assets/proxy-CA5D3mmo.js": 3,
+      "GET /assets/index-CxLTL9oj.css": 3,
+      "GET /fonts/alibaba-puhuiti/AlibabaPuHuiTi-Regular.ttf": 3,
+      "GET /api/auth/me": 3,
+      "GET /favicon.svg": 111,
+      "GET /assets/applications-page-COF56vBX.js": 2,
+      "GET /assets/layout-C6U7wui-.js": 3,
+      "GET /assets/arrow-left-DqYBRFnX.js": 2,
+      "GET /assets/application-avatar-Dn1SJ_-e.js": 3,
+      "GET /assets/shield-check-hQ8Yyrcu.js": 3,
+      "GET /assets/check-CMBI6pD_.js": 3,
+      "GET /assets/modal-C8mD5Oui.js": 3,
+      "GET /assets/use-regions-COxoWRaZ.js": 3,
+      "GET /assets/folder-CrBgP6UP.js": 3,
+      "GET /assets/common-CWk2c1p1.js": 3,
+      "GET /assets/badge-DBNP94C-.js": 3,
+      "GET /assets/application-directory-BMGBKbOI.js": 3,
+      "GET /assets/applications-sSpik_mZ.js": 3,
+      "GET /assets/use-reduced-motion-9IqwjGCq.js": 3,
+      "GET /assets/use-projects-ChC1QS3P.js": 3,
+      "GET /assets/use-collection-page-GmVuW7YS.js": 3,
+      "GET /assets/use-directory-summary-gxfG3-A4.js": 3,
+      "GET /assets/plus-B_L_4du9.js": 3,
+      "GET /assets/shares-CdxXWHD0.js": 3,
+      "GET /assets/request-error-DyoxHd95.js": 3,
+      "GET /assets/input-CAJYHkWf.js": 3,
+      "GET /assets/roles-GUohsO8x.js": 3,
+      "GET /assets/application-code-CGSPsiUy.js": 3,
+      "GET /assets/use-applications-DzMuz9Kf.js": 2,
+      "GET /assets/use-personal-workspace-eXNojp1P.js": 2,
+      "GET /images/artifact-center-logo.png": 3,
+      "GET /fonts/alibaba-puhuiti/AlibabaPuHuiTi-Bold.ttf": 3,
+      "GET /fonts/jetbrains-mono/JetBrainsMono-SemiBold.ttf": 3,
+      "GET /api/settings/regions": 3,
+      "GET /api/settings/projects": 3,
+      "GET /api/applications/summary": 3,
+      "GET /api/workspace": 85,
+      "GET /api/applications": 30,
+      "GET /fonts/jetbrains-mono/JetBrainsMono-Regular.ttf": 3,
+      "GET /avatar-library/avatar-21.jpg": 4,
+      "PUT /api/workspace/preferences": 83,
+      "GET /applications/0ec4178b-2c6b-4053-86e2-9c7fe6a2676d": 1,
+      "GET /assets/application-detail-page-Dn-i2KSn.js": 1,
+      "GET /assets/use-download-artifact-BLa1WpnF.js": 1,
+      "GET /assets/select-CPeED2SF.js": 1,
+      "GET /assets/dist-hFinok0O.js": 1,
+      "GET /assets/dist-PuXu0MEA.js": 1,
+      "GET /assets/table-GYGKYy83.js": 1,
+      "GET /assets/trash-2-DZqJ-fyM.js": 1,
+      "GET /assets/channel-meta-B6yiAyAI.js": 1,
+      "GET /assets/application-fields-KCRcOoDN.js": 1,
+      "GET /assets/markdown-preview-D9eVdTad.js": 1,
+      "GET /api/applications/0ec4178b-2c6b-4053-86e2-9c7fe6a2676d": 1,
+      "GET /api/applications/0ec4178b-2c6b-4053-86e2-9c7fe6a2676d/overview": 1,
+      "POST /api/workspace/visits/0ec4178b-2c6b-4053-86e2-9c7fe6a2676d": 7,
+      "GET /api/applications/c0fd2125-b930-43b8-83e0-21d6ddfdb750": 1,
+      "GET /api/applications/c0fd2125-b930-43b8-83e0-21d6ddfdb750/overview": 1,
+      "POST /api/workspace/visits/c0fd2125-b930-43b8-83e0-21d6ddfdb750": 6
+    }
+  },
+  "pointer": {
+    "conditions": "Trusted mouse clicks, production build, browser-only 300-app fixtures, cached products 01/02; motion A/B/A",
+    "results": [
+      {
+        "mode": "no-preference",
+        "clicks": 4,
+        "readyP50": 67.1,
+        "readyP95": 72.5,
+        "maxFrame": 30.8,
+        "framesOver50ms": 0,
+        "longTasks": 0,
+        "clickEventDurations": [24, 24, 24, 24],
+        "visible": true,
+        "trusted": true
+      },
+      {
+        "mode": "reduce",
+        "clicks": 4,
+        "readyP50": 45,
+        "readyP95": 53.9,
+        "maxFrame": 35.7,
+        "framesOver50ms": 0,
+        "longTasks": 0,
+        "clickEventDurations": [24, 24, 24, 24],
+        "visible": true,
+        "trusted": true
+      },
+      {
+        "mode": "no-preference",
+        "clicks": 4,
+        "readyP50": 63.1,
+        "readyP95": 82.3,
+        "maxFrame": 27.1,
+        "framesOver50ms": 0,
+        "longTasks": 0,
+        "clickEventDurations": [24, 24, 24, 24],
+        "visible": true,
+        "trusted": true
+      }
+    ]
+  },
+  "cpu": {
+    "scenario": "Development build; refresh workspace then enter Applications; Chromium CPU sampling 1ms",
+    "topSelf": [
+      {
+        "name": "(program)",
+        "url": "",
+        "line": 0,
+        "selfMs": 523.1,
+        "inclusiveMs": 523.1
+      },
+      {
+        "name": "(idle)",
+        "url": "",
+        "line": 0,
+        "selfMs": 477.7,
+        "inclusiveMs": 477.7
+      },
+      {
+        "name": "(anonymous)",
+        "url": "/src/features/products/product-directory.tsx?t=1789112579544",
+        "line": 28,
+        "selfMs": 37.2,
+        "inclusiveMs": 37.2
+      },
+      {
+        "name": "measureScroll",
+        "url": "/node_modules/.vite/deps/framer-motion.js?v=cd65fed3",
+        "line": 9087,
+        "selfMs": 22.9,
+        "inclusiveMs": 22.9
+      },
+      {
+        "name": "(anonymous)",
+        "url": "/src/features/products/product-directory.tsx?t=1789112579544",
+        "line": 28,
+        "selfMs": 17,
+        "inclusiveMs": 17
+      },
+      {
+        "name": "(garbage collector)",
+        "url": "",
+        "line": 0,
+        "selfMs": 14,
+        "inclusiveMs": 14
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cd65fed3",
+        "line": 191,
+        "selfMs": 11.9,
+        "inclusiveMs": 16.6
+      },
+      {
+        "name": "exports.createElement",
+        "url": "/node_modules/.vite/deps/react.js?v=cd65fed3",
+        "line": 591,
+        "selfMs": 10.8,
+        "inclusiveMs": 15.4
+      },
+      {
+        "name": "appendChild",
+        "url": "",
+        "line": 0,
+        "selfMs": 10.1,
+        "inclusiveMs": 10.1
+      },
+      {
+        "name": "exports.createElement",
+        "url": "/node_modules/.vite/deps/react.js?v=cd65fed3",
+        "line": 591,
+        "selfMs": 9.3,
+        "inclusiveMs": 9.3
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cd65fed3",
+        "line": 191,
+        "selfMs": 9,
+        "inclusiveMs": 10.5
+      },
+      {
+        "name": "exports.createElement",
+        "url": "/node_modules/.vite/deps/react.js?v=cd65fed3",
+        "line": 591,
+        "selfMs": 9,
+        "inclusiveMs": 9
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cd65fed3",
+        "line": 191,
+        "selfMs": 7.7,
+        "inclusiveMs": 7.7
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cd65fed3",
+        "line": 191,
+        "selfMs": 7.5,
+        "inclusiveMs": 10.2
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cd65fed3",
+        "line": 191,
+        "selfMs": 7.3,
+        "inclusiveMs": 7.3
+      },
+      {
+        "name": "validateProperty",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 1875,
+        "selfMs": 5.8,
+        "inclusiveMs": 5.8
+      },
+      {
+        "name": "completeWork",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 6276,
+        "selfMs": 4.9,
+        "inclusiveMs": 51.3
+      },
+      {
+        "name": "renderHTML",
+        "url": "/node_modules/.vite/deps/framer-motion.js?v=cd65fed3",
+        "line": 6747,
+        "selfMs": 4.9,
+        "inclusiveMs": 4.9
+      },
+      {
+        "name": "beginWork",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 6081,
+        "selfMs": 4.8,
+        "inclusiveMs": 238.8
+      },
+      {
+        "name": "runWithFiberInDEV",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 847,
+        "selfMs": 4.7,
+        "inclusiveMs": 59
+      },
+      {
+        "name": "formatRelativeTime",
+        "url": "/src/lib/format.ts?t=1789117899146",
+        "line": 5,
+        "selfMs": 4.6,
+        "inclusiveMs": 4.6
+      },
+      {
+        "name": "toPascalCase",
+        "url": "/node_modules/.vite/deps/lucide-react.js?v=cd65fed3",
+        "line": 40,
+        "selfMs": 4.6,
+        "inclusiveMs": 4.6
+      },
+      {
+        "name": "exports.createElement",
+        "url": "/node_modules/.vite/deps/react.js?v=cd65fed3",
+        "line": 591,
+        "selfMs": 4.6,
+        "inclusiveMs": 6.1
+      },
+      {
+        "name": "createElement",
+        "url": "",
+        "line": 0,
+        "selfMs": 4.6,
+        "inclusiveMs": 4.6
+      },
+      {
+        "name": "setAttribute",
+        "url": "",
+        "line": 0,
+        "selfMs": 4.6,
+        "inclusiveMs": 4.6
+      },
+      {
+        "name": "setAttribute",
+        "url": "",
+        "line": 0,
+        "selfMs": 4.4,
+        "inclusiveMs": 4.4
+      },
+      {
+        "name": "performWorkUntilDeadline",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 16,
+        "selfMs": 3.3,
+        "inclusiveMs": 109.1
+      },
+      {
+        "name": "ReactElement",
+        "url": "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cd65fed3",
+        "line": 104,
+        "selfMs": 3.2,
+        "inclusiveMs": 3.2
+      },
+      {
+        "name": "exports.jsxDEV",
+        "url": "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=cd65fed3",
+        "line": 191,
+        "selfMs": 3.2,
+        "inclusiveMs": 3.2
+      },
+      {
+        "name": "setInitialProperties",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 9760,
+        "selfMs": 3.2,
+        "inclusiveMs": 25.6
+      },
+      {
+        "name": "setInitialProperties",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 9760,
+        "selfMs": 3.1,
+        "inclusiveMs": 6.2
+      },
+      {
+        "name": "setAttribute",
+        "url": "",
+        "line": 0,
+        "selfMs": 3.1,
+        "inclusiveMs": 3.1
+      },
+      {
+        "name": "dispatchEvent",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 11316,
+        "selfMs": 3.1,
+        "inclusiveMs": 4.5
+      },
+      {
+        "name": "fixedT",
+        "url": "/node_modules/.vite/deps/i18next.js?v=cd65fed3",
+        "line": 1726,
+        "selfMs": 3.1,
+        "inclusiveMs": 6.2
+      },
+      {
+        "name": "updatedAncestorInfoDev",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 1643,
+        "selfMs": 3.1,
+        "inclusiveMs": 3.1
+      }
+    ],
+    "topInclusive": [
+      {
+        "name": "processRootScheduleInMicrotask",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 8995,
+        "selfMs": 0,
+        "inclusiveMs": 378.6
+      },
+      {
+        "name": "flushSyncWorkAcrossRoots_impl",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 8968,
+        "selfMs": 0,
+        "inclusiveMs": 378.6
+      },
+      {
+        "name": "performSyncWorkOnRoot",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 9063,
+        "selfMs": 0,
+        "inclusiveMs": 378.6
+      },
+      {
+        "name": "performWorkOnRoot",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 7940,
+        "selfMs": 0,
+        "inclusiveMs": 378.6
+      },
+      {
+        "name": "renderRootSync",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 8268,
+        "selfMs": 0,
+        "inclusiveMs": 304.3
+      },
+      {
+        "name": "workLoopSync",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 8324,
+        "selfMs": 0,
+        "inclusiveMs": 302.7
+      },
+      {
+        "name": "performUnitOfWork",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 8427,
+        "selfMs": 0,
+        "inclusiveMs": 302.7
+      },
+      {
+        "name": "runWithFiberInDEV",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 847,
+        "selfMs": 1.7,
+        "inclusiveMs": 240.5
+      },
+      {
+        "name": "beginWork",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 6081,
+        "selfMs": 4.8,
+        "inclusiveMs": 238.8
+      },
+      {
+        "name": "run",
+        "url": "",
+        "line": 0,
+        "selfMs": 0,
+        "inclusiveMs": 238.8
+      },
+      {
+        "name": "updateFunctionComponent",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 5561,
+        "selfMs": 0,
+        "inclusiveMs": 138.4
+      },
+      {
+        "name": "renderWithHooks",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 4201,
+        "selfMs": 0,
+        "inclusiveMs": 136.9
+      },
+      {
+        "name": "performWorkUntilDeadline",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 16,
+        "selfMs": 3.3,
+        "inclusiveMs": 109.1
+      },
+      {
+        "name": "performWorkOnRootViaSchedulerTask",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 9049,
+        "selfMs": 0,
+        "inclusiveMs": 100.9
+      },
+      {
+        "name": "performWorkOnRoot",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 7940,
+        "selfMs": 0,
+        "inclusiveMs": 99.3
+      },
+      {
+        "name": "renderWithHooks",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 4201,
+        "selfMs": 1.5,
+        "inclusiveMs": 82.1
+      },
+      {
+        "name": "updateForwardRef",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 5388,
+        "selfMs": 0,
+        "inclusiveMs": 82.1
+      },
+      {
+        "name": "react_stack_bottom_frame",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 12862,
+        "selfMs": 1.6,
+        "inclusiveMs": 78.2
+      },
+      {
+        "name": "commitRootWhenReady",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 8059,
+        "selfMs": 0,
+        "inclusiveMs": 74.3
+      },
+      {
+        "name": "commitRoot",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 8532,
+        "selfMs": 0,
+        "inclusiveMs": 74.3
+      },
+      {
+        "name": "completeUnitOfWork",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 8482,
+        "selfMs": 0,
+        "inclusiveMs": 60.7
+      },
+      {
+        "name": "runWithFiberInDEV",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 847,
+        "selfMs": 4.7,
+        "inclusiveMs": 59
+      },
+      {
+        "name": "renderWithHooksAgain",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 4248,
+        "selfMs": 0,
+        "inclusiveMs": 58.7
+      },
+      {
+        "name": "react_stack_bottom_frame",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 12862,
+        "selfMs": 0,
+        "inclusiveMs": 58.7
+      },
+      {
+        "name": "react_stack_bottom_frame",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=cd65fed3",
+        "line": 12862,
+        "selfMs": 0,
+        "inclusiveMs": 56.3
+      }
+    ]
+  },
+  "limits": [
+    "Local Chromium, 1440x960, no CPU slowdown. Small samples, not release acceptance or an INP score.",
+    "Browser routing disables HTTP cache; preferences use consistent in-memory read/write responses to avoid changing user data.",
+    "300-app tests use browser-only metadata, not a 90000-artifact database.",
+    "Initial inconsistent preference mocks and unfocused pointer run discarded. No application performance code changed."
+  ]
+}
