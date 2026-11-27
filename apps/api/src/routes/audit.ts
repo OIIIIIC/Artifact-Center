@@ -1,9 +1,10 @@
-import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '../db/client.js'
 import { applicationMembers, applications, auditLogs } from '../db/schema.js'
 import { jsonError } from '../lib/errors.js'
+import { applicationAuditFilter } from '../lib/application-audit-filter.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import { hasApplicationRole } from '../middleware/application-access.js'
 
@@ -43,25 +44,8 @@ auditRoutes.get('/', async (c) => {
     rows = await db
       .select()
       .from(auditLogs)
-      .where(
-        or(
-          eq(auditLogs.applicationId, applicationId),
-          and(
-            inArray(auditLogs.action, ['share.create', 'share.revoke']),
-            or(
-              // Collections keep one event, with all affected applications in its snapshot.
-              sql`${auditLogs.meta}->'applicationIds' @> ${JSON.stringify([applicationId])}::jsonb`,
-              // Older revocations did not snapshot members; use the surviving share items.
-              sql`(${auditLogs.meta}->'applicationIds') is null and exists (
-                select 1 from share_link_items item
-                where item.share_link_id::text = ${auditLogs.objectId}
-                  and item.application_id = ${applicationId}
-              )`,
-            ),
-          ),
-        ),
-      )
-      .orderBy(desc(auditLogs.createdAt))
+      .where(applicationAuditFilter(applicationId))
+      .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
       .offset(offset)
       .limit(limit)
   } else if (user.role === 'admin') {

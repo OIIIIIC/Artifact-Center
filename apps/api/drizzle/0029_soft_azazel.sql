@@ -1,0 +1,2 @@
+CREATE INDEX "audit_logs_share_applications_idx" ON "audit_logs" USING gin (("meta"->'applicationIds')) WHERE "audit_logs"."action" in ('share.create', 'share.revoke');--> statement-breakpoint
+CREATE INDEX "audit_logs_legacy_share_object_idx" ON "audit_logs" USING btree ("object_id") WHERE "audit_logs"."action" in ('share.create', 'share.revoke') and ("audit_logs"."meta"->'applicationIds') is null;

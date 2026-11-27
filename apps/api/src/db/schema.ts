@@ -546,6 +546,14 @@ export const auditLogs = pgTable(
     index('audit_logs_application_id_idx').on(t.applicationId),
     index('audit_logs_application_created_at_idx').on(t.applicationId, t.createdAt),
     index('audit_logs_action_idx').on(t.action),
+    index('audit_logs_share_applications_idx')
+      .using('gin', sql`(${t.meta}->'applicationIds')`)
+      .where(sql`${t.action} in ('share.create', 'share.revoke')`),
+    index('audit_logs_legacy_share_object_idx')
+      .on(t.objectId)
+      .where(
+        sql`${t.action} in ('share.create', 'share.revoke') and (${t.meta}->'applicationIds') is null`,
+      ),
   ],
 )
 

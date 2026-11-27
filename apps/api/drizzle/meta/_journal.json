@@ -204,6 +204,13 @@
       "when": 1789375212731,
       "tag": "0028_repository_bindings",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1789437512532,
+      "tag": "0029_soft_azazel",
+      "breakpoints": true
     }
   ]
 }
