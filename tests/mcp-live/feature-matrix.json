@@ -1,0 +1,2415 @@
+{
+  "version": 1,
+  "application": {
+    "name": "Artifact Center MCP",
+    "platforms": ["web"]
+  },
+  "execution": {
+    "runner": "node tests/mcp-live/run.mjs",
+    "visible": false,
+    "session_policy": "one primary MCP process plus permission actors",
+    "restart_policy": "new account sessions only",
+    "side_effect_policy": {
+      "production": "read-only",
+      "isolated": "test-owned writes allowed",
+      "jenkins": "simulated"
+    }
+  },
+  "features": [
+    {
+      "id": "whoami",
+      "name": "whoami",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "whoami.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "whoami"
+            }
+          ],
+          "destructive": false
+        },
+        {
+          "id": "whoami.reject-401",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 401"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "update_profile",
+      "name": "update_profile",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "update_profile.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "update_profile"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "change_password",
+      "name": "change_password",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "change_password.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "change_password"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_users",
+      "name": "list_users",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_users.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_users"
+            }
+          ],
+          "destructive": false
+        },
+        {
+          "id": "list_users.reject-403",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 403"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "get_user",
+      "name": "get_user",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_user.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_user"
+            }
+          ],
+          "destructive": false
+        },
+        {
+          "id": "get_user.reject-404",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 404"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "create_user",
+      "name": "create_user",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "create_user.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "create_user"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "update_user",
+      "name": "update_user",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "update_user.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "update_user"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "delete_user",
+      "name": "delete_user",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "delete_user.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "delete_user"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "reset_user_password",
+      "name": "reset_user_password",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "reset_user_password.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "reset_user_password"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "transfer_admin",
+      "name": "transfer_admin",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "transfer_admin.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "transfer_admin"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_products",
+      "name": "list_products",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_products.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_products"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "create_product",
+      "name": "create_product",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "create_product.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "create_product"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "update_product",
+      "name": "update_product",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "update_product.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "update_product"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "delete_product",
+      "name": "delete_product",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "delete_product.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "delete_product"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_projects",
+      "name": "list_projects",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_projects.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_projects"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "create_project",
+      "name": "create_project",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "create_project.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "create_project"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        },
+        {
+          "id": "create_project.reject-403",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 403"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "update_project",
+      "name": "update_project",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "update_project.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "update_project"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "delete_project",
+      "name": "delete_project",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "delete_project.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "delete_project"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "reorder_projects",
+      "name": "reorder_projects",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "reorder_projects.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "reorder_projects"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "browse_applications",
+      "name": "browse_applications",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "browse_applications.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "browse_applications"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "application_summary",
+      "name": "application_summary",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "application_summary.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "application_summary"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "application_details",
+      "name": "application_details",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "application_details.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "application_details"
+            }
+          ],
+          "destructive": false
+        },
+        {
+          "id": "application_details.reject-403",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 403"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        },
+        {
+          "id": "application_details.reject-404",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 404"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "application_overview",
+      "name": "application_overview",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "application_overview.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "application_overview"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "create_application",
+      "name": "create_application",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "create_application.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "create_application"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "edit_application",
+      "name": "edit_application",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "edit_application.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "edit_application"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "delete_application",
+      "name": "delete_application",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "delete_application.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "delete_application"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "bulk_application_codes",
+      "name": "bulk_application_codes",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "bulk_application_codes.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "bulk_application_codes"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "bulk_application_appearance",
+      "name": "bulk_application_appearance",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "bulk_application_appearance.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "bulk_application_appearance"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_application_members",
+      "name": "list_application_members",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_application_members.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_application_members"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "member_candidates",
+      "name": "member_candidates",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "member_candidates.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "member_candidates"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "set_application_member",
+      "name": "set_application_member",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "set_application_member.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "set_application_member"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "remove_application_member",
+      "name": "remove_application_member",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "remove_application_member.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "remove_application_member"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "get_access_grants",
+      "name": "get_access_grants",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_access_grants.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_access_grants"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "set_access_grants",
+      "name": "set_access_grants",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "set_access_grants.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "set_access_grants"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_artifacts",
+      "name": "list_artifacts",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_artifacts.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_artifacts"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "get_artifact",
+      "name": "get_artifact",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_artifact.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_artifact"
+            }
+          ],
+          "destructive": false
+        },
+        {
+          "id": "get_artifact.reject-404",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 404"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "manage_artifact",
+      "name": "manage_artifact",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "manage_artifact.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "manage_artifact"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "delete_artifact",
+      "name": "delete_artifact",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "delete_artifact.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "delete_artifact"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "artifact_download_ticket",
+      "name": "artifact_download_ticket",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "artifact_download_ticket.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "artifact_download_ticket"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_releases",
+      "name": "list_releases",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_releases.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_releases"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "edit_release",
+      "name": "edit_release",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "edit_release.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "edit_release"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_shares",
+      "name": "list_shares",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_shares.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_shares"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "create_share",
+      "name": "create_share",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "create_share.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "create_share"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "create_share_collection",
+      "name": "create_share_collection",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "create_share_collection.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "create_share_collection"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "revoke_share",
+      "name": "revoke_share",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "revoke_share.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "revoke_share"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "get_retention",
+      "name": "get_retention",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_retention.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_retention"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "set_retention",
+      "name": "set_retention",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "set_retention.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "set_retention"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "run_retention",
+      "name": "run_retention",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "run_retention.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "run_retention"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_release_credentials",
+      "name": "list_release_credentials",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_release_credentials.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_release_credentials"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "create_release_credential",
+      "name": "create_release_credential",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "create_release_credential.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "create_release_credential"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "revoke_release_credential",
+      "name": "revoke_release_credential",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "revoke_release_credential.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "revoke_release_credential"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_mcp_credentials",
+      "name": "list_mcp_credentials",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_mcp_credentials.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_mcp_credentials"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "revoke_mcp_credential",
+      "name": "revoke_mcp_credential",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "revoke_mcp_credential.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "revoke_mcp_credential"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "list_audit",
+      "name": "list_audit",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_audit.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_audit"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "name": "search",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "search.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "search"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "get_workspace",
+      "name": "get_workspace",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_workspace.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_workspace"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "set_favorite",
+      "name": "set_favorite",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "set_favorite.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "set_favorite"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "record_visit",
+      "name": "record_visit",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "record_visit.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "record_visit"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "set_workspace_preferences",
+      "name": "set_workspace_preferences",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "set_workspace_preferences.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "set_workspace_preferences"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "get_jenkins",
+      "name": "get_jenkins",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_jenkins.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_jenkins"
+            }
+          ],
+          "destructive": false,
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "set_jenkins",
+      "name": "set_jenkins",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "set_jenkins.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "set_jenkins"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"],
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "test_jenkins",
+      "name": "test_jenkins",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "test_jenkins.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "test_jenkins"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"],
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "get_build_config",
+      "name": "get_build_config",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_build_config.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_build_config"
+            }
+          ],
+          "destructive": false,
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "set_build_config",
+      "name": "set_build_config",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "set_build_config.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "set_build_config"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"],
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "test_build_config",
+      "name": "test_build_config",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "test_build_config.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "test_build_config"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"],
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "list_builds",
+      "name": "list_builds",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "list_builds.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_builds"
+            }
+          ],
+          "destructive": false,
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "start_build",
+      "name": "start_build",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "start_build.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "start_build"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"],
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        },
+        {
+          "id": "start_build.reject-409",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 409"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "get_build",
+      "name": "get_build",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_build.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_build"
+            }
+          ],
+          "destructive": false,
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "cancel_build",
+      "name": "cancel_build",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "cancel_build.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "cancel_build"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"],
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "get_build_log",
+      "name": "get_build_log",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_build_log.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_build_log"
+            }
+          ],
+          "destructive": false,
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "build_download_ticket",
+      "name": "build_download_ticket",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "build_download_ticket.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "build_download_ticket"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"],
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "publish_build",
+      "name": "publish_build",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "publish_build.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "publish_build"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"],
+          "environment_note": "Jenkins external HTTP dependency is simulated; real production jobs are not exercised."
+        }
+      ]
+    },
+    {
+      "id": "get_upload",
+      "name": "get_upload",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "get_upload.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_upload"
+            }
+          ],
+          "destructive": false
+        },
+        {
+          "id": "get_upload.reject-404",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 404"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "cancel_upload",
+      "name": "cancel_upload",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/management.js"],
+      "scenarios": [
+        {
+          "id": "cancel_upload.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "cancel_upload"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "check_authorization",
+      "name": "check_authorization",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/index.js"],
+      "scenarios": [
+        {
+          "id": "check_authorization.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "check_authorization"
+            }
+          ],
+          "destructive": false
+        },
+        {
+          "id": "check_authorization.reject-401",
+          "kind": "permission",
+          "status": "implemented",
+          "preconditions": ["Isolated accounts and credentials created by this run"],
+          "actions": [
+            "Invoke the tool without required permission or with a revoked credential"
+          ],
+          "expected": ["MCP reports isError true and HTTP status 401"],
+          "evidence": [
+            {
+              "type": "mcp-tool-error",
+              "assertion": "isError and server HTTP status were asserted",
+              "artifact": "output/mcp-live-20261020/results-pass2.json"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "list_applications",
+      "name": "list_applications",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/index.js"],
+      "scenarios": [
+        {
+          "id": "list_applications.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "list_applications"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "get_application",
+      "name": "get_application",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/index.js"],
+      "scenarios": [
+        {
+          "id": "get_application.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "get_application"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "match_repository",
+      "name": "match_repository",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/index.js"],
+      "scenarios": [
+        {
+          "id": "match_repository.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "match_repository"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "prepare_upload",
+      "name": "prepare_upload",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/index.js"],
+      "scenarios": [
+        {
+          "id": "prepare_upload.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "prepare_upload"
+            }
+          ],
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "id": "upload_artifact",
+      "name": "upload_artifact",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/index.js"],
+      "scenarios": [
+        {
+          "id": "upload_artifact.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "upload_artifact"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    },
+    {
+      "id": "update_artifact",
+      "name": "update_artifact",
+      "kind": "workflow",
+      "source_refs": ["plugins/artifact-center-mcp/src/index.js"],
+      "scenarios": [
+        {
+          "id": "update_artifact.effect",
+          "kind": "effect",
+          "status": "implemented",
+          "actions": [
+            "Invoke named tool over stdio against the deployed image with owned fixtures"
+          ],
+          "expected": ["Tool succeeds and downstream observable result is asserted"],
+          "evidence": [
+            {
+              "type": "mcp-public-outcome",
+              "assertion": "stdio call and associated effect assertions passed in two fresh isolated databases",
+              "artifact": "output/mcp-live-20261020/results-pass1.json and results-pass2.json",
+              "tool": "update_artifact"
+            }
+          ],
+          "destructive": true,
+          "created_by_test": true,
+          "cleanup": ["Remove exact named isolated containers and local Git fixture"]
+        }
+      ]
+    }
+  ]
+}

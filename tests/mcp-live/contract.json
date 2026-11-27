@@ -1,0 +1,21 @@
+{
+  "platform": "Node.js stdio MCP against the deployed API image in an isolated Docker network",
+  "driver": "Node built-in assertions, child processes and HTTP; no browser or desktop input",
+  "sessions": "One primary MCP process; additional account processes only for permission/revocation scenarios",
+  "production": "Read-only connection inventory and health check; no production business-data writes",
+  "test_data": "Fresh isolated PostgreSQL database and tmpfs artifact storage; all accounts, applications, artifacts and configuration are test-owned",
+  "external_services": "Jenkins HTTP service is explicitly simulated inside the isolated network; no real Jenkins jobs triggered",
+  "upload_confirmation": "The test harness simulates the host confirmation for test-owned fixture files only; no human approval or production publication is claimed",
+  "credentials": "Synthetic isolated accounts; SSH password entered through getpass, never persisted; tokens remain in driver memory",
+  "assertions": "Tool success must be followed by public API/tool-visible effects, download bytes or authentication/authorization effects",
+  "cleanup": "Close MCP processes; delete only the temporary Git fixture and the exact named e2e Docker containers/network; preserve sanitized result artifacts",
+  "artifacts": "tests/mcp-live/feature-matrix.json plus sanitized execution results in output/mcp-live-20261020",
+  "side_effect_policy": {
+    "production_business_writes": "forbidden",
+    "isolated_test_owned_writes": "allowed",
+    "real_jenkins_builds": "forbidden",
+    "jenkins_test_service": "simulated",
+    "local_fixture_files": "allowed",
+    "messages": "forbidden"
+  }
+}
