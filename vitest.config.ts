@@ -17,7 +17,7 @@ export default defineConfig({
     // Setup file: extend expect with jest-dom matchers
     setupFiles: ['./src/test/setup.ts'],
     // Include only frontend tests (exclude apps/ from root config)
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'tests/contracts/**/*.test.ts'],
     // CSS imports in components should not break tests
     css: {
       modules: {

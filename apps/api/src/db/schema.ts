@@ -574,6 +574,7 @@ export const auditLogs = pgTable(
 /** Jenkins 连接；Token 仅以独立密钥加密后的密文保存。 */
 export const jenkinsConnections = pgTable('jenkins_connections', {
   id: varchar('id', { length: 16 }).primaryKey().default('default'),
+  name: varchar('name', { length: 120 }).notNull().default('Jenkins'),
   baseUrl: varchar('base_url', { length: 500 }).notNull(),
   username: varchar('username', { length: 120 }).notNull(),
   tokenCiphertext: text('token_ciphertext').notNull(),
@@ -589,6 +590,7 @@ export const applicationBuildConfigs = pgTable('application_build_configs', {
   applicationId: uuid('application_id')
     .primaryKey()
     .references(() => applications.id, { onDelete: 'cascade' }),
+  connectionId: varchar('connection_id', { length: 16 }).notNull().default('default'),
   enabled: boolean('enabled').notNull().default(false),
   jobPath: varchar('job_path', { length: 300 }).notNull(),
   artifactPattern: varchar('artifact_pattern', { length: 300 }).notNull(),
@@ -616,6 +618,7 @@ export const applicationBuilds = pgTable(
       onDelete: 'set null',
     }),
     requestedByName: varchar('requested_by_name', { length: 120 }).notNull(),
+    connectionId: varchar('connection_id', { length: 16 }).notNull().default('default'),
     baseUrl: varchar('base_url', { length: 500 }).notNull(),
     username: varchar('username', { length: 120 }).notNull(),
     jobPath: varchar('job_path', { length: 300 }).notNull(),

@@ -1,6 +1,7 @@
 map $uri $diagnostic_uri {
     ~^(?<share_prefix>/api/public/shares)/[^/]+(?<share_suffix>/.*)?$ $share_prefix/:token$share_suffix;
     ~^(?<download_prefix>/api/downloads)/[^/]+$ $download_prefix/:ticket;
+    ~^(?<build_download_prefix>/api/build-downloads)/[^/]+$ $build_download_prefix/:ticket;
     default $uri;
 }
 

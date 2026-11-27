@@ -80,22 +80,25 @@ describe('请求可观测中间件', () => {
     expect(logs[0]?.path).toBe('/public/shares/:token/items/item-1/download')
   })
 
-  it('遮蔽短时下载路径中的下载凭据', async () => {
-    const logs: ObservabilityLog[] = []
-    const app = new Hono()
-    app.use(
-      '*',
-      createRequestObservability({
-        slowRequestMs: 500,
-        write: (log) => logs.push(log),
-      }),
-    )
-    app.get('/downloads/:ticket', (c) => c.body('ok'))
+  it.each(['downloads', 'build-downloads'])(
+    '遮蔽 %s 路径中的下载凭据',
+    async (prefix) => {
+      const logs: ObservabilityLog[] = []
+      const app = new Hono()
+      app.use(
+        '*',
+        createRequestObservability({
+          slowRequestMs: 500,
+          write: (log) => logs.push(log),
+        }),
+      )
+      app.get(`/${prefix}/:ticket`, (c) => c.body('ok'))
 
-    await app.request('/downloads/secret-download-ticket')
+      await app.request(`/${prefix}/secret-download-ticket`)
 
-    expect(logs[0]?.path).toBe('/downloads/:ticket')
-  })
+      expect(logs[0]?.path).toBe(`/${prefix}/:ticket`)
+    },
+  )
 
   it('拒绝可能污染日志的上游请求 ID', async () => {
     const logs: ObservabilityLog[] = []

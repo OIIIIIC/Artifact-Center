@@ -1,10 +1,12 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db } from '../db/client.js'
 import {
   applicationMembers,
+  applicationBuilds,
   applications,
   artifacts,
+  buildPublications,
   projects,
   regions,
 } from '../db/schema.js'
@@ -293,24 +295,50 @@ export function registerApplicationDetails(
 
   applicationRoutes.delete('/:id', requireRoles('admin'), async (c) => {
     const id = c.req.param('id')
-    const [existing] = await db
-      .select({ id: applications.id, name: applications.name })
-      .from(applications)
-      .where(eq(applications.id, id))
-      .limit(1)
-    if (!existing) return jsonError(c, 404, 'not_found', 'Application not found')
-
-    const files = await db
-      .select({
-        storageKey: artifacts.storageKey,
-        storageBackend: artifacts.storageBackend,
-      })
-      .from(artifacts)
-      .where(eq(artifacts.applicationId, id))
-
-    await db.delete(applications).where(eq(applications.id, id))
+    const result = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ id: applications.id, name: applications.name })
+        .from(applications)
+        .where(eq(applications.id, id))
+        .limit(1)
+        .for('update')
+      if (!existing) return { kind: 'not_found' as const }
+      const [reference] = await tx
+        .select({ id: buildPublications.id })
+        .from(buildPublications)
+        .innerJoin(applicationBuilds, eq(applicationBuilds.id, buildPublications.buildId))
+        .where(
+          and(
+            eq(buildPublications.targetApplicationId, id),
+            ne(applicationBuilds.applicationId, id),
+          ),
+        )
+        .limit(1)
+      if (reference) return { kind: 'in_use' as const }
+      const files = await tx
+        .select({
+          storageKey: artifacts.storageKey,
+          storageBackend: artifacts.storageBackend,
+        })
+        .from(artifacts)
+        .where(eq(artifacts.applicationId, id))
+      // The target FK uses RESTRICT: remove owned build publications via their
+      // parent builds before deleting the application, within the same transaction.
+      await tx.delete(applicationBuilds).where(eq(applicationBuilds.applicationId, id))
+      await tx.delete(applications).where(eq(applications.id, id))
+      return { kind: 'deleted' as const, existing, files }
+    })
+    if (result.kind === 'not_found')
+      return jsonError(c, 404, 'not_found', 'Application not found')
+    if (result.kind === 'in_use')
+      return jsonError(
+        c,
+        409,
+        'application_build_target_in_use',
+        '应用仍被其他应用的构建发布记录引用，无法删除',
+      )
     await Promise.all(
-      files.map((file) =>
+      result.files.map((file) =>
         deleteArtifactStorageFile(file.storageKey, file.storageBackend),
       ),
     )
@@ -318,9 +346,9 @@ export function registerApplicationDetails(
     await writeAudit(c, {
       action: 'app.delete',
       objectType: 'application',
-      objectId: existing.id,
+      objectId: result.existing.id,
       applicationId: null,
-      summary: `删除应用 ${existing.name}`,
+      summary: `删除应用 ${result.existing.name}`,
     })
 
     return c.json({ ok: true })

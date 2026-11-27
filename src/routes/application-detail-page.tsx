@@ -15,6 +15,7 @@ import { ApplicationDetailHeader } from '@/features/applications/application-det
 import { ArtifactRiskNotice } from '@/features/applications/artifact-risk-warning'
 import { ApplicationDetailSkeleton } from '@/features/applications/application-detail-skeleton'
 import { ApplicationSettingsPanel } from '@/features/applications/application-settings-panel'
+import { ApplicationBuildsPanel } from '@/features/applications/application-builds-panel'
 import { ApplicationSummary } from '@/features/applications/application-summary'
 import { ApplicationHistoryPage } from '@/features/applications/application-history-page'
 import { OverviewRecentVersions } from '@/features/applications/overview-recent-versions'
@@ -127,6 +128,7 @@ export function ApplicationDetailPage() {
     ...(canWrite
       ? ([
           { value: 'shares', label: t('detail.tabShares') },
+          { value: 'builds', label: t('builds.title') },
           { value: 'settings', label: t('detail.tabSettings') },
         ] as const)
       : []),
@@ -323,6 +325,19 @@ export function ApplicationDetailPage() {
                   key={application.id}
                   application={application}
                   autoOpenMembers={searchParams.get('addMember') === '1'}
+                />
+              </DetailTabContent>
+            ) : null}
+            {canWrite ? (
+              <DetailTabContent
+                key={`${application.id}-builds`}
+                active={activeTab === 'builds'}
+                value="builds"
+                className="mt-0 outline-none"
+              >
+                <ApplicationBuildsPanel
+                  application={application}
+                  active={activeTab === 'builds'}
                 />
               </DetailTabContent>
             ) : null}

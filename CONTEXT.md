@@ -1,6 +1,6 @@
 # CONTEXT.md — artifact-center
 
-> 本文档为 AI 助手提供项目上下文。最后更新: 2026-09-10
+> 本文档为 AI 助手提供项目上下文。最后更新: 2026-10-13
 
 ## 项目定位
 
@@ -27,6 +27,16 @@ artifact-center 是一个**企业内网软件制品管理平台**。核心使命
 | **Release Credential**      | 平台级发布凭据；供 Codex MCP、CI 等自动化方式向所有 Application 发布测试版和正式版制品，不代表通用用户会话。                                |
 | **Personal MCP Credential** | 绑定一个 User 的个人 MCP 凭据；管理权限跟随账号当前平台角色及 Application 成员权限，可独立撤销，不等同于 Release Credential。               |
 | **Personal Workspace**      | 属于 User 的个性化页面；保存收藏、最近访问和目录偏好。它是工作入口，但不承载平台统计或 Dashboard 指标。                                     |
+
+## 应用构建术语
+
+2026-11-03：支持管理员维护多个 Jenkins 连接，应用构建配置选择服务器；历史 Build Run 按连接 ID 和地址/账号快照读取，原有记录保留 `default` 连接。支持 Pipeline 和自由风格任务，接入仍要求归档产物。见 [ADR-0027](docs/adr/0027-multiple-jenkins-connections.md)。
+
+**Build Configuration（构建配置）**：属于 Application 的外部构建任务绑定，定义应用如何取得候选构建产物。它不是发布记录；产物经发布后才进入应用的制品历史。边界见 [ADR-0024](docs/adr/0024-application-jenkins-build-configuration.md)。
+
+**Build Run（构建记录）**：属于 Application 的一次持久化构建请求，保存任务/参数快照、队列号、构建号、状态及实际提交号。**Build Output（候选构建产物）**仍由 Jenkins 归档；**Build Publication（构建发布任务）**负责将用户选中的成功构建文件导入为 Artifact，默认测试版且不自动标记最新。
+
+**Build Output Target（产物发布目标）**：管理员配置的归档路径规则与目标 Application 的映射。构建保存规则快照，每个文件必须唯一匹配；发布同时检查源和目标应用权限，并将制品及审计归入目标应用。空规则沿用当前应用，详见 [ADR-0025](docs/adr/0025-build-output-targets.md)。
 
 ## 产品与项目目录（2026-09-09）
 

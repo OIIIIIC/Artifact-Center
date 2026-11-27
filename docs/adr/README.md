@@ -59,4 +59,7 @@ ADR (Architecture Decision Record) 是一种轻量级的架构决策文档，由
 - [ADR GitHub Organization](https://adr.github.io/)
 
 - [0023 — 仓库绑定与确认后上传](0023-repository-publishing-preview.md)（accepted）
+- [0024 — 由应用配置 Jenkins 构建任务](0024-application-jenkins-build-configuration.md)（accepted）
+- [0025 — 同一次构建的产物分别发布到应用](0025-build-output-targets.md)（accepted）
 - [0026 — 账号绑定的 MCP 管理能力](0026-account-bound-management-mcp.md)（accepted）
+- [0027 — 应用选择 Jenkins 连接](0027-multiple-jenkins-connections.md)（accepted）

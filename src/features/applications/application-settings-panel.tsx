@@ -1,15 +1,16 @@
 import { ApplicationAppearanceSettings } from '@/features/applications/application-appearance-settings'
 import { ApplicationMembersPanel } from '@/features/applications/application-members-panel'
-import { canDeleteApplication } from '@/lib/roles'
+import { canDeleteApplication, canMaintainApplication } from '@/lib/roles'
+import { ApplicationBuildSettingsPanel } from './application-build-settings'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 import type { Application } from '@/types/application'
-import { AlertTriangle, Info, Palette, Users } from 'lucide-react'
+import { AlertTriangle, Info, Palette, Users, Wrench } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApplicationBasicSettings } from './application-basic-settings'
 import { ApplicationDangerSettings } from './application-danger-settings'
-type SettingsView = 'basic' | 'appearance' | 'members' | 'danger'
+type SettingsView = 'basic' | 'appearance' | 'members' | 'danger' | 'build'
 interface ApplicationSettingsPanelProps {
   application: Application
   autoOpenMembers?: boolean
@@ -29,6 +30,12 @@ export function ApplicationSettingsPanel({
     visible: boolean
   }> = [
     { id: 'basic', label: t('appSettings.navBasic'), icon: Info, visible: true },
+    {
+      id: 'build',
+      label: t('jenkins.buildTitle'),
+      icon: Wrench,
+      visible: canMaintainApplication(platformRole, application.accessRole),
+    },
     {
       id: 'appearance',
       label: t('appSettings.navAppearance'),
@@ -75,6 +82,10 @@ export function ApplicationSettingsPanel({
       </nav>
 
       <div className="min-w-0">
+        {view === 'build' &&
+        canMaintainApplication(platformRole, application.accessRole) ? (
+          <ApplicationBuildSettingsPanel application={application} />
+        ) : null}
         <div hidden={view !== 'basic'}>
           <ApplicationBasicSettings application={application} />
         </div>

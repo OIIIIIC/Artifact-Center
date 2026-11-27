@@ -69,6 +69,7 @@ HTTPS、升级、备份和恢复见 [生产部署文档](./docs/11-DEPLOYMENT.md
 - [设计系统](./docs/08-DESIGN-SYSTEM.md)
 - [API 开发](./apps/api/README.md)
 - [领域模型](./CONTEXT.md)
+- [Jenkins 联动配置](./docs/jenkins-integration.md)
 
 ## 检查
 

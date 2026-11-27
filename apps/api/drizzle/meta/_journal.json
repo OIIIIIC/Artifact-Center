@@ -239,6 +239,13 @@
       "when": 1792472426224,
       "tag": "0033_account_mcp_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793707677588,
+      "tag": "0034_multi_jenkins_connections",
+      "breakpoints": true
     }
   ]
 }

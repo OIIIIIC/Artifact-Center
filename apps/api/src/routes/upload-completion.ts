@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db } from '../db/client.js'
 import {
@@ -6,10 +6,10 @@ import {
   artifacts,
   projects,
   regions,
-  releases,
   uploadParts,
   uploadSessions,
 } from '../db/schema.js'
+import { createPublishedArtifact } from '../lib/publish-artifact.js'
 import { distributionFilename } from '../lib/artifact-filename.js'
 import { refreshApplicationArtifactStats } from '../lib/artifact-helpers.js'
 import { mapArtifact } from '../lib/artifact-response.js'
@@ -156,56 +156,25 @@ export function registerUploadCompletion(
     try {
       created = await db.transaction(async (tx) => {
         const now = new Date()
-        const [release] = await tx
-          .insert(releases)
-          .values({
-            applicationId: session.applicationId,
-            version: fields.version,
-            releaseNotes: fields.releaseNotes,
-            createdById: user.sub,
-            createdByName: uploaderName,
-            publishedAt: now,
-          })
-          .onConflictDoUpdate({
-            target: [releases.applicationId, releases.version],
-            set: { releaseNotes: fields.releaseNotes, updatedAt: now },
-          })
-          .returning()
-        if (markLatest) {
-          await tx.execute(sql`
-          UPDATE artifacts
-          SET status = CASE channel
-            WHEN 'beta' THEN 'beta'::artifact_status
-            WHEN 'deprecated' THEN 'deprecated'::artifact_status
-            ELSE 'stable'::artifact_status
-          END,
-          updated_at = now()
-          WHERE application_id = ${session.applicationId} AND status = 'latest'
-        `)
-        }
-        const [artifact] = await tx
-          .insert(artifacts)
-          .values({
-            applicationId: session.applicationId,
-            releaseId: release.id,
-            version: fields.version,
-            buildNumber: finalBuildNumber,
-            platform,
-            type: artifactType,
-            channel,
-            status,
-            originalFilename: session.filename,
-            filename: finalFilename,
-            sizeBytes: assembled.sizeBytes,
-            sha256: assembled.sha256,
-            storageKey: session.storageKey,
-            storageBackend: session.storageBackend,
-            releaseNotes: fields.releaseNotes,
-            uploaderId: user.sub,
-            uploaderName,
-            deprecatedAt: isDeprecated ? now : null,
-          })
-          .returning()
+        const artifact = await createPublishedArtifact(tx, {
+          applicationId: session.applicationId,
+          version: fields.version,
+          buildNumber: finalBuildNumber,
+          platform,
+          type: artifactType,
+          channel,
+          status,
+          originalFilename: session.filename,
+          filename: finalFilename,
+          sizeBytes: assembled.sizeBytes,
+          sha256: assembled.sha256,
+          storageKey: session.storageKey,
+          storageBackend: session.storageBackend,
+          releaseNotes: fields.releaseNotes,
+          uploaderId: user.sub,
+          uploaderName,
+          deprecatedAt: isDeprecated ? now : null,
+        })
         await tx
           .update(uploadSessions)
           .set({ status: 'completed', updatedAt: now })

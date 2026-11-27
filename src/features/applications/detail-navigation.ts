@@ -4,13 +4,14 @@ export const detailTabs = [
   'release-notes',
   'activity',
   'shares',
+  'builds',
   'settings',
 ] as const
 
 export function resolveDetailTab(tab: string | null, canWrite: boolean) {
   return tab &&
     detailTabs.includes(tab as (typeof detailTabs)[number]) &&
-    (canWrite || !['settings', 'shares'].includes(tab))
+    (canWrite || !['settings', 'shares', 'builds'].includes(tab))
     ? tab
     : 'overview'
 }

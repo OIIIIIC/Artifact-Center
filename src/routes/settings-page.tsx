@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 
 import { AppLayout, PageContainer } from '@/components/layout'
+import { JenkinsSettingsPanel } from '@/features/settings/jenkins-settings-panel'
 import { McpCredentialsPanel } from '@/features/settings/mcp-credentials-panel'
 import { AccessPermissionsPanel } from '@/features/settings/access-permissions-panel'
 import { AppearanceSettingsPanel } from '@/features/settings/appearance-settings-panel'
@@ -28,6 +29,7 @@ import { useAuthStore } from '@/store/auth-store'
 
 type SettingsSection =
   | 'mcp'
+  | 'jenkins'
   | 'general'
   | 'appearance'
   | 'retention'
@@ -41,6 +43,7 @@ type SettingsStandalone = Extract<SettingsSection, 'members' | 'regions' | 'acce
 const PERSONAL_SECTIONS: SettingsSection[] = ['general', 'appearance', 'mcp']
 const PLATFORM_SECTIONS: SettingsSection[] = ['retention']
 const MANAGEMENT_SECTIONS: SettingsSection[] = [
+  'jenkins',
   'robots',
   'members',
   'regions',
@@ -59,6 +62,7 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
 
   const sectionMeta = {
     mcp: { label: t('mcp.title'), icon: Bot },
+    jenkins: { label: t('jenkins.title'), icon: Box },
     general: { label: t('settings.navGeneral'), icon: UserRound },
     appearance: { label: t('settings.navAppearance'), icon: Palette },
     retention: { label: t('settings.navRetention'), icon: HardDrive },
@@ -160,6 +164,7 @@ export function SettingsPage({ standalone }: { standalone?: SettingsStandalone }
           >
             {section === 'general' ? <ProfileSecurityPanel /> : null}
             {section === 'mcp' ? <McpCredentialsPanel /> : null}
+            {isAdmin && section === 'jenkins' ? <JenkinsSettingsPanel /> : null}
             {section === 'appearance' ? <AppearanceSettingsPanel hideHeader /> : null}
             {section === 'retention' ? (
               <RetentionSettingsPanel isAdmin={isAdmin} hideHeader />

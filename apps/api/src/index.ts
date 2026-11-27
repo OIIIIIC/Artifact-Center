@@ -25,6 +25,9 @@ import { shareRoutes } from './routes/shares.js'
 import { userRoutes } from './routes/users.js'
 import { workspaceRoutes } from './routes/workspace.js'
 import { uploadRoutes } from './routes/uploads.js'
+import { jenkinsSettingsRoutes, applicationBuildRoutes } from './routes/jenkins.js'
+import { buildRoutes } from './routes/builds.js'
+import { startBuildWorker } from './lib/build-worker.js'
 
 ensureStorageRoot()
 void ensureRetentionSettings().catch((err) =>
@@ -79,9 +82,12 @@ app.route('/users', userRoutes)
 app.route('/audit', auditRoutes)
 app.route('/search', searchRoutes)
 app.route('/settings', settingsRoutes)
+app.route('/settings/jenkins', jenkinsSettingsRoutes)
 // Upload routes include /applications/:appId/uploads and must be registered before
 // the ordinary /applications tree so its user-only middleware cannot intercept robots.
 app.route('/', uploadRoutes)
+app.route('/', buildRoutes)
+app.route('/applications', applicationBuildRoutes)
 app.route('/applications', applicationRoutes)
 app.route('/workspace', workspaceRoutes)
 app.route('/settings/release-credentials', releaseCredentialRoutes)
@@ -110,9 +116,11 @@ const server = serve({
   hostname: env.host,
   port: env.port,
 })
+const stopBuildWorker = startBuildWorker()
 
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(signal, () => {
+    stopBuildWorker()
     console.log(`[server] received ${signal}, shutting down`)
     server.close(() => process.exit(0))
   })
